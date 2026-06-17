@@ -28,11 +28,14 @@ Each packet must build and keep tests green before the next.
 | **AB9** | Wire **§10/§11** (detachment rules, per-enhancement eligibility, stratagems) → finalize R2/R6 + missing enhancement points | Core, Api, UI | complete |
 
 ## Current status
-- **AB1 — in progress.**
-  - Catalogue POCOs: `Warhammer40k.Core/Catalogue/` → `CatalogueParts.cs` (StatProfile, WeaponProfile, Ability, PointsOption, PantheonBinding), `Datasheet.cs`, `CatalogueData.cs`.
-  - `CatalogueSeedLoader.cs` — `Load(string|Stream)` + idempotent `Enrich(...)` deriving the fields below.
-  - NEXT: **AB1 step 3** — add loader/derivation unit tests (`Warhammer40k.Tests/CatalogueSeedLoaderTests.cs`) with inline fixtures, then `dotnet build` + `dotnet test` green to close AB1.
-- **Seed data saved**: `Warhammer40k.Api/Seed/necron-catalogue-seed.json` (raw). AB2 wires it as an `<EmbeddedResource>` and adds the provider/endpoint.
+- **AB1 — done.** Catalogue POCOs (`Warhammer40k.Core/Catalogue/`), `CatalogueSeedLoader.Load`/`Enrich` (derivation), and loader unit tests (`Warhammer40k.Tests/CatalogueSeedLoaderTests.cs`, inline fixture covering every derivation branch). `dotnet build` + `dotnet test` green.
+- **AB2 — done.** Deployable.
+  - Seed embedded as `<EmbeddedResource>` in `Warhammer40k.Api` (`Seed/necron-catalogue-seed.json`).
+  - `CatalogueProvider` (`Warhammer40k.Api/Catalogue/`) lazily loads + caches the enriched catalogue once; static `LoadEmbedded()` resolves the manifest resource by suffix so tests can reuse it.
+  - `GET /api/catalogue` (`Catalogue` function, `Anonymous` — SWA gates `/api/*` to the `owner` role) returns the enriched `CatalogueData`; `CatalogueProvider` registered as a singleton in `Program.cs`.
+  - Client: `IApiClient.GetCatalogueAsync` (Core) + `ApiClient` impl (UI) with empty-`CatalogueData` fallback matching the existing resilience pattern.
+  - Real-seed test `Warhammer40k.Tests/CatalogueProviderTests.cs`: 52 datasheets / 4 bindings + derivation spot-checks (slug ids, copy caps, Overlord leader/Warlord eligibility, C'tan restrictions, every Monster → its binding, binding details, provider caching). **43 tests green.**
+  - NEXT: **AB3** — tabbed nav + Catalogue browse tab (52 units grouped by role, searchable, detail sheet), themed.
 - **Pending from user:** spec **§10 & §11** (detachment rules, enhancement definitions + per-enhancement eligibility, stratagems). Until then R2/R6 eligibility stays permissive with a TODO.
 
 ## Derived-at-load fields (computed once by `CatalogueSeedLoader.Enrich`)

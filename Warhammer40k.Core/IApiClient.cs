@@ -1,3 +1,5 @@
+using Warhammer40k.Core.Catalogue;
+
 namespace Warhammer40k.Core;
 
 /// <summary>
@@ -12,6 +14,12 @@ public interface IApiClient
     /// no one is authenticated or the API is unreachable.
     /// </summary>
     Task<UserInfo> GetCurrentUserAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the enriched Necron catalogue (datasheets + Pantheon bindings) from <c>/api/catalogue</c>,
+    /// or an empty <see cref="CatalogueData"/> when the API is unreachable.
+    /// </summary>
+    Task<CatalogueData> GetCatalogueAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Lists the signed-in user's armies (newest first). Empty when not signed in.</summary>
     Task<IReadOnlyList<Army>> GetArmiesAsync(CancellationToken cancellationToken = default);

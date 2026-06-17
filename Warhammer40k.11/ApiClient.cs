@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Warhammer40k.Core;
+using Warhammer40k.Core.Catalogue;
 
 namespace Warhammer40k._11;
 
@@ -31,6 +32,29 @@ internal sealed class ApiClient(HttpClient http) : IApiClient
         catch (JsonException)
         {
             return UserInfo.Anonymous;
+        }
+    }
+
+    public async Task<CatalogueData> GetCatalogueAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var catalogue = await http.GetFromJsonAsync<CatalogueData>("api/catalogue", cancellationToken);
+            return catalogue ?? new CatalogueData();
+        }
+        catch (HttpRequestException)
+        {
+            // API not deployed / not running (no /api route).
+            return new CatalogueData();
+        }
+        catch (NotSupportedException)
+        {
+            // SPA fallback returned HTML instead of JSON.
+            return new CatalogueData();
+        }
+        catch (JsonException)
+        {
+            return new CatalogueData();
         }
     }
 
