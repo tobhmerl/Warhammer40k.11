@@ -6,47 +6,60 @@
 
 <div class="armies">
 	<header class="head">
-		<h1>My armies</h1>
-		<a class="link" href="/">&larr; Home</a>
+		<div>
+			<p class="eyebrow">Your roster</p>
+			<h1>My armies</h1>
+		</div>
+		@if (_authenticated && !_loading)
+		{
+			<span class="count">@_armies.Count @(_armies.Count == 1 ? "army" : "armies")</span>
+		}
 	</header>
 
 	@if (_loading)
 	{
-		<p class="status">Loading&hellip;</p>
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading&hellip;</p>
+		</div>
 	}
 	else if (!_authenticated)
 	{
-		<div class="card">
-			<p class="status">Sign in to create and manage your armies.</p>
+		<div class="card pad signin">
+			<p class="status">Sign in to forge and command your armies.</p>
 			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
 		</div>
 	}
 	else
 	{
-		<div class="card form-card">
-			<h2>@(_editing.Id.Length == 0 ? "New army" : "Edit army")</h2>
+		<div class="card form-card" id="army-form">
+			<div class="form-head">
+				<span class="form-mark" aria-hidden="true"></span>
+				<h2>@(_editing.Id.Length == 0 ? "Forge new army" : "Edit army")</h2>
+			</div>
 			<EditForm Model="_editing" OnValidSubmit="SaveAsync">
 				<DataAnnotationsValidator />
-				<label class="field">
-					<span>Name</span>
-					<InputText class="input" @bind-Value="_editing.Name" placeholder="e.g. Sautekh Dynasty" />
-				</label>
-				<label class="field">
-					<span>Faction</span>
-					<InputText class="input" @bind-Value="_editing.Faction" placeholder="e.g. Necrons" />
-				</label>
-				<label class="field">
-					<span>Points</span>
-					<InputNumber class="input" @bind-Value="_editing.Points" />
-				</label>
+				<div class="grid">
+					<label class="field">
+						<span>Name</span>
+						<InputText class="input" @bind-Value="_editing.Name" placeholder="e.g. Sautekh Dynasty" />
+					</label>
+					<label class="field">
+						<span>Faction</span>
+						<InputText class="input" @bind-Value="_editing.Faction" placeholder="e.g. Necrons" />
+					</label>
+					<label class="field points">
+						<span>Points</span>
+						<InputNumber class="input" @bind-Value="_editing.Points" />
+					</label>
+				</div>
 				<ValidationSummary />
 				<div class="actions">
 					<button class="btn primary" type="submit" disabled="@_saving">
-						@(_saving ? "Saving…" : "Save")
+						@(_saving ? "Saving…" : (_editing.Id.Length == 0 ? "Forge army" : "Save changes"))
 					</button>
 					@if (_editing.Id.Length > 0)
 					{
-						<button class="btn" type="button" @onclick="StartNew">Cancel</button>
+						<button class="btn ghost" type="button" @onclick="StartNew">Cancel</button>
 					}
 				</div>
 			</EditForm>
@@ -58,26 +71,34 @@
 
 		@if (_armies.Count == 0)
 		{
-			<p class="status muted">No armies yet &mdash; create your first one above.</p>
+			<div class="card empty">
+				<span class="empty-mark" aria-hidden="true"></span>
+				<p>No armies yet &mdash; forge your first one above.</p>
+			</div>
 		}
 		else
 		{
 			<ul class="list">
 				@foreach (var army in _armies)
 				{
-					<li class="row" @key="army.Id">
+					<li class="army-card" @key="army.Id">
+						<span class="army-glyph" aria-hidden="true"></span>
 						<div class="info">
 							<span class="name">@army.Name</span>
-							<span class="meta">@army.Faction &middot; @army.Points pts</span>
+							<span class="meta">@army.Faction &middot; <strong>@army.Points</strong> pts</span>
 						</div>
 						<div class="row-actions">
-							<button class="btn small" @onclick="() => Edit(army)">Edit</button>
+							<button class="btn small ghost" @onclick="() => Edit(army)">Edit</button>
 							<button class="btn small danger" @onclick="() => DeleteAsync(army)">Delete</button>
 						</div>
 					</li>
 				}
 			</ul>
 		}
+
+		<a class="fab" href="#army-form" aria-label="Jump to new army form">
+			<span aria-hidden="true">+</span>
+		</a>
 	}
 </div>
 

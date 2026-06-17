@@ -4,24 +4,36 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Warhammer40k.11</title>
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#070b0a" />
+    <title>TombForge — Warhammer 40k Army Forge</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
     <link href="Warhammer40k.11.styles.css" rel="stylesheet" />
     <link href="manifest.webmanifest" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <style>
+        html, body { margin: 0; background-color: #070b0a; }
+    </style>
     <script type="importmap"></script>
 </head>
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="boot">
+            <p class="boot-brand">TOMBFORGE</p>
+            <svg class="loading-progress">
+                <circle r="40%" cx="50%" cy="50%" />
+                <circle r="40%" cx="50%" cy="50%" />
+            </svg>
+            <div class="loading-progress-text"></div>
+            <p class="boot-sub">Awakening the tomb world&hellip;</p>
+        </div>
     </div>
 
     <div id="blazor-error-ui">
