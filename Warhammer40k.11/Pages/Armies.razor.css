@@ -1,0 +1,192 @@
+.armies {
+    max-width: 36rem;
+    margin: 2.5rem auto;
+    padding: 0 1.25rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.head h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.link {
+    color: #0a84ff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.card {
+    background: #f2f2f7;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-card h2 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+}
+
+.field {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.field > span {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.35rem;
+}
+
+.form-card ::deep .input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #d1d1d6;
+    border-radius: 0.6rem;
+    font-size: 1rem;
+    background: #fff;
+    color: #111;
+}
+
+.form-card ::deep .validation-message {
+    color: #d11;
+    font-size: 0.85rem;
+    margin-top: 0.35rem;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.error {
+    color: #d11;
+    font-size: 0.9rem;
+    margin: 0.75rem 0 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    background: #e5e5ea;
+    color: #111;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    min-height: 44px;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.btn.primary {
+    background: #0a84ff;
+    color: #fff;
+}
+
+.btn.small {
+    min-height: 0;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.btn.danger {
+    background: #ffe5e5;
+    color: #c0231f;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.status {
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+}
+
+.status.muted {
+    color: #8e8e93;
+    text-align: center;
+}
+
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: #f2f2f7;
+    border-radius: 0.85rem;
+    padding: 0.85rem 1.1rem;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+}
+
+.name {
+    font-weight: 600;
+}
+
+.meta {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.row-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    .card,
+    .row {
+        background: #1c1c1e;
+    }
+
+    .form-card ::deep .input {
+        background: #2c2c2e;
+        border-color: #3a3a3c;
+        color: #f2f2f7;
+    }
+
+    .btn {
+        background: #2c2c2e;
+        color: #f2f2f7;
+    }
+
+    .btn.danger {
+        background: #3a1f1f;
+        color: #ff6961;
+    }
+
+    .meta,
+    .field > span {
+        color: #9a9aa0;
+    }
+}

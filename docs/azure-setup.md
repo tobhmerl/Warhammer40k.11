@@ -135,26 +135,34 @@ Standard plan. Same `/api`, same built-in auth.
 - Built-in login works out of the box: `/.auth/login/github`, `/.auth/logout`,
   and `/.auth/me` (current principal). The API reads the user from the `x-ms-client-principal`
   header — already implemented in `WhoAmI.cs`.
-- **Restrict to just you** (recommended in **M1**): your data is partitioned per user id, so a
-  stranger who logs in only ever sees their own empty data. To block them entirely, add a route
-  rule requiring an `authenticated`/custom role in `staticwebapp.config.json` and invite only your
-  account via **SWA → Role management → Invite**.
+- **Restricted to just you (implemented in M1):** `staticwebapp.config.json` now requires the
+  custom **`owner`** role on `/*` and `/api/*`, blocks the AAD provider, and redirects 401s to the
+  GitHub login. Data is also partitioned per user id as defense in depth.
+  - ⚠️ **Do this right after deploy or you'll lock yourself out:** in the SWA resource →
+    **Role management → Invite**, invite your own GitHub account with the role **`owner`**, open the
+    generated invite link while signed in, and accept. Until you hold the `owner` role every route
+    returns 401 → login (by design — that's what keeps strangers out).
 - Optional branded login: register your own GitHub OAuth app and add `GITHUB_CLIENT_ID` /
   `GITHUB_CLIENT_SECRET` as SWA app settings. Not required for M0/M1.
 
 ---
 
-## E. Azure Table Storage  **[M1]**
+## E. Azure Table Storage  **[M1 — implemented]**
+
+Armies are persisted per user in an Azure Table named **`Armies`** (PartitionKey = user id,
+RowKey = army id). The table is **created automatically** on first write, so there is no schema or
+provisioning step. The API reads its connection string from the **`TablesConnectionString`** setting.
 
 1. Portal → **Create a resource** → **Storage account**:
    - Resource group `rg-tombforge`, **Name** e.g. `tombforgestore` (globally unique, lowercase),
 	 **Redundancy** LRS (cheapest).
 2. After creation → **Security + networking → Access keys** → copy a **connection string**.
 3. SWA resource → **Settings → Environment variables** → add
-   **`TablesConnectionString`** = that connection string. (The API reads this in M1.)
-   - If you used a *linked* Functions app (section C fallback), set it on that Functions app instead.
-4. Local dev uses **Azurite** via `UseDevelopmentStorage=true` (already in
-   `Warhammer40k.Api/local.settings.json`).
+   **`TablesConnectionString`** = that connection string, then **Save** (this restarts the API).
+   - If you used a *linked* Functions app (section C alternative), set it on that Functions app instead.
+4. **Local dev** uses **Azurite**: `TablesConnectionString=UseDevelopmentStorage=true` is already in
+   `Warhammer40k.Api/local.settings.json`. Start Azurite (VS 2026 auto-starts it, or run `azurite`)
+   before `swa start` / running the API, or table calls will fail to connect.
 
 ---
 
@@ -172,6 +180,8 @@ SWA resource → **Custom domains** → add your domain and follow the DNS valid
 - [ ] Create the Static Web App + first deploy (section C)
 
 **Do in M1 (persistence):**
+- [x] Army CRUD + Azure Table Storage persistence implemented (Core/Api/UI)
+- [x] Site locked to the `owner` role in `staticwebapp.config.json` (section D)
 - [ ] Create the Storage account + copy connection string (section E)
 - [ ] Add `TablesConnectionString` app setting in SWA (section E)
-- [ ] (Recommended) lock login down to your account (section D)
+- [ ] **Invite your GitHub account as `owner`** right after deploy (section D) — or you're locked out

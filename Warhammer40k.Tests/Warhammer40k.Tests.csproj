@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Warhammer40k.Core\Warhammer40k.Core.csproj" />
+    <ProjectReference Include="..\Warhammer40k.Api\Warhammer40k.Api.csproj" />
   </ItemGroup>
 
 </Project>
