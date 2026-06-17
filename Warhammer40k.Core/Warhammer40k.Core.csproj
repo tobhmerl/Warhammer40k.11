@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Pinned to net9.0 so the SWA Free-plan managed Functions builder accepts the API
+         (it only supports dotnetisolated 8.0/9.0). The net10 Blazor WASM UI consumes this
+         net9 library fine. Bump back to net10.0 once SWA managed Functions supports it. -->
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

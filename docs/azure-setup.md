@@ -20,6 +20,12 @@ Architecture recap: **Blazor WASM (UI)** → same-origin **`/api`** (Azure Funct
 | Azurite (storage emulator) | ships with Visual Studio 2026 | **[M1]** start it before running the API locally (VS auto-starts it; or `npm i -g azurite` then run `azurite`) |
 | Azure account | — | **[NOW for deploy]** free sign-up at https://azure.microsoft.com/free |
 
+> **API/Core target `net9.0`; the UI targets `net10.0`.** `Warhammer40k.Api` and
+> `Warhammer40k.Core` are pinned to .NET 9 so the SWA Free-plan managed Functions builder accepts
+> them (see section C). Building works with the .NET 10 SDK alone, but to **run the API locally**
+> (`func` / `swa start`) you need the **.NET 9 (ASP.NET Core) runtime** installed
+> (`winget install Microsoft.DotNet.AspNetCore.9`) — otherwise just let Azure host it on deploy.
+
 ### Run the UI only (no API/login)
 ```powershell
 dotnet run --project Warhammer40k.11
@@ -99,13 +105,28 @@ the Static Web App.
    (`.github/workflows/azure-static-web-apps-*.yml`) to your repo and runs the first deploy.
 5. When the GitHub Action finishes, your site is live at **https://&lt;name&gt;.azurestaticapps.net**.
 
-### ⚠️ If the build fails on the .NET 10 API (managed Functions lag)
-The SWA *managed* Functions platform can trail the newest runtime. If the API step fails:
-1. Create a standalone **Azure Functions app** (.NET isolated) and deploy `Warhammer40k.Api` to it.
-2. In the SWA resource → **APIs** → **Link** the Functions app.
-3. Remove `api_location` from the workflow (set it to `""`).
+### ⚠️ The .NET 10 API vs SWA managed Functions — RESOLVED by pinning to .NET 9
+The SWA **managed** Functions builder only accepts `dotnetisolated` **8.0/9.0**. A **net10.0** API
+fails the deploy with: *"The function language version detected is unsupported or invalid. The
+following dotnetisolated language versions are valid: 8.0, 9.0."*
 
-No code changes are needed — same `/api`, same login. (This was flagged during planning.)
+**What we did (Free plan, $0):** pinned **`Warhammer40k.Api`** and **`Warhammer40k.Core`** to
+**`net9.0`** so the managed builder accepts them. The Blazor WASM UI (**`Warhammer40k.11`**) stays on
+**`net10.0`** and consumes the net9 `Core` without issue. No workflow edit is needed — `api_location`
+still points at `Warhammer40k.Api`, and the builder detects 9.0 from the csproj.
+
+> A clean **Debug** solution build also required removing the
+> `<Build Solution="Debug|*" Project="false" />` overrides from `Warhammer40k.11.slnx`, which were
+> excluding `Core`/`Api`/`Tests` from building in Debug.
+
+**Revert to .NET 10 later:** once the SWA managed builder supports .NET 10, bump `<TargetFramework>`
+back to `net10.0` in `Warhammer40k.Core/Warhammer40k.Core.csproj` and
+`Warhammer40k.Api/Warhammer40k.Api.csproj`.
+
+**Alternative — keep .NET 10 now (~$9/mo):** host the API as a standalone **Flex Consumption**
+Function App (supports .NET 8/9/10), upgrade the SWA to the **Standard** plan, set `api_location: ""`
+in the workflow, then **APIs → Link** the Function App. Bring-your-own/linked backends require the
+Standard plan. Same `/api`, same built-in auth.
 
 ---
 

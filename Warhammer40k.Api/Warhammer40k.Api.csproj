@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Pinned to net9.0: the SWA Free-plan managed Functions builder only accepts
+         dotnetisolated 8.0/9.0. Bump back to net10.0 once SWA managed Functions supports it
+         (or move to a standalone Flex Consumption Function App on the SWA Standard plan). -->
+    <TargetFramework>net9.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
