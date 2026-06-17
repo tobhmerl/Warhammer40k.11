@@ -82,6 +82,24 @@
     justify-content: center;
 }
 
+.hint {
+    margin: 1rem 0 0;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+}
+
+.hint a {
+    color: var(--accent-strong);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.hint a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
 .btn {
     display: inline-flex;
     align-items: center;

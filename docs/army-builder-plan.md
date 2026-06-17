@@ -10,7 +10,7 @@ Translate every requirement into the **existing** solution — do **not** add ne
 - **`Warhammer40k.Api`** — Azure Functions isolated API (net9). Persistence = **Azure Table Storage** (repository pattern, see `ArmyRepository`). Catalogue seeding + roster CRUD live here.
 - **`Warhammer40k.Core`** — shared POCOs + the **pure, unit-tested** validation engine (net9).
 - **`Warhammer40k.Tests`** — xUnit (net10), references Core + Api.
-- Auth = SWA built-in GitHub; site locked to the `owner` role.
+- Auth = SWA built-in GitHub. The app **shell is public** so the SPA always boots and sign-in is a deliberate action on the Home page; `/api/*` requires the built-in **`authenticated`** role (except `/api/whoami`, which is anonymous so the landing page can detect sign-in state). The API derives identity from the SWA principal header and partitions Table Storage **per user**, so each account only ever sees its own data. (To make the site single-owner exclusive later: invite yourself as a custom `owner` role in the portal **and** gate `/api/*` on it, or add a server-side allow-list of your `userId` — don't lock `/*`, or the framework files 403 and the app can't boot.)
 
 ## Packet roadmap (AB1–AB9)
 Each packet must build and keep tests green before the next.

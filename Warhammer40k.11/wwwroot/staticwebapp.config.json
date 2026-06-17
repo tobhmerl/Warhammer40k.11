@@ -1,13 +1,9 @@
 {
   "routes": [
-    { "route": "/.auth/login/github", "allowedRoles": [ "anonymous", "authenticated" ] },
     { "route": "/.auth/login/aad", "statusCode": 404 },
-    { "route": "/api/*", "allowedRoles": [ "owner" ] },
-    { "route": "/*", "allowedRoles": [ "owner" ] }
+    { "route": "/api/whoami", "allowedRoles": [ "anonymous", "authenticated" ] },
+    { "route": "/api/*", "allowedRoles": [ "authenticated" ] }
   ],
-  "responseOverrides": {
-    "401": { "redirect": "/.auth/login/github", "statusCode": 302 }
-  },
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
