@@ -45,21 +45,38 @@ fake-login form (type any username/roles) → the whoami card reflects that iden
 
 ---
 
-## B. Put the repository on GitHub  **[NOW for deploy]**
+## B. Put the repository on GitHub (manual)  **[NOW for deploy]**
 
-Static Web Apps' standard CI/CD deploys **from GitHub**. If this repo isn't on GitHub yet:
+Static Web Apps' standard CI/CD deploys **from GitHub**. The repo is already initialized
+locally (branch `main`, commit `M0: cloud-ready solution skeleton`), so you only need to create
+the **empty** GitHub repo by hand and push to it. No `git init` / CLI repo-creation step is needed.
+
+### B1. Create the empty repo on github.com
+1. Open **https://github.com/new**.
+2. **Owner**: your account (`tobhmerl`).  **Repository name**: `Warhammer40k.11`.
+3. Visibility: **Private** (recommended) or Public.
+4. **Do NOT** tick *Add a README*, *.gitignore*, or *license* — the repo already has these
+   locally, and initializing the remote would make the first push fail with a non-fast-forward error.
+5. Click **Create repository** and leave the "…push an existing repository" page open for reference.
+
+### B2. Point the local repo at it and push
+The local `origin` previously contained a `<you>` placeholder. It has been corrected to the URL
+below — replace `tobhmerl` only if your GitHub username differs:
 
 ```powershell
 cd C:\Users\tobhmerl\source\repos\Warhammer40k.11
-git init
-git add .
-git commit -m "M0: cloud-ready solution skeleton"
-# create an empty repo on github.com first, then:
-git remote add origin https://github.com/<you>/Warhammer40k.11.git
-git branch -M main
+git remote set-url origin https://github.com/tobhmerl/Warhammer40k.11.git
+git remote -v                      # confirm the URL no longer shows <you>
 git push -u origin main
 ```
+
+> The first push opens a browser / Git Credential Manager prompt — sign in to GitHub (or use a PAT).
+> If `origin` does not exist, use `git remote add origin <url>` instead of `set-url`.
+
 A root `.gitignore` is included so `bin/`, `obj/`, and `local.settings.json` are not committed.
+
+✅ Once `git push` succeeds and your files appear on github.com, continue to **section C** to create
+the Static Web App.
 
 ---
 
