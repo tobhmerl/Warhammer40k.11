@@ -1,0 +1,348 @@
+@page "/catalogue"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@inject IApiClient Api
+
+<PageTitle>TombForge — Catalogue</PageTitle>
+
+<div class="catalogue">
+	<header class="head">
+		<div>
+			<p class="eyebrow">Necron datasheets</p>
+			<h1>Catalogue</h1>
+		</div>
+		@if (!_loading && _authenticated && _catalogue.Datasheets.Count > 0)
+		{
+			<span class="count">@_catalogue.Datasheets.Count units</span>
+		}
+	</header>
+
+	@if (_loading)
+	{
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Summoning the catalogue&hellip;</p>
+		</div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad signin">
+			<p class="status">Sign in to browse the Necron catalogue.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else if (_catalogue.Datasheets.Count == 0)
+	{
+		<div class="card pad">
+			<p class="status">The catalogue could not be loaded. Please reload the page.</p>
+		</div>
+	}
+	else
+	{
+		<div class="search">
+			<span class="search-icon" aria-hidden="true">⌕</span>
+			<input class="search-input" type="search" autocomplete="off" spellcheck="false"
+				   placeholder="Search units, keywords, rules…"
+				   aria-label="Search the catalogue"
+				   @bind="_query" @bind:event="oninput" />
+			@if (_query.Length > 0)
+			{
+				<button class="search-clear" type="button" aria-label="Clear search" @onclick="Clear">✕</button>
+			}
+		</div>
+
+		@if (MatchCount == 0)
+		{
+			<div class="card pad">
+				<p class="status">No units match “<strong>@_query</strong>”.</p>
+			</div>
+		}
+		else
+		{
+			@foreach (var group in Groups())
+			{
+				<section class="role-group" @key="group.Role">
+					<h2 class="role-title">
+						@group.Role
+						<span class="role-count">@group.Units.Count</span>
+					</h2>
+					<ul class="unit-grid">
+						@foreach (var d in group.Units)
+						{
+							<li @key="d.Id">
+								<button class="unit-card" type="button" @onclick="() => Open(d)">
+									<span class="unit-name">@d.Name</span>
+									<span class="unit-meta">
+										@if (d.IsEpicHero)
+										{
+											<span class="chip epic">Epic Hero</span>
+										}
+										@if (d.IsMonster)
+										{
+											<span class="chip monster">Monster</span>
+										}
+										<span class="pts">@PointsLabel(d)</span>
+									</span>
+								</button>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+		}
+	}
+</div>
+
+<Sheet Open="_selected is not null" Eyebrow="@_selected?.PrimaryRole" Title="@_selected?.Name" OnCloseRequested="Close">
+	@if (_selected is { } d)
+	{
+		<div class="detail">
+			<div class="detail-meta">
+				<span class="chip solid">@PointsLabel(d)</span>
+				<span class="chip">Max @d.MaxCopies</span>
+				@if (d.IsCharacter)
+				{
+					<span class="chip">Character</span>
+				}
+				@if (d.IsBattleline)
+				{
+					<span class="chip">Battleline</span>
+				}
+				@if (d.WarlordEligible)
+				{
+					<span class="chip">Warlord-eligible</span>
+				}
+				@if (d.CanTakeEnhancements)
+				{
+					<span class="chip">Enhancements</span>
+				}
+				@if (d.HasLeaderAbility)
+				{
+					<span class="chip">Leader@(d.AllowsCoLeader ? " · co-lead" : "")</span>
+				}
+			</div>
+
+			@if (BindingFor(d) is { } binding)
+			{
+				<p class="binding">
+					<span class="binding-mark" aria-hidden="true"></span>
+					Pantheon of Woe — <strong>@binding.Name</strong> <span class="binding-pts">+@binding.Points pts</span>
+				</p>
+			}
+
+			@if (d.StatProfiles.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Profile</h3>
+					<div class="table-wrap">
+						<table class="stats">
+							<thead>
+								<tr>
+									@if (d.StatProfiles.Count > 1)
+									{
+										<th class="lcell">Model</th>
+									}
+									<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var s in d.StatProfiles)
+								{
+									<tr @key="s.Name">
+										@if (d.StatProfiles.Count > 1)
+										{
+											<td class="lcell">@s.Name</td>
+										}
+										<td>@s.Move</td><td>@s.Toughness</td><td>@s.Save</td>
+										<td>@s.Wounds</td><td>@s.Leadership</td><td>@s.ObjectiveControl</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			}
+
+			@if (d.Weapons.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Weapons</h3>
+					<div class="table-wrap">
+						<table class="weapons">
+							<thead>
+								<tr>
+									<th class="lcell">Name</th>
+									<th>Range</th><th>A</th><th>BS/WS</th><th>S</th><th>AP</th><th>D</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var w in d.Weapons)
+								{
+									<tr @key="w.Name">
+										<td class="lcell">
+											<span class="wname">@w.Name</span>
+											@if (w.Keywords.Count > 0)
+											{
+												<span class="wkw">@string.Join(", ", w.Keywords)</span>
+											}
+										</td>
+										<td>@Dash(w.Range)</td><td>@Dash(w.Attacks)</td><td>@Dash(w.Skill)</td>
+										<td>@Dash(w.Strength)</td><td>@Dash(w.ArmourPenetration)</td><td>@Dash(w.Damage)</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			}
+
+			@if (d.Abilities.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Abilities</h3>
+					<ul class="abilities">
+						@foreach (var a in d.Abilities)
+						{
+							<li @key="a.Name">
+								<span class="ability-name">@a.Name</span>
+								<span class="ability-text">@Clean(a.Text)</span>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+
+			@if (LeaderTargets(d).Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Can lead</h3>
+					<p class="lead-list">@string.Join(" · ", LeaderTargets(d))</p>
+				</section>
+			}
+
+			@if (d.PointsOptions.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Unit sizes</h3>
+					<ul class="sizes">
+						@foreach (var o in d.PointsOptions)
+						{
+							<li @key="o.Models"><span>@o.Models @(o.Models == 1 ? "model" : "models")</span><strong>@o.Points pts</strong></li>
+						}
+					</ul>
+				</section>
+			}
+
+			@if (d.FactionRules.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Faction rules</h3>
+					<div class="chips">
+						@foreach (var r in d.FactionRules)
+						{
+							<span class="chip" @key="r">@r</span>
+						}
+					</div>
+				</section>
+			}
+
+			@if (d.Keywords.Count > 0)
+			{
+				<section class="block">
+					<h3 class="block-title">Keywords</h3>
+					<div class="chips">
+						@foreach (var k in d.Keywords)
+						{
+							<span class="chip muted" @key="k">@k</span>
+						}
+					</div>
+				</section>
+			}
+		</div>
+	}
+</Sheet>
+
+@code {
+	private static readonly string[] RoleOrder =
+	{
+		"Epic Hero", "Character", "Battleline", "Infantry",
+		"Mounted", "Beast", "Swarm", "Vehicle",
+		"Dedicated Transport", "Fortification",
+	};
+
+	private CatalogueData _catalogue = new();
+	private bool _loading = true;
+	private bool _authenticated;
+	private string _query = "";
+	private Datasheet? _selected;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+			_catalogue = await Api.GetCatalogueAsync();
+		_loading = false;
+	}
+
+	private void Open(Datasheet d) => _selected = d;
+
+	private void Close() => _selected = null;
+
+	private void Clear() => _query = "";
+
+	private int MatchCount => _catalogue.Datasheets.Count(d => Matches(d, _query.Trim()));
+
+	private IEnumerable<RoleGroup> Groups()
+	{
+		var q = _query.Trim();
+		return _catalogue.Datasheets
+			.Where(d => Matches(d, q))
+			.GroupBy(d => string.IsNullOrWhiteSpace(d.PrimaryRole) ? "Other" : d.PrimaryRole)
+			.OrderBy(g => RoleRank(g.Key))
+			.ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+			.Select(g => new RoleGroup(
+				g.Key,
+				g.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList()));
+	}
+
+	private static int RoleRank(string role)
+	{
+		var i = Array.FindIndex(RoleOrder, r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
+		return i < 0 ? RoleOrder.Length : i;
+	}
+
+	private static bool Matches(Datasheet d, string q)
+	{
+		if (q.Length == 0)
+			return true;
+		return d.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+			|| d.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase))
+			|| d.FactionRules.Any(r => r.Contains(q, StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static string PointsLabel(Datasheet d) =>
+		d.PointsOptions.Count > 1
+			? $"from {d.PointsOptions.Min(p => p.Points)} pts"
+			: $"{d.Points} pts";
+
+	private PantheonBinding? BindingFor(Datasheet d) =>
+		d.IsMonster ? _catalogue.FindBindingForUnit(d.Name) : null;
+
+	private IReadOnlyList<string> LeaderTargets(Datasheet d) =>
+		d.LeaderTargetIds
+			.Select(id => _catalogue.FindById(id)?.Name)
+			.Where(name => name is not null)
+			.Select(name => name!)
+			.ToList();
+
+	private static string Dash(string value) => string.IsNullOrWhiteSpace(value) ? "–" : value;
+
+	private static string Clean(string text) =>
+		text.Replace("^^**", "", StringComparison.Ordinal)
+			.Replace("**", "", StringComparison.Ordinal)
+			.Replace("^^", "", StringComparison.Ordinal)
+			.Replace("■", "•", StringComparison.Ordinal)
+			.Trim();
+
+	private sealed record RoleGroup(string Role, IReadOnlyList<Datasheet> Units);
+}

@@ -36,6 +36,12 @@ Each packet must build and keep tests green before the next.
   - Client: `IApiClient.GetCatalogueAsync` (Core) + `ApiClient` impl (UI) with empty-`CatalogueData` fallback matching the existing resilience pattern.
   - Real-seed test `Warhammer40k.Tests/CatalogueProviderTests.cs`: 52 datasheets / 4 bindings + derivation spot-checks (slug ids, copy caps, Overlord leader/Warlord eligibility, C'tan restrictions, every Monster → its binding, binding details, provider caching). **43 tests green.**
   - NEXT: **AB3** — tabbed nav + Catalogue browse tab (52 units grouped by role, searchable, detail sheet), themed.
+- **AB3 — done.** Deployable.
+  - Nav: added a **Catalogue** pill to `MainLayout` (Home · Catalogue · Armies).
+  - Reusable `Components/Sheet.razor` (+ scoped CSS): accessible `role="dialog"` modal that renders as a bottom-sheet on mobile and a centered modal ≥720px (the spec's "iOS sheet"; reused by AB6). Closes via backdrop or button.
+  - `Pages/Catalogue.razor` (+ scoped CSS): auth-gated load via `IApiClient.GetCatalogueAsync`; live search over name/keywords/faction-rules; all 52 datasheets grouped by `PrimaryRole` in battle order; themed unit cards open the detail Sheet (stat table, weapons table, cleaned ability text, leader targets, unit sizes, faction-rule/keyword chips, and the Pantheon binding surcharge for Monsters).
+  - UI builds clean (0/0); 43 tests still green.
+  - NEXT: **AB4** — `Roster`/`RosterUnit`/`Detachment`/`Enhancement` model + rules R1–R11 + `RosterValidator` + rules tests + §6 integration test (Core, Tests).
 - **Pending from user:** spec **§10 & §11** (detachment rules, enhancement definitions + per-enhancement eligibility, stratagems). Until then R2/R6 eligibility stays permissive with a TODO.
 
 ## Derived-at-load fields (computed once by `CatalogueSeedLoader.Enrich`)

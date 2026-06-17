@@ -1,0 +1,42 @@
+@namespace Warhammer40k._11.Components
+
+@if (Open)
+{
+	<div class="sheet-backdrop" @onclick="CloseAsync">
+		<div class="sheet" role="dialog" aria-modal="true" aria-label="@Title"
+			 @onclick:stopPropagation="true">
+			<header class="sheet-head">
+				<div class="sheet-titles">
+					@if (!string.IsNullOrWhiteSpace(Eyebrow))
+					{
+						<p class="sheet-eyebrow">@Eyebrow</p>
+					}
+					<h2 class="sheet-title">@Title</h2>
+				</div>
+				<button type="button" class="sheet-close" aria-label="Close" @onclick="CloseAsync">✕</button>
+			</header>
+			<div class="sheet-body">
+				@ChildContent
+			</div>
+		</div>
+	</div>
+}
+
+@code {
+	/// <summary>Whether the sheet is shown.</summary>
+	[Parameter] public bool Open { get; set; }
+
+	/// <summary>Small label rendered above the title.</summary>
+	[Parameter] public string? Eyebrow { get; set; }
+
+	/// <summary>Accessible title shown in the sheet header.</summary>
+	[Parameter] public string? Title { get; set; }
+
+	/// <summary>The sheet content.</summary>
+	[Parameter] public RenderFragment? ChildContent { get; set; }
+
+	/// <summary>Raised when the user dismisses the sheet (backdrop click or close button).</summary>
+	[Parameter] public EventCallback OnCloseRequested { get; set; }
+
+	private Task CloseAsync() => OnCloseRequested.InvokeAsync();
+}

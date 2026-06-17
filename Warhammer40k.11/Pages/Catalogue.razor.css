@@ -1,0 +1,495 @@
+.catalogue {
+    max-width: 52rem;
+    margin: 1.5rem auto;
+}
+
+/* ---- Header (matches the app's page-head pattern) ---- */
+.head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.eyebrow {
+    margin: 0 0 0.15rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+}
+
+.head h1 {
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+
+.count {
+    flex: none;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+/* ---- Shared primitives ---- */
+.card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(180deg, rgba(53, 240, 160, 0.05), transparent 38%),
+        var(--surface);
+    box-shadow: var(--shadow), var(--shadow-inset);
+}
+
+.pad {
+    padding: 1.5rem;
+}
+
+.signin {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--text);
+}
+
+.pulse {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: var(--glow-sm);
+    animation: cat-pulse 1.4s var(--ease) infinite;
+}
+
+@keyframes cat-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.3rem;
+    min-height: 44px;
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.15s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.btn.primary {
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    color: #03150d;
+    box-shadow: var(--glow-sm);
+}
+
+.btn.primary:hover {
+    box-shadow: var(--glow);
+    transform: translateY(-1px);
+}
+
+/* ---- Search ---- */
+.search {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 1.15rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.7rem 2.6rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    background: rgba(4, 10, 8, 0.6);
+    color: var(--text);
+    transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.search-input::placeholder {
+    color: var(--text-faint);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--glow-sm);
+}
+
+.search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search-clear {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.9rem;
+    height: 1.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.search-clear:hover {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* ---- Role groups ---- */
+.role-group {
+    margin-bottom: 1.75rem;
+}
+
+.role-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.85rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.role-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: 0.75rem;
+    letter-spacing: 0;
+}
+
+/* ---- Unit cards ---- */
+.unit-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+    gap: 0.7rem;
+}
+
+.unit-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(180deg, rgba(53, 240, 160, 0.05), transparent 45%),
+        var(--surface);
+    box-shadow: var(--shadow-inset);
+    transition: transform 0.14s var(--ease), border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.unit-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: var(--glow-sm), var(--shadow-inset);
+}
+
+.unit-name {
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    line-height: 1.2;
+    color: #eafff5;
+    letter-spacing: 0.01em;
+}
+
+.unit-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: auto;
+}
+
+.pts {
+    margin-left: auto;
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* ---- Chips ---- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.chip.solid {
+    background: var(--accent-soft);
+    border-color: var(--border-strong);
+    color: var(--accent-strong);
+}
+
+.chip.muted {
+    background: transparent;
+    color: var(--text-faint);
+}
+
+.chip.epic {
+    background: rgba(255, 196, 86, 0.12);
+    border-color: rgba(255, 196, 86, 0.4);
+    color: #ffd98a;
+}
+
+.chip.monster {
+    background: rgba(86, 240, 180, 0.1);
+    border-color: var(--border-strong);
+    color: var(--accent-strong);
+}
+
+/* ---- Detail sheet content ---- */
+.detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.binding {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.9rem 0 0;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.binding-mark {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex: none;
+    transform: rotate(45deg);
+    background: var(--accent);
+    box-shadow: var(--glow-sm);
+}
+
+.binding-pts {
+    margin-left: auto;
+    color: var(--accent-strong);
+    font-weight: 700;
+}
+
+.block {
+    margin-top: 1.4rem;
+}
+
+.block-title {
+    margin: 0 0 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+table.stats,
+table.weapons {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    min-width: 22rem;
+}
+
+table.stats th,
+table.weapons th {
+    padding: 0.5rem 0.55rem;
+    text-align: center;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+}
+
+table.stats td,
+table.weapons td {
+    padding: 0.5rem 0.55rem;
+    text-align: center;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+
+table.stats tr:last-child td,
+table.weapons tr:last-child td {
+    border-bottom: none;
+}
+
+.lcell {
+    text-align: left !important;
+}
+
+.wname {
+    display: block;
+    color: #eafff5;
+    font-weight: 600;
+}
+
+.wkw {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--text-faint);
+    font-size: 0.75rem;
+}
+
+/* ---- Abilities ---- */
+.abilities {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.abilities li {
+    border-left: 2px solid var(--border-strong);
+    padding-left: 0.75rem;
+}
+
+.ability-name {
+    display: block;
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 0.15rem;
+}
+
+.ability-text {
+    display: block;
+    white-space: pre-line;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.lead-list {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.92rem;
+}
+
+/* ---- Unit sizes ---- */
+.sizes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.sizes li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    font-size: 0.9rem;
+}
+
+.sizes strong {
+    color: var(--accent-strong);
+}
+
+/* ---- Chip groups ---- */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+@media (max-width: 420px) {
+    .unit-grid {
+        grid-template-columns: 1fr;
+    }
+}
