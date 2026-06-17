@@ -1,0 +1,16 @@
+## .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+
+## Azure Functions
+local.settings.json
+
+## SWA CLI
+.swa/
+swa-cli.output/
+
+## Publish output
+publish/
+*.publishsettings

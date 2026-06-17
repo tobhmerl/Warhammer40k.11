@@ -1,0 +1,12 @@
+<Solution>
+  <Project Path="Warhammer40k.11/Warhammer40k.11.csproj" />
+  <Project Path="Warhammer40k.Api/Warhammer40k.Api.csproj">
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
+  <Project Path="Warhammer40k.Core/Warhammer40k.Core.csproj">
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
+  <Project Path="Warhammer40k.Tests/Warhammer40k.Tests.csproj">
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
+</Solution>

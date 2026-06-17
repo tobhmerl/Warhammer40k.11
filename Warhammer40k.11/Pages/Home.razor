@@ -1,0 +1,56 @@
+﻿@page "/"
+@using Warhammer40k.Core
+@inject IApiClient Api
+
+<PageTitle>TombForge</PageTitle>
+
+<div class="hero">
+    <h1>TombForge</h1>
+    <p class="tagline">Warhammer&nbsp;40k army builder &mdash; Phase&nbsp;1 skeleton (M0)</p>
+
+    <div class="auth-card">
+        @if (_loading)
+        {
+            <p class="status">Checking sign-in&hellip;</p>
+        }
+        else if (_user is { IsAuthenticated: true })
+        {
+            <p class="status ok">
+                Signed in as <strong>@_user.UserName</strong>
+                @if (!string.IsNullOrWhiteSpace(_user.IdentityProvider))
+                {
+                    <span> via @_user.IdentityProvider</span>
+                }
+            </p>
+            <a class="btn" href="/.auth/logout">Sign out</a>
+        }
+        else
+        {
+            <p class="status">Not signed in.</p>
+            <a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+        }
+    </div>
+
+    <p class="hint">
+        Login &amp; <code>/api/whoami</code> work when running under <code>swa start</code> or once
+        deployed to Azure Static Web Apps. With a plain <code>dotnet run</code> the API isn't present,
+        so this card shows <em>Not signed in</em> &mdash; that's expected.
+    </p>
+</div>
+
+@code {
+    private UserInfo? _user;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _user = await Api.GetCurrentUserAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

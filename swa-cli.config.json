@@ -1,0 +1,14 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "warhammer40k": {
+      "appLocation": ".",
+      "apiLocation": "Warhammer40k.Api",
+      "outputLocation": "Warhammer40k.11/bin/Release/net10.0/publish/wwwroot",
+      "appBuildCommand": "dotnet publish Warhammer40k.11/Warhammer40k.11.csproj -c Release",
+      "apiBuildCommand": "dotnet publish Warhammer40k.Api/Warhammer40k.Api.csproj -c Release",
+      "apiLanguage": "dotnet-isolated",
+      "apiVersion": "10.0"
+    }
+  }
+}
