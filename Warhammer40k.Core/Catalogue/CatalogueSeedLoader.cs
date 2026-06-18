@@ -1,5 +1,5 @@
-using System.Text;
 using System.Text.Json;
+using Warhammer40k.Core.Text;
 
 namespace Warhammer40k.Core.Catalogue;
 
@@ -40,7 +40,10 @@ public static class CatalogueSeedLoader
         // First pass: id + per-datasheet flags.
         foreach (var d in data.Datasheets)
         {
-            d.Id = Slug(d.Name);
+            // Preserve an existing id so editing/renaming a datasheet in the Catalogue editor doesn't
+            // silently break roster references; only derive a slug for new (id-less) datasheets.
+            if (string.IsNullOrEmpty(d.Id))
+                d.Id = Slug(d.Name);
             d.IsMonster = d.Keywords.Any(k => k.Equals("Monster", StringComparison.OrdinalIgnoreCase));
             d.IsUnique = d.IsEpicHero;
             d.MaxCopies = d.IsEpicHero ? 1 : (d.IsBattleline || d.IsDedicatedTransport ? 6 : 3);
@@ -96,32 +99,5 @@ public static class CatalogueSeedLoader
             .Replace("■", " ", StringComparison.Ordinal);
 
     /// <summary>Turns a unit name into a stable lowercase slug ("C'tan Shard of the Deceiver" → "ctan-shard-of-the-deceiver").</summary>
-    private static string Slug(string name)
-    {
-        var sb = new StringBuilder(name.Length);
-        var lastDash = false;
-        foreach (var ch in name)
-        {
-            if (char.IsLetterOrDigit(ch))
-            {
-                sb.Append(char.ToLowerInvariant(ch));
-                lastDash = false;
-            }
-            else if (ch is '\'' or '\u2019')
-            {
-                // drop apostrophes so "C'tan" -> "ctan"
-                continue;
-            }
-            else if (!lastDash && sb.Length > 0)
-            {
-                sb.Append('-');
-                lastDash = true;
-            }
-        }
-
-        while (sb.Length > 0 && sb[^1] == '-')
-            sb.Length--;
-
-        return sb.ToString();
-    }
+    private static string Slug(string name) => Slugger.Slug(name);
 }

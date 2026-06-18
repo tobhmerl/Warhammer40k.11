@@ -43,6 +43,25 @@
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+        // Minimal interop for the Settings tab (AB8): theme switch + JSON file download.
+        window.tombforge = {
+            setTheme: function (id) {
+                document.documentElement.setAttribute('data-theme', id || 'phosphor');
+            },
+            download: function (filename, text) {
+                const blob = new Blob([text], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        };
+    </script>
 </body>
 
 </html>

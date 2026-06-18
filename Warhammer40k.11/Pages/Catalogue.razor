@@ -13,7 +13,10 @@
 		</div>
 		@if (!_loading && _authenticated && _catalogue.Datasheets.Count > 0)
 		{
-			<span class="count">@_catalogue.Datasheets.Count units</span>
+			<div class="head-actions">
+				<span class="count">@_catalogue.Datasheets.Count units</span>
+				<a class="edit-link" href="catalogue/edit">Edit catalogue</a>
+			</div>
 		}
 	</header>
 

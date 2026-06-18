@@ -41,6 +41,31 @@
     white-space: nowrap;
 }
 
+.head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: none;
+}
+
+.edit-link {
+    padding: 0.3rem 0.85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.edit-link:hover {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
 /* ---- Shared primitives ---- */
 .card {
     border: 1px solid var(--border);

@@ -26,16 +26,17 @@
     --accent: #35f0a0;
     --accent-strong: #6affc2;
     --accent-deep: #15c47f;
-    --accent-soft: rgba(53, 240, 160, 0.14);
-    --accent-line: rgba(53, 240, 160, 0.5);
+    --accent-rgb: 53, 240, 160; /* drives accent tints + glows so themes can swap the palette */
+    --accent-soft: rgba(var(--accent-rgb), 0.14);
+    --accent-line: rgba(var(--accent-rgb), 0.5);
 
     /* Destructive */
     --danger: #ff5f56;
     --danger-soft: rgba(255, 95, 86, 0.14);
 
     /* Effects */
-    --glow: 0 0 0.6rem rgba(53, 240, 160, 0.45), 0 0 1.6rem rgba(53, 240, 160, 0.18);
-    --glow-sm: 0 0 0.4rem rgba(53, 240, 160, 0.4);
+    --glow: 0 0 0.6rem rgba(var(--accent-rgb), 0.45), 0 0 1.6rem rgba(var(--accent-rgb), 0.18);
+    --glow-sm: 0 0 0.4rem rgba(var(--accent-rgb), 0.4);
     --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.85);
     --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
@@ -48,6 +49,34 @@
     /* Type */
     --font-ui: "Rajdhani", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
     --font-display: "Orbitron", "Rajdhani", system-ui, sans-serif;
+}
+
+/* ---- Themes (AB8): swap the accent palette; tints/glows follow --accent-rgb ---- */
+[data-theme="arcane"] {
+    --accent: #4aa8ff;
+    --accent-strong: #8fc8ff;
+    --accent-deep: #1f6fe0;
+    --accent-rgb: 74, 168, 255;
+    --border: rgba(74, 168, 255, 0.16);
+    --border-strong: rgba(74, 168, 255, 0.36);
+}
+
+[data-theme="ember"] {
+    --accent: #ff9d2e;
+    --accent-strong: #ffc06a;
+    --accent-deep: #d77400;
+    --accent-rgb: 255, 157, 46;
+    --border: rgba(255, 157, 46, 0.16);
+    --border-strong: rgba(255, 157, 46, 0.36);
+}
+
+[data-theme="blood"] {
+    --accent: #ff5f6d;
+    --accent-strong: #ff97a0;
+    --accent-deep: #c8324a;
+    --accent-rgb: 255, 95, 109;
+    --border: rgba(255, 95, 109, 0.16);
+    --border-strong: rgba(255, 95, 109, 0.36);
 }
 
 *,
@@ -69,7 +98,7 @@ body {
     color: var(--text);
     background-color: var(--bg);
     background-image:
-        radial-gradient(1200px 600px at 50% -10%, rgba(53, 240, 160, 0.10), transparent 60%),
+        radial-gradient(1200px 600px at 50% -10%, rgba(var(--accent-rgb), 0.10), transparent 60%),
         radial-gradient(900px 520px at 100% 0%, rgba(21, 196, 127, 0.06), transparent 55%),
         linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
     background-attachment: fixed;
@@ -85,8 +114,8 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background-image:
-        linear-gradient(rgba(53, 240, 160, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(53, 240, 160, 0.035) 1px, transparent 1px);
+        linear-gradient(rgba(var(--accent-rgb), 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--accent-rgb), 0.035) 1px, transparent 1px);
     background-size: 46px 46px;
     -webkit-mask-image: radial-gradient(circle at 50% 28%, #000 0%, transparent 75%);
     mask-image: radial-gradient(circle at 50% 28%, #000 0%, transparent 75%);

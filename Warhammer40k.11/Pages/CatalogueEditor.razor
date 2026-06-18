@@ -1,0 +1,472 @@
+@page "/catalogue/edit"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@inject IApiClient Api
+
+<PageTitle>TombForge — Edit catalogue</PageTitle>
+
+<div class="cat-editor">
+	<a class="back" href="catalogue">&larr; Catalogue</a>
+
+	<header class="head">
+		<div>
+			<p class="eyebrow">Authoring</p>
+			<h1>Edit catalogue</h1>
+		</div>
+		@if (!_loading && _authenticated)
+		{
+			<div class="head-actions">
+				<button class="btn small primary" type="button" disabled="@(_saving || !_dirty)" @onclick="SaveAsync">
+					@(_saving ? "Saving…" : _dirty ? "Save" : "Saved")
+				</button>
+				@if (!_confirmReset)
+				{
+					<button class="btn small ghost" type="button" @onclick="() => _confirmReset = true">Reset</button>
+				}
+				else
+				{
+					<button class="btn small danger" type="button" @onclick="ResetAsync">Confirm reset</button>
+					<button class="btn small ghost" type="button" @onclick="() => _confirmReset = false">Cancel</button>
+				}
+			</div>
+		}
+	</header>
+
+	@if (_loading)
+	{
+		<div class="card pad"><p class="status"><span class="pulse" aria-hidden="true"></span> Loading catalogue&hellip;</p></div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad signin">
+			<p class="status">Sign in to edit the catalogue.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else
+	{
+		@if (_error is not null)
+		{
+			<p class="error">@_error</p>
+		}
+
+		@if (_issues.Count > 0)
+		{
+			<section class="panel @(_panelOpen ? "open" : "")">
+				<button class="panel-head" type="button" @onclick="() => _panelOpen = !_panelOpen" aria-expanded="@_panelOpen">
+					<span class="panel-title">
+						Referential integrity
+						<span class="badge @(_issues.Any(i => i.IsError) ? "bad" : "warn")">@_issues.Count</span>
+					</span>
+					<span class="chev" aria-hidden="true">@(_panelOpen ? "▾" : "▸")</span>
+				</button>
+				@if (_panelOpen)
+				{
+					<ul class="messages">
+						@foreach (var issue in _issues)
+						{
+							<li class="msg @(issue.IsError ? "error" : "warn")" @key="issue">
+								<span class="lvl">@(issue.IsError ? "Error" : "Warn")</span>
+								<span class="msg-text">@issue.Text</span>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		}
+
+		<div class="toolbar">
+			<div class="search">
+				<span class="search-icon" aria-hidden="true">⌕</span>
+				<input class="search-input" type="search" placeholder="Search datasheets…" aria-label="Search datasheets"
+					   @bind="_query" @bind:event="oninput" autocomplete="off" spellcheck="false" />
+			</div>
+			<button class="btn primary" type="button" @onclick="AddDatasheet">New datasheet</button>
+		</div>
+
+		<p class="hint">@Filtered().Count of @_catalogue.Datasheets.Count datasheets</p>
+
+		<ul class="ds-list">
+			@foreach (var d in Filtered())
+			{
+				<li class="ds-row" @key="d">
+					<button class="ds-open" type="button" @onclick="() => EditDatasheet(d)">
+						<span class="ds-name">@(string.IsNullOrWhiteSpace(d.Name) ? "(unnamed)" : d.Name)</span>
+						<span class="ds-meta">
+							<span class="role">@(string.IsNullOrWhiteSpace(d.PrimaryRole) ? "—" : d.PrimaryRole)</span>
+							<span class="dot">·</span>
+							<span>@d.PointsOptions.Count @(d.PointsOptions.Count == 1 ? "size" : "sizes")</span>
+							@if (d.WargearGroups.Count > 0)
+							{
+								<span class="dot">·</span>
+								<span>@d.WargearGroups.Count wargear</span>
+							}
+						</span>
+					</button>
+					<button class="btn small danger" type="button" @onclick="() => DeleteDatasheet(d)">Delete</button>
+				</li>
+			}
+		</ul>
+	}
+</div>
+
+<Sheet Open="_editing is not null" Eyebrow="Datasheet"
+	   Title="@(_editing is null ? null : string.IsNullOrWhiteSpace(_editing.Name) ? "New datasheet" : _editing.Name)"
+	   OnCloseRequested="CloseEditor">
+	@if (_editing is { } d)
+	{
+		<div class="dsedit">
+			<section class="sec">
+				<div class="grid2">
+					<label class="field"><span>Name</span>
+						<input class="input" @bind="d.Name" @bind:after="OnChanged" maxlength="80" />
+					</label>
+					<label class="field"><span>Primary role</span>
+						<input class="input" list="roles" @bind="d.PrimaryRole" @bind:after="OnChanged" />
+						<datalist id="roles">
+							@foreach (var r in RoleOptions)
+							{
+								<option value="@r" />
+							}
+						</datalist>
+					</label>
+				</div>
+				<div class="flags">
+					<label class="flag"><input type="checkbox" @bind="d.IsCharacter" @bind:after="OnChanged" /> Character</label>
+					<label class="flag"><input type="checkbox" @bind="d.IsBattleline" @bind:after="OnChanged" /> Battleline</label>
+					<label class="flag"><input type="checkbox" @bind="d.IsDedicatedTransport" @bind:after="OnChanged" /> Dedicated Transport</label>
+					<label class="flag"><input type="checkbox" @bind="d.IsEpicHero" @bind:after="OnChanged" /> Epic Hero</label>
+				</div>
+				<p class="derived">
+					id <code>@(string.IsNullOrEmpty(d.Id) ? "(set on save)" : d.Id)</code>
+					· max @d.MaxCopies
+					@if (d.IsMonster)
+					{
+						<span>· Monster</span>
+					}
+					@if (d.WarlordEligible)
+					{
+						<span>· Warlord-eligible</span>
+					}
+				</p>
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Keywords</h3>
+				<div class="chips-edit">
+					@foreach (var k in d.Keywords)
+					{
+						<span class="chip" @key="k">@k <button type="button" class="x" @onclick="() => RemoveFrom(d.Keywords, k)">✕</button></span>
+					}
+				</div>
+				<div class="add-row">
+					<input class="input" @bind="_newKeyword" placeholder="e.g. Faction: Necrons" @onkeydown="@(e => OnAddKey(e, () => AddTo(d.Keywords, ref _newKeyword)))" />
+					<button class="btn small ghost" type="button" @onclick="() => AddTo(d.Keywords, ref _newKeyword)">Add</button>
+				</div>
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Faction rules</h3>
+				<div class="chips-edit">
+					@foreach (var r in d.FactionRules)
+					{
+						<span class="chip" @key="r">@r <button type="button" class="x" @onclick="() => RemoveFrom(d.FactionRules, r)">✕</button></span>
+					}
+				</div>
+				<div class="add-row">
+					<input class="input" @bind="_newRule" placeholder="e.g. Reanimation Protocols" @onkeydown="@(e => OnAddKey(e, () => AddTo(d.FactionRules, ref _newRule)))" />
+					<button class="btn small ghost" type="button" @onclick="() => AddTo(d.FactionRules, ref _newRule)">Add</button>
+				</div>
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Unit sizes <button class="btn tiny ghost" type="button" @onclick="() => AddPointsOption(d)">+ size</button></h3>
+				@foreach (var o in d.PointsOptions)
+				{
+					<div class="row" @key="o">
+						<label class="mini"><span>Models</span><input class="input" type="number" min="1" @bind="o.Models" @bind:after="OnChanged" /></label>
+						<label class="mini"><span>Points</span><input class="input" type="number" min="0" step="5" @bind="o.Points" @bind:after="OnChanged" /></label>
+						<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(d.PointsOptions, o)">Remove</button>
+					</div>
+				}
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Stat profiles <button class="btn tiny ghost" type="button" @onclick="() => AddStat(d)">+ profile</button></h3>
+				@foreach (var s in d.StatProfiles)
+				{
+					<div class="statrow" @key="s">
+						<input class="input pname" placeholder="Profile" @bind="s.Name" @bind:after="OnChanged" />
+						<input class="input" placeholder="M" @bind="s.Move" @bind:after="OnChanged" />
+						<input class="input" placeholder="T" @bind="s.Toughness" @bind:after="OnChanged" />
+						<input class="input" placeholder="SV" @bind="s.Save" @bind:after="OnChanged" />
+						<input class="input" placeholder="W" @bind="s.Wounds" @bind:after="OnChanged" />
+						<input class="input" placeholder="LD" @bind="s.Leadership" @bind:after="OnChanged" />
+						<input class="input" placeholder="OC" @bind="s.ObjectiveControl" @bind:after="OnChanged" />
+						<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(d.StatProfiles, s)">✕</button>
+					</div>
+				}
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Weapons <button class="btn tiny ghost" type="button" @onclick="() => AddWeapon(d)">+ weapon</button></h3>
+				@foreach (var w in d.Weapons)
+				{
+					<div class="weapon" @key="w">
+						<div class="wtop">
+							<input class="input pname" placeholder="Name" @bind="w.Name" @bind:after="OnChanged" />
+							<input class="input wtype" placeholder="Type" @bind="w.Type" @bind:after="OnChanged" />
+							<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(d.Weapons, w)">✕</button>
+						</div>
+						<div class="wstats">
+							<input class="input" placeholder="Range" @bind="w.Range" @bind:after="OnChanged" />
+							<input class="input" placeholder="A" @bind="w.Attacks" @bind:after="OnChanged" />
+							<input class="input" placeholder="BS/WS" @bind="w.Skill" @bind:after="OnChanged" />
+							<input class="input" placeholder="S" @bind="w.Strength" @bind:after="OnChanged" />
+							<input class="input" placeholder="AP" @bind="w.ArmourPenetration" @bind:after="OnChanged" />
+							<input class="input" placeholder="D" @bind="w.Damage" @bind:after="OnChanged" />
+						</div>
+						<input class="input" placeholder="Keywords (comma-separated)" value="@string.Join(", ", w.Keywords)"
+							   @onchange="e => SetWeaponKeywords(w, e.Value?.ToString())" />
+					</div>
+				}
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Abilities <button class="btn tiny ghost" type="button" @onclick="() => AddAbility(d)">+ ability</button></h3>
+				@foreach (var a in d.Abilities)
+				{
+					<div class="ability" @key="a">
+						<div class="atop">
+							<input class="input pname" placeholder="Name" @bind="a.Name" @bind:after="OnChanged" />
+							<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(d.Abilities, a)">✕</button>
+						</div>
+						<textarea class="input" rows="2" placeholder="Ability text" @bind="a.Text" @bind:after="OnChanged"></textarea>
+					</div>
+				}
+			</section>
+
+			<section class="sec">
+				<h3 class="sec-title">Wargear option-groups <button class="btn tiny ghost" type="button" @onclick="() => AddWargearGroup(d)">+ group</button></h3>
+				@if (d.WargearGroups.Count == 0)
+				{
+					<p class="cfg-note">No wargear groups — units of this datasheet take no wargear choices.</p>
+				}
+				@foreach (var g in d.WargearGroups)
+				{
+					<div class="wgroup" @key="g">
+						<div class="wgtop">
+							<input class="input pname" placeholder="Group name" @bind="g.Name" @bind:after="OnChanged" />
+							<label class="mini"><span>Min</span><input class="input" type="number" min="0" @bind="g.Min" @bind:after="OnChanged" /></label>
+							<label class="mini"><span>Max</span><input class="input" type="number" min="0" @bind="g.Max" @bind:after="OnChanged" /></label>
+							<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(d.WargearGroups, g)">✕</button>
+						</div>
+						<div class="wopts">
+							@foreach (var o in g.Options)
+							{
+								<div class="wopt" @key="o">
+									<input class="input" placeholder="Option name" @bind="o.Name" @bind:after="OnChanged" />
+									<button class="btn tiny danger" type="button" @onclick="() => RemoveFrom(g.Options, o)">✕</button>
+								</div>
+							}
+							<button class="btn tiny ghost" type="button" @onclick="() => AddWargearOption(g)">+ option</button>
+						</div>
+					</div>
+				}
+			</section>
+
+			<div class="dsedit-actions">
+				<button class="btn ghost" type="button" @onclick="CloseEditor">Done</button>
+			</div>
+		</div>
+	}
+</Sheet>
+
+@code {
+	private static readonly string[] RoleOptions =
+	{
+		"Epic Hero", "Character", "Battleline", "Infantry",
+		"Mounted", "Beast", "Swarm", "Vehicle",
+		"Dedicated Transport", "Fortification",
+	};
+
+	private CatalogueData _catalogue = new();
+	private IReadOnlyList<CatalogueIssue> _issues = Array.Empty<CatalogueIssue>();
+
+	private bool _loading = true;
+	private bool _authenticated;
+	private bool _saving;
+	private bool _dirty;
+	private bool _panelOpen;
+	private bool _confirmReset;
+	private string? _error;
+	private string _query = "";
+
+	private Datasheet? _editing;
+	private string _newKeyword = "";
+	private string _newRule = "";
+
+	protected override async Task OnInitializedAsync()
+	{
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			_catalogue = await Api.GetCatalogueAsync();
+			Recompute();
+		}
+		_loading = false;
+	}
+
+	private void Recompute()
+	{
+		CatalogueSeedLoader.Enrich(_catalogue);
+		_issues = CatalogueIntegrity.Check(_catalogue);
+	}
+
+	private void OnChanged()
+	{
+		Recompute();
+		_dirty = true;
+	}
+
+	private List<Datasheet> Filtered()
+	{
+		var q = _query.Trim();
+		return _catalogue.Datasheets
+			.Where(d => q.Length == 0
+				|| d.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+				|| d.PrimaryRole.Contains(q, StringComparison.OrdinalIgnoreCase)
+				|| d.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase)))
+			.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+	}
+
+	private void AddDatasheet()
+	{
+		var d = new Datasheet { Name = "", PrimaryRole = "Infantry", Keywords = { "Faction: Necrons" } };
+		_catalogue.Datasheets.Add(d);
+		_editing = d;
+		OnChanged();
+	}
+
+	private void EditDatasheet(Datasheet d) => _editing = d;
+
+	private void DeleteDatasheet(Datasheet d)
+	{
+		_catalogue.Datasheets.Remove(d);
+		if (ReferenceEquals(_editing, d))
+			_editing = null;
+		OnChanged();
+	}
+
+	private void CloseEditor() => _editing = null;
+
+	private void AddPointsOption(Datasheet d)
+	{
+		d.PointsOptions.Add(new PointsOption { Models = 1, Points = 0 });
+		OnChanged();
+	}
+
+	private void AddStat(Datasheet d)
+	{
+		d.StatProfiles.Add(new StatProfile());
+		OnChanged();
+	}
+
+	private void AddWeapon(Datasheet d)
+	{
+		d.Weapons.Add(new WeaponProfile());
+		OnChanged();
+	}
+
+	private void AddAbility(Datasheet d)
+	{
+		d.Abilities.Add(new Ability());
+		OnChanged();
+	}
+
+	private void AddWargearGroup(Datasheet d)
+	{
+		d.WargearGroups.Add(new WargearGroup { Id = NewId(), Name = "", Min = 0, Max = 1 });
+		OnChanged();
+	}
+
+	private void AddWargearOption(WargearGroup g)
+	{
+		g.Options.Add(new WargearOption { Id = NewId(), Name = "" });
+		OnChanged();
+	}
+
+	private void AddTo(List<string> list, ref string value)
+	{
+		var v = value.Trim();
+		if (v.Length > 0 && !list.Contains(v, StringComparer.OrdinalIgnoreCase))
+			list.Add(v);
+		value = "";
+		OnChanged();
+	}
+
+	private void RemoveFrom<T>(List<T> list, T item)
+	{
+		list.Remove(item);
+		OnChanged();
+	}
+
+	private void SetWeaponKeywords(WeaponProfile w, string? csv)
+	{
+		w.Keywords = (csv ?? "")
+			.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			.ToList();
+		OnChanged();
+	}
+
+	private void OnAddKey(KeyboardEventArgs e, Action add)
+	{
+		if (e.Key == "Enter")
+			add();
+	}
+
+	private async Task SaveAsync()
+	{
+		_saving = true;
+		_error = null;
+		try
+		{
+			var editingId = _editing?.Id;
+			var saved = await Api.SaveCatalogueAsync(_catalogue);
+			_catalogue = saved;
+			Recompute();
+			_dirty = false;
+			// Keep the editor open on the same datasheet if it survived the round-trip.
+			_editing = editingId is null ? null : _catalogue.FindById(editingId);
+		}
+		catch (Exception)
+		{
+			_error = "Could not save the catalogue. Please try again.";
+		}
+		finally
+		{
+			_saving = false;
+		}
+	}
+
+	private async Task ResetAsync()
+	{
+		_confirmReset = false;
+		_error = null;
+		try
+		{
+			_catalogue = await Api.ResetCatalogueAsync();
+			_editing = null;
+			Recompute();
+			_dirty = false;
+		}
+		catch (Exception)
+		{
+			_error = "Could not reset the catalogue. Please try again.";
+		}
+	}
+
+	private static string NewId() => Guid.NewGuid().ToString("n")[..8];
+}

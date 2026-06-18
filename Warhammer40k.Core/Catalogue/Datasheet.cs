@@ -24,6 +24,12 @@ public sealed class Datasheet
     [JsonPropertyName("weapons")] public List<WeaponProfile> Weapons { get; set; } = [];
     [JsonPropertyName("pointsOptions")] public List<PointsOption> PointsOptions { get; set; } = [];
 
+    /// <summary>
+    /// Authored wargear option-groups (§12: empty-but-present until authored in the Catalogue editor).
+    /// A unit's selections (<see cref="Warhammer40k.Core.Rosters.RosterUnit.Wargear"/>) are validated against these by rule R8.
+    /// </summary>
+    [JsonPropertyName("wargearGroups")] public List<WargearGroup> WargearGroups { get; set; } = [];
+
     // ---- Derived at load time (not authored in the seed) ----
 
     /// <summary>Stable slug derived from <see cref="Name"/>; used as the catalogue key and in rosters.</summary>

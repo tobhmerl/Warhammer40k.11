@@ -1,0 +1,258 @@
+@page "/settings"
+@using System.Text.Json
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Rosters
+@inject IApiClient Api
+@inject SettingsState SettingsState
+@inject IJSRuntime JS
+
+<PageTitle>TombForge — Settings</PageTitle>
+
+<div class="settings">
+	<header class="head">
+		<div>
+			<p class="eyebrow">Preferences</p>
+			<h1>Settings</h1>
+		</div>
+	</header>
+
+	@if (_loading)
+	{
+		<div class="card pad"><p class="status"><span class="pulse" aria-hidden="true"></span> Loading&hellip;</p></div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad signin">
+			<p class="status">Sign in to manage your settings.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else
+	{
+		<section class="card pad">
+			<h2 class="sec-h">Default points limit</h2>
+			<p class="muted">Pre-selected when you forge a new roster.</p>
+			<div class="presets">
+				@foreach (var preset in Roster.PointsPresets)
+				{
+					<button type="button" class="preset @(_settings.DefaultPointsLimit == preset ? "on" : "")"
+							@onclick="() => _settings.DefaultPointsLimit = preset">@preset</button>
+				}
+				<input class="input custom" type="number" min="0" max="100000" step="5"
+					   @bind="_settings.DefaultPointsLimit" aria-label="Custom default points" />
+			</div>
+		</section>
+
+		<section class="card pad">
+			<h2 class="sec-h">Theme</h2>
+			<p class="muted">Changes apply instantly; press Save to keep them.</p>
+			<div class="themes">
+				@foreach (var t in AppThemes.All)
+				{
+					<button type="button" class="theme @(_settings.Theme == t.Id ? "on" : "")" @onclick="() => ChooseTheme(t.Id)">
+						<span class="swatch swatch-@t.Id" aria-hidden="true"></span>
+						<span>@t.Name</span>
+					</button>
+				}
+			</div>
+		</section>
+
+		<div class="save-row">
+			<button class="btn primary" type="button" disabled="@_saving" @onclick="SaveAsync">
+				@(_saving ? "Saving…" : "Save settings")
+			</button>
+			@if (_savedFlash)
+			{
+				<span class="saved">Saved ✓</span>
+			}
+			@if (_error is not null)
+			{
+				<span class="error">@_error</span>
+			}
+		</div>
+
+		<section class="card pad">
+			<h2 class="sec-h">Backup &amp; restore</h2>
+			<p class="muted">Export everything (settings, your catalogue, and all rosters) to a JSON file, or restore from one.</p>
+			<div class="backup-actions">
+				<button class="btn ghost" type="button" disabled="@_exporting" @onclick="ExportAsync">
+					@(_exporting ? "Exporting…" : "Export backup")
+				</button>
+				<label class="btn ghost file-btn">
+					<span>Import backup…</span>
+					<InputFile OnChange="OnFileSelected" accept=".json" />
+				</label>
+			</div>
+
+			@if (_restoreError is not null)
+			{
+				<p class="error">@_restoreError</p>
+			}
+			@if (_restoreInfo is not null)
+			{
+				<p class="ok">@_restoreInfo</p>
+			}
+
+			@if (_confirmRestore && _pendingBundle is not null)
+			{
+				<div class="confirm">
+					<p>
+						Restore will <strong>replace</strong> your current rosters, catalogue and settings with this backup
+						(@_pendingBundle.Rosters.Count @(_pendingBundle.Rosters.Count == 1 ? "roster" : "rosters")@(_pendingBundle.Catalogue is { Datasheets.Count: > 0 } ? ", custom catalogue" : "")).
+						This can't be undone.
+					</p>
+					<div class="confirm-actions">
+						<button class="btn danger" type="button" disabled="@_restoring" @onclick="ConfirmRestoreAsync">
+							@(_restoring ? "Restoring…" : "Replace my data")
+						</button>
+						<button class="btn ghost" type="button" @onclick="CancelRestore">Cancel</button>
+					</div>
+				</div>
+			}
+		</section>
+	}
+</div>
+
+@code {
+	private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+
+	private UserSettings _settings = UserSettings.Default;
+	private bool _loading = true;
+	private bool _authenticated;
+	private bool _saving;
+	private bool _savedFlash;
+	private string? _error;
+
+	private bool _exporting;
+	private bool _restoring;
+	private bool _confirmRestore;
+	private BackupBundle? _pendingBundle;
+	private string? _restoreError;
+	private string? _restoreInfo;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			await SettingsState.InitializeAsync();
+			_settings = Clone(SettingsState.Current);
+		}
+		_loading = false;
+	}
+
+	private async Task ChooseTheme(string themeId)
+	{
+		_settings.Theme = themeId;
+		await SettingsState.PreviewThemeAsync(themeId);
+	}
+
+	private async Task SaveAsync()
+	{
+		_saving = true;
+		_savedFlash = false;
+		_error = null;
+		var ok = await SettingsState.SaveAsync(_settings);
+		if (ok)
+		{
+			_settings = Clone(SettingsState.Current);
+			_savedFlash = true;
+		}
+		else
+		{
+			_error = "Could not save settings.";
+		}
+		_saving = false;
+	}
+
+	private async Task ExportAsync()
+	{
+		_exporting = true;
+		_restoreError = null;
+		_restoreInfo = null;
+		try
+		{
+			var bundle = await Api.GetBackupAsync();
+			if (bundle is null)
+			{
+				_restoreError = "Could not build a backup. Please try again.";
+				return;
+			}
+
+			var json = JsonSerializer.Serialize(bundle, Json);
+			await JS.InvokeVoidAsync("tombforge.download", $"tombforge-backup-{DateTime.UtcNow:yyyyMMdd}.json", json);
+		}
+		catch (Exception)
+		{
+			_restoreError = "Could not export the backup.";
+		}
+		finally
+		{
+			_exporting = false;
+		}
+	}
+
+	private async Task OnFileSelected(InputFileChangeEventArgs e)
+	{
+		_restoreError = null;
+		_restoreInfo = null;
+		_pendingBundle = null;
+		_confirmRestore = false;
+
+		try
+		{
+			await using var stream = e.File.OpenReadStream(maxAllowedSize: 16 * 1024 * 1024);
+			using var reader = new StreamReader(stream);
+			var json = await reader.ReadToEndAsync();
+			_pendingBundle = JsonSerializer.Deserialize<BackupBundle>(json, Json);
+
+			if (_pendingBundle is null)
+				_restoreError = "That file isn't a valid backup.";
+			else
+				_confirmRestore = true;
+		}
+		catch (Exception)
+		{
+			_restoreError = "Could not read that file as a backup.";
+		}
+	}
+
+	private async Task ConfirmRestoreAsync()
+	{
+		if (_pendingBundle is null)
+			return;
+
+		_restoring = true;
+		_restoreError = null;
+		try
+		{
+			await Api.RestoreBackupAsync(_pendingBundle);
+			await SettingsState.ApplyAsync(_pendingBundle.Settings ?? UserSettings.Default);
+			_settings = Clone(SettingsState.Current);
+			_restoreInfo = "Backup restored — your rosters and catalogue have been replaced.";
+		}
+		catch (Exception)
+		{
+			_restoreError = "Could not restore that backup.";
+		}
+		finally
+		{
+			_restoring = false;
+			_confirmRestore = false;
+			_pendingBundle = null;
+		}
+	}
+
+	private void CancelRestore()
+	{
+		_confirmRestore = false;
+		_pendingBundle = null;
+	}
+
+	private static UserSettings Clone(UserSettings s) => new()
+	{
+		DefaultPointsLimit = s.DefaultPointsLimit,
+		Theme = s.Theme,
+	};
+}

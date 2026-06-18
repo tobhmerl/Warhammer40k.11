@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWarhammer40k(this IServiceCollection services)
     {
         services.AddScoped<IApiClient, ApiClient>();
+        services.AddScoped<SettingsState>();
         return services;
     }
 }

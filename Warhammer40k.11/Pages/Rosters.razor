@@ -1,0 +1,295 @@
+@page "/rosters"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k.Core.Rosters.Validation
+@inject IApiClient Api
+@inject NavigationManager Nav
+@inject SettingsState Settings
+
+<PageTitle>TombForge — Rosters</PageTitle>
+
+<div class="rosters">
+	<header class="head">
+		<div>
+			<p class="eyebrow">Your army lists</p>
+			<h1>Rosters</h1>
+		</div>
+		@if (_authenticated && !_loading)
+		{
+			<span class="count">@_rosters.Count @(_rosters.Count == 1 ? "roster" : "rosters")</span>
+		}
+	</header>
+
+	@if (_loading)
+	{
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading&hellip;</p>
+		</div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad signin">
+			<p class="status">Sign in to forge and command your rosters.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else if (_rosters.Count == 0)
+	{
+		<div class="card empty">
+			<span class="empty-mark" aria-hidden="true"></span>
+			<p>No rosters yet &mdash; forge your first one.</p>
+			<button class="btn primary" type="button" @onclick="OpenWizard">New roster</button>
+		</div>
+	}
+	else
+	{
+		<ul class="list">
+			@foreach (var roster in _rosters)
+			{
+				var s = Summary(roster);
+				<li class="roster-card" @key="roster.Id">
+					<a class="open" href="@($"rosters/{roster.Id}")">
+						<span class="roster-glyph" aria-hidden="true"></span>
+						<span class="info">
+							<span class="name">@roster.Name</span>
+							<span class="meta">@s.Detachment</span>
+						</span>
+						<span class="numbers">
+							<span class="pts"><strong>@s.Total</strong> / @roster.PointsLimit</span>
+							<span class="pill @(s.Errors == 0 ? "ready" : "issues")">
+								@(s.Errors == 0 ? "Ready" : $"{s.Errors} {(s.Errors == 1 ? "issue" : "issues")}")
+							</span>
+						</span>
+					</a>
+					<div class="row-actions">
+						<button class="btn small ghost" type="button" @onclick="() => DuplicateAsync(roster)">Duplicate</button>
+						<button class="btn small danger" type="button" @onclick="() => DeleteAsync(roster)">Delete</button>
+					</div>
+				</li>
+			}
+		</ul>
+
+		<button class="fab" type="button" aria-label="New roster" @onclick="OpenWizard">
+			<span aria-hidden="true">+</span>
+		</button>
+	}
+
+	@if (_error is not null)
+	{
+		<p class="error">@_error</p>
+	}
+</div>
+
+<Sheet Open="_wizardOpen" Eyebrow="New roster" Title="Forge a roster" OnCloseRequested="CloseWizard">
+	<div class="wizard">
+		<label class="field">
+			<span>Name</span>
+			<input class="input" @bind="_draft.Name" @bind:event="oninput" maxlength="80"
+				   placeholder="e.g. Sautekh Vanguard" aria-label="Roster name" />
+		</label>
+
+		<div class="field">
+			<span>Faction</span>
+			<p class="fixed-faction"><span class="roster-glyph sm" aria-hidden="true"></span> Necrons</p>
+		</div>
+
+		<div class="field">
+			<span>Points limit</span>
+			<div class="presets">
+				@foreach (var preset in Roster.PointsPresets)
+				{
+					<button type="button" class="preset @(_draft.PointsLimit == preset ? "on" : "")"
+							@onclick="() => _draft.PointsLimit = preset">@preset</button>
+				}
+				<input class="input custom" type="number" min="0" max="100000" step="5"
+					   @bind="_draft.PointsLimit" aria-label="Custom points limit" />
+			</div>
+		</div>
+
+		<div class="field">
+			<span>Detachment</span>
+			<div class="detachments">
+				@foreach (var d in DetachmentCatalogue.BuiltIn)
+				{
+					<button type="button" class="detachment @(_draft.DetachmentId == d.Id ? "on" : "")"
+							@onclick="() => _draft.DetachmentId = d.Id">@d.Name</button>
+				}
+			</div>
+		</div>
+
+		@if (_wizardError is not null)
+		{
+			<p class="error">@_wizardError</p>
+		}
+
+		<div class="wizard-actions">
+			<button class="btn primary" type="button" disabled="@_creating" @onclick="CreateAsync">
+				@(_creating ? "Forging…" : "Create roster")
+			</button>
+			<button class="btn ghost" type="button" @onclick="CloseWizard">Cancel</button>
+		</div>
+	</div>
+</Sheet>
+
+@code {
+	private readonly List<Roster> _rosters = new();
+	private readonly Dictionary<string, RosterSummary> _summaries = new();
+	private CatalogueData _catalogue = new();
+	private readonly RosterValidator _validator = new();
+
+	private bool _loading = true;
+	private bool _authenticated;
+	private string? _error;
+
+	private bool _wizardOpen;
+	private bool _creating;
+	private string? _wizardError;
+	private Roster _draft = NewDraft();
+
+	protected override async Task OnInitializedAsync()
+	{
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			await Settings.InitializeAsync();
+			_catalogue = await Api.GetCatalogueAsync();
+			await ReloadAsync();
+		}
+		_loading = false;
+	}
+
+	private async Task ReloadAsync()
+	{
+		var rosters = await Api.GetRostersAsync();
+		_rosters.Clear();
+		_rosters.AddRange(rosters);
+
+		_summaries.Clear();
+		foreach (var roster in _rosters)
+			_summaries[roster.Id] = Compute(roster);
+	}
+
+	private RosterSummary Compute(Roster roster)
+	{
+		var detachment = DetachmentCatalogue.FindById(roster.DetachmentId);
+		var result = _validator.Validate(roster, _catalogue);
+		return new RosterSummary(
+			detachment?.Name ?? "No detachment",
+			result.TotalPoints,
+			result.Errors.Count());
+	}
+
+	private RosterSummary Summary(Roster roster) =>
+		_summaries.TryGetValue(roster.Id, out var s) ? s : new RosterSummary("", 0, 0);
+
+	private void OpenWizard()
+	{
+		_draft = NewDraft();
+		_draft.PointsLimit = Settings.DefaultPointsLimit;
+		_wizardError = null;
+		_wizardOpen = true;
+	}
+
+	private void CloseWizard() => _wizardOpen = false;
+
+	private async Task CreateAsync()
+	{
+		if (string.IsNullOrWhiteSpace(_draft.Name))
+		{
+			_wizardError = "Give your roster a name.";
+			return;
+		}
+		if (string.IsNullOrWhiteSpace(_draft.DetachmentId))
+		{
+			_wizardError = "Choose a detachment.";
+			return;
+		}
+
+		_creating = true;
+		_wizardError = null;
+		try
+		{
+			var saved = await Api.SaveRosterAsync(_draft);
+			_wizardOpen = false;
+			Nav.NavigateTo($"rosters/{saved.Id}");
+		}
+		catch (Exception)
+		{
+			_wizardError = "Could not create the roster. Please try again.";
+		}
+		finally
+		{
+			_creating = false;
+		}
+	}
+
+	private async Task DuplicateAsync(Roster roster)
+	{
+		_error = null;
+		try
+		{
+			// New ids per unit; remap leader attachments so they keep pointing at the right bodyguard.
+			var idMap = roster.Units.ToDictionary(u => u.Id, _ => Guid.NewGuid().ToString("n"));
+
+			var copy = new Roster
+			{
+				Name = Truncate($"{roster.Name} (copy)", 80),
+				Faction = roster.Faction,
+				PointsLimit = roster.PointsLimit,
+				DetachmentId = roster.DetachmentId,
+				CatalogueVersion = roster.CatalogueVersion,
+				Units = roster.Units.Select(u => CloneUnit(u, idMap)).ToList(),
+			};
+			await Api.SaveRosterAsync(copy);
+			await ReloadAsync();
+		}
+		catch (Exception)
+		{
+			_error = "Could not duplicate the roster. Please try again.";
+		}
+	}
+
+	private async Task DeleteAsync(Roster roster)
+	{
+		_error = null;
+		try
+		{
+			await Api.DeleteRosterAsync(roster.Id);
+			await ReloadAsync();
+		}
+		catch (Exception)
+		{
+			_error = "Could not delete the roster. Please try again.";
+		}
+	}
+
+	private static Roster NewDraft() => new()
+	{
+		Name = "",
+		Faction = Roster.NecronsFaction,
+		PointsLimit = Roster.DefaultPointsLimit,
+		DetachmentId = "",
+	};
+
+	private static RosterUnit CloneUnit(RosterUnit u, IReadOnlyDictionary<string, string> idMap) => new()
+	{
+		Id = idMap[u.Id],
+		DatasheetId = u.DatasheetId,
+		ModelCount = u.ModelCount,
+		AttachedToRosterUnitId = u.AttachedToRosterUnitId is not null && idMap.TryGetValue(u.AttachedToRosterUnitId, out var mapped)
+			? mapped
+			: null,
+		AssignedEnhancementId = u.AssignedEnhancementId,
+		IsWarlord = u.IsWarlord,
+		AppliedBindingId = u.AppliedBindingId,
+		BindingSurcharge = u.BindingSurcharge,
+		Wargear = u.Wargear.Select(w => new WargearSelection { GroupId = w.GroupId, OptionIds = new List<string>(w.OptionIds) }).ToList(),
+	};
+
+	private static string Truncate(string value, int max) =>
+		value.Length <= max ? value : value[..max];
+
+	private sealed record RosterSummary(string Detachment, int Total, int Errors);
+}

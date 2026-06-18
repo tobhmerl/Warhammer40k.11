@@ -42,6 +42,39 @@ public sealed class PointsOption
     [JsonPropertyName("points")] public int Points { get; set; }
 }
 
+/// <summary>
+/// An authored wargear option-group: a player chooses between <see cref="Min"/> and <see cref="Max"/> of its
+/// <see cref="Options"/> (rule R8). Authored in the Catalogue editor (AB7); empty-but-present until then (§12).
+/// Wargear never costs points beyond model count (§3), so options carry a forward-compat <c>PointDelta = 0</c>.
+/// </summary>
+public sealed class WargearGroup
+{
+    /// <summary>Stable id used by <see cref="Warhammer40k.Core.Rosters.WargearSelection.GroupId"/>.</summary>
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+
+    /// <summary>Minimum options that must be selected (0 = optional group).</summary>
+    [JsonPropertyName("min")] public int Min { get; set; }
+
+    /// <summary>Maximum options that may be selected.</summary>
+    [JsonPropertyName("max")] public int Max { get; set; } = 1;
+
+    [JsonPropertyName("options")] public List<WargearOption> Options { get; set; } = [];
+}
+
+/// <summary>A single selectable wargear option within a <see cref="WargearGroup"/>.</summary>
+public sealed class WargearOption
+{
+    /// <summary>Stable id referenced by a roster unit's selection.</summary>
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+
+    /// <summary>Points delta — always 0 today (wargear is free, §3); kept for forward-compatibility.</summary>
+    [JsonPropertyName("pointDelta")] public int PointDelta { get; set; }
+}
+
 /// <summary>A Pantheon of Woe Necrodermal Binding: a points surcharge applied to a specific Monster datasheet (rule R10).</summary>
 public sealed class PantheonBinding
 {

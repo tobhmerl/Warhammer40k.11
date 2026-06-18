@@ -1,0 +1,757 @@
+@page "/rosters/{Id}"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k.Core.Rosters.Validation
+@inject IApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>TombForge — @(_roster?.Name ?? "Roster")</PageTitle>
+
+@if (_loading)
+{
+	<div class="editor">
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading roster&hellip;</p>
+		</div>
+	</div>
+}
+else if (!_authenticated)
+{
+	<div class="editor">
+		<div class="card pad signin">
+			<p class="status">Sign in to edit your rosters.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	</div>
+}
+else if (_notFound || _roster is null)
+{
+	<div class="editor">
+		<div class="card pad signin">
+			<p class="status">That roster could not be found.</p>
+			<a class="btn ghost" href="rosters">&larr; Back to rosters</a>
+		</div>
+	</div>
+}
+else
+{
+	<div class="editor">
+		<a class="back" href="rosters">&larr; Rosters</a>
+
+		<header class="sticky">
+			<div class="title-row">
+				<input class="name-input" value="@_roster.Name" @oninput="OnNameInput" maxlength="80" aria-label="Roster name" />
+				<button class="btn small primary" type="button" disabled="@(_saving || !_dirty)" @onclick="SaveAsync">
+					@(_saving ? "Saving…" : _dirty ? "Save" : "Saved")
+				</button>
+			</div>
+			<div class="stats-row">
+				@if (_detachment is not null)
+				{
+					<button class="detach detach-btn" type="button" @onclick="OpenDetachInfo" title="Detachment rules">
+						@_detachment.Name <span class="info-dot" aria-hidden="true">ⓘ</span>
+					</button>
+				}
+				else
+				{
+					<span class="detach">No detachment</span>
+				}
+				<span class="spacer"></span>
+				<span class="enh">Enhancements @EnhancementCount/3</span>
+				<span class="points @(Over ? "over" : "")"><strong>@_validation.TotalPoints</strong> / @_roster.PointsLimit</span>
+				<span class="pill @(_validation.IsReady ? "ready" : "issues")">
+					@(_validation.IsReady ? "Ready" : $"{ErrorCount} {(ErrorCount == 1 ? "issue" : "issues")}")
+				</span>
+			</div>
+		</header>
+
+		@if (_validation.Messages.Count > 0)
+		{
+			<section class="panel @(_panelOpen ? "open" : "")">
+				<button class="panel-head" type="button" @onclick="() => _panelOpen = !_panelOpen" aria-expanded="@_panelOpen">
+					<span class="panel-title">
+						Validation
+						<span class="badge @(_validation.IsReady ? "ok" : "bad")">@_validation.Messages.Count</span>
+					</span>
+					<span class="chev" aria-hidden="true">@(_panelOpen ? "▾" : "▸")</span>
+				</button>
+				@if (_panelOpen)
+				{
+					<ul class="messages">
+						@foreach (var m in OrderedMessages())
+						{
+							<li class="msg @Sev(m.Severity)" @key="m">
+								<span class="rule">@m.RuleId</span>
+								<span class="msg-text">@m.Text</span>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		}
+
+		@if (_roster.Units.Count == 0)
+		{
+			<div class="card empty">
+				<span class="empty-mark" aria-hidden="true"></span>
+				<p>No units yet &mdash; add your first.</p>
+				<button class="btn primary" type="button" @onclick="OpenPicker">Add unit</button>
+			</div>
+		}
+		else
+		{
+			@foreach (var group in UnitGroups())
+			{
+				<section class="role-group" @key="group.Role">
+					<h2 class="role-title">@group.Role <span class="role-count">@group.Units.Count</span></h2>
+					<ul class="unit-list">
+						@foreach (var entry in group.Units)
+						{
+							<li @key="entry.Unit.Id">
+								<button class="unit-card" type="button" @onclick="() => OpenConfig(entry.Unit)">
+									<span class="u-main">
+										<span class="u-name">
+											@entry.Sheet.Name
+											@if (entry.Unit.ModelCount > 1)
+											{
+												<span class="u-size">×@entry.Unit.ModelCount</span>
+											}
+										</span>
+										<span class="u-chips">
+											@if (entry.Unit.IsWarlord)
+											{
+												<span class="chip warlord">Warlord</span>
+											}
+											@if (AttachedToName(entry.Unit) is { } target)
+											{
+												<span class="chip">→ @target</span>
+											}
+											@if (EnhancementName(entry.Unit) is { } enh)
+											{
+												<span class="chip enh">@enh</span>
+											}
+											@if (entry.Unit.AppliedBindingId is { } binding)
+											{
+												<span class="chip binding">@binding +@entry.Unit.BindingSurcharge</span>
+											}
+										</span>
+									</span>
+									<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
+								</button>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+
+			<div class="editor-actions">
+				<button class="btn ghost" type="button" @onclick="OpenSummary">Summary &amp; export</button>
+			</div>
+
+			<button class="fab" type="button" aria-label="Add unit" @onclick="OpenPicker">
+				<span aria-hidden="true">+</span>
+			</button>
+		}
+
+		@if (_error is not null)
+		{
+			<p class="error">@_error</p>
+		}
+	</div>
+}
+
+<Sheet Open="_picking" Eyebrow="Add unit" Title="Add a unit" OnCloseRequested="ClosePicker">
+	<div class="picker">
+		<div class="search">
+			<span class="search-icon" aria-hidden="true">⌕</span>
+			<input class="search-input" type="search" placeholder="Search units…" aria-label="Search units"
+				   @bind="_pickQuery" @bind:event="oninput" autocomplete="off" spellcheck="false" />
+		</div>
+		@foreach (var group in PickerGroups())
+		{
+			<section class="pick-group" @key="group.Role">
+				<h3 class="pick-role">@group.Role</h3>
+				<ul class="pick-list">
+					@foreach (var e in group.Units)
+					{
+						var remaining = Remaining(e.Sheet);
+						<li @key="e.Sheet.Id">
+							<button class="pick-row" type="button" disabled="@(remaining <= 0)" @onclick="() => AddUnit(e.Sheet)">
+								<span class="pick-name">@e.Sheet.Name</span>
+								<span class="pick-meta">
+									<span class="pick-pts">@PointsLabel(e.Sheet)</span>
+									<span class="pick-remain @(remaining <= 0 ? "none" : "")">@remaining left</span>
+								</span>
+							</button>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+	</div>
+</Sheet>
+
+<Sheet Open="_configuring is not null" Eyebrow="Configure"
+	   Title="@(_configuring is { } cu ? SheetFor(cu)?.Name : null)" OnCloseRequested="CloseConfig">
+	@if (_configuring is { } u && SheetFor(u) is { } sheet)
+	{
+		<div class="config">
+			@if (sheet.PointsOptions.Count > 0)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Unit size</span>
+					<div class="sizes">
+						@foreach (var o in sheet.PointsOptions)
+						{
+							<button type="button" class="size @(u.ModelCount == o.Models ? "on" : "")" @onclick="() => SetSize(u, o.Models)">
+								@o.Models @(o.Models == 1 ? "model" : "models") · @o.Points pts
+							</button>
+						}
+					</div>
+				</div>
+			}
+
+			@foreach (var group in sheet.WargearGroups)
+			{
+				<div class="cfg-block" @key="group.Id">
+					<span class="cfg-label">@group.Name <span class="cfg-hint">choose @WargearRangeLabel(group)</span></span>
+					<div class="sizes">
+						@foreach (var opt in group.Options)
+						{
+							<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
+									@onclick="() => ToggleWargear(u, group.Id, opt.Id)">
+								@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
+							</button>
+						}
+					</div>
+				</div>
+			}
+
+			@if (sheet.WarlordEligible)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Warlord</span>
+					<button type="button" class="toggle @(u.IsWarlord ? "on" : "")" @onclick="() => SetWarlord(u, !u.IsWarlord)">
+						@(u.IsWarlord ? "Warlord" : "Make Warlord")
+					</button>
+				</div>
+			}
+
+			@if (sheet.HasLeaderAbility)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Attach to</span>
+					<select class="input" value="@(u.AttachedToRosterUnitId ?? "")" @onchange="e => SetAttachment(u, e.Value?.ToString())">
+						<option value="">Not attached</option>
+						@foreach (var t in LeaderTargets(u))
+						{
+							<option value="@t.Id">@t.Name</option>
+						}
+					</select>
+				</div>
+			}
+
+			@if (sheet.CanTakeEnhancements)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Enhancement</span>
+					@if (_detachment is null || _detachment.Enhancements.Count == 0)
+					{
+						<p class="cfg-note">No enhancements available for this detachment yet.</p>
+					}
+					else if (EligibleEnhancements(sheet, u).Any())
+					{
+						<select class="input" value="@(u.AssignedEnhancementId ?? "")" @onchange="e => SetEnhancement(u, e.Value?.ToString())">
+							<option value="">None</option>
+							@foreach (var enh in EligibleEnhancements(sheet, u))
+							{
+								<option value="@enh.Id">@enh.Name (+@enh.Points)</option>
+							}
+						</select>
+					}
+					else
+					{
+						<p class="cfg-note">No @_detachment.Name enhancements are eligible for this character.</p>
+					}
+				</div>
+			}
+
+			@if (u.AppliedBindingId is { } binding)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Necrodermal binding</span>
+					<p class="cfg-note">@binding · +@u.BindingSurcharge pts (Pantheon of Woe)</p>
+				</div>
+			}
+
+			<div class="cfg-actions">
+				<button class="btn danger" type="button" @onclick="() => RemoveUnit(u)">Remove unit</button>
+				<button class="btn ghost" type="button" @onclick="CloseConfig">Done</button>
+			</div>
+		</div>
+	}
+</Sheet>
+
+<Sheet Open="_summaryOpen" Eyebrow="Summary" Title="@(_roster?.Name)" OnCloseRequested="CloseSummary">
+	<div class="summary">
+		<textarea class="summary-text" readonly rows="16">@BuildSummary()</textarea>
+		<p class="cfg-note">Select all and copy to export this list as text.</p>
+	</div>
+</Sheet>
+
+<Sheet Open="_detachInfoOpen" Eyebrow="Detachment" Title="@(_detachment?.Name)" OnCloseRequested="CloseDetachInfo">
+	@if (_detachment is { } det)
+	{
+		<div class="detach-info">
+			<section class="di-block">
+				<h3 class="di-title">Enhancements</h3>
+				@if (det.Enhancements.Count == 0)
+				{
+					<p class="cfg-note">No enhancements defined yet (pending 11th-edition points).</p>
+				}
+				else
+				{
+					<ul class="di-list">
+						@foreach (var enh in det.Enhancements)
+						{
+							<li @key="enh.Id">
+								<span class="di-name">@enh.Name <span class="di-pts">+@enh.Points</span></span>
+								@if (!enh.Eligibility.IsUnconstrained)
+								{
+									<span class="di-elig">@EligibilityText(enh)</span>
+								}
+							</li>
+						}
+					</ul>
+				}
+			</section>
+
+			<section class="di-block">
+				<h3 class="di-title">Stratagems</h3>
+				@if (det.Stratagems.Count == 0)
+				{
+					<p class="cfg-note">No stratagems defined yet (pending §11).</p>
+				}
+				else
+				{
+					<ul class="di-list">
+						@foreach (var strat in det.Stratagems)
+						{
+							<li @key="strat.Id">
+								<span class="di-name">
+									@strat.Name <span class="di-cp">@strat.CpCost CP</span>
+									@if (!string.IsNullOrWhiteSpace(strat.Type))
+									{
+										<span class="di-type">@strat.Type</span>
+									}
+								</span>
+								@if (!string.IsNullOrWhiteSpace(strat.Text))
+								{
+									<span class="di-text">@strat.Text</span>
+								}
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		</div>
+	}
+</Sheet>
+
+@code {
+	private static readonly string[] RoleOrder =
+	{
+		"Epic Hero", "Character", "Battleline", "Infantry",
+		"Mounted", "Beast", "Swarm", "Vehicle",
+		"Dedicated Transport", "Fortification",
+	};
+
+	[Parameter] public string Id { get; set; } = "";
+
+	private readonly RosterValidator _validator = new();
+	private CatalogueData _catalogue = new();
+	private Roster? _roster;
+	private Detachment? _detachment;
+	private ValidationResult _validation = new(Array.Empty<ValidationMessage>(), 0);
+
+	private string? _loadedId;
+	private bool _loading = true;
+	private bool _authenticated;
+	private bool _notFound;
+	private bool _saving;
+	private bool _dirty;
+	private bool _panelOpen;
+	private string? _error;
+
+	// Sheet state (markup added alongside the editor body).
+	private bool _picking;
+	private string _pickQuery = "";
+	private RosterUnit? _configuring;
+	private bool _summaryOpen;
+	private bool _detachInfoOpen;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (_loadedId == Id)
+			return;
+		_loadedId = Id;
+		await LoadAsync();
+	}
+
+	private async Task LoadAsync()
+	{
+		_loading = true;
+		_notFound = false;
+		_error = null;
+
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			if (_catalogue.Datasheets.Count == 0)
+				_catalogue = await Api.GetCatalogueAsync();
+
+			var roster = await Api.GetRosterAsync(Id);
+			if (roster is null)
+			{
+				_notFound = true;
+			}
+			else
+			{
+				_roster = roster;
+				_detachment = DetachmentCatalogue.FindById(roster.DetachmentId);
+				_panelOpen = false;
+				Recompute();
+				_dirty = false;
+			}
+		}
+
+		_loading = false;
+	}
+
+	private void Recompute()
+	{
+		if (_roster is null)
+			return;
+		PantheonBindingApplier.Apply(_roster, _catalogue, _detachment);
+		_validation = _validator.Validate(_roster, _catalogue);
+	}
+
+	private void MarkChanged()
+	{
+		Recompute();
+		_dirty = true;
+	}
+
+	private void OnNameInput(ChangeEventArgs e)
+	{
+		if (_roster is null)
+			return;
+		_roster.Name = e.Value?.ToString() ?? "";
+		_dirty = true;
+	}
+
+	private async Task SaveAsync()
+	{
+		if (_roster is null)
+			return;
+
+		_saving = true;
+		_error = null;
+		try
+		{
+			var saved = await Api.SaveRosterAsync(_roster);
+			// Keep our in-memory instance (open sheets reference its units); just sync server-assigned fields.
+			_roster.Id = saved.Id;
+			_roster.CreatedUtc = saved.CreatedUtc;
+			_roster.ModifiedUtc = saved.ModifiedUtc;
+			_dirty = false;
+		}
+		catch (Exception)
+		{
+			_error = "Could not save the roster. Please try again.";
+		}
+		finally
+		{
+			_saving = false;
+		}
+	}
+
+	// ---- Sheet open/close ----
+	private void OpenPicker()
+	{
+		_pickQuery = "";
+		_picking = true;
+	}
+
+	private void ClosePicker() => _picking = false;
+
+	private void OpenConfig(RosterUnit unit) => _configuring = unit;
+
+	private void CloseConfig() => _configuring = null;
+
+	private void OpenSummary() => _summaryOpen = true;
+
+	private void CloseSummary() => _summaryOpen = false;
+
+	private void OpenDetachInfo() => _detachInfoOpen = true;
+
+	private void CloseDetachInfo() => _detachInfoOpen = false;
+
+	private static string EligibilityText(Enhancement enhancement)
+	{
+		var parts = new List<string>();
+		if (enhancement.Eligibility.RequiredKeywords.Count > 0)
+			parts.Add("requires " + string.Join(", ", enhancement.Eligibility.RequiredKeywords));
+		if (enhancement.Eligibility.ExcludedKeywords.Count > 0)
+			parts.Add("not for " + string.Join(", ", enhancement.Eligibility.ExcludedKeywords));
+		return string.Join(" · ", parts);
+	}
+
+	// ---- Mutations ----
+	private void AddUnit(Datasheet sheet)
+	{
+		if (_roster is null)
+			return;
+		_roster.Units.Add(RosterUnit.FromDatasheet(sheet));
+		MarkChanged();
+	}
+
+	private void RemoveUnit(RosterUnit unit)
+	{
+		if (_roster is null)
+			return;
+
+		// Detach any leaders pointing at this unit so no dangling references remain.
+		foreach (var other in _roster.Units)
+		{
+			if (other.AttachedToRosterUnitId == unit.Id)
+				other.AttachedToRosterUnitId = null;
+		}
+
+		_roster.Units.Remove(unit);
+		_configuring = null;
+		MarkChanged();
+	}
+
+	private void SetSize(RosterUnit unit, int models)
+	{
+		unit.ModelCount = models;
+		MarkChanged();
+	}
+
+	private void SetWarlord(RosterUnit unit, bool isWarlord)
+	{
+		if (isWarlord && _roster is not null)
+		{
+			foreach (var other in _roster.Units)
+				other.IsWarlord = false;
+		}
+		unit.IsWarlord = isWarlord;
+		MarkChanged();
+	}
+
+	private void SetAttachment(RosterUnit unit, string? targetId)
+	{
+		unit.AttachedToRosterUnitId = string.IsNullOrEmpty(targetId) ? null : targetId;
+		MarkChanged();
+	}
+
+	private void SetEnhancement(RosterUnit unit, string? enhancementId)
+	{
+		unit.AssignedEnhancementId = string.IsNullOrEmpty(enhancementId) ? null : enhancementId;
+		MarkChanged();
+	}
+
+	private IEnumerable<Enhancement> EligibleEnhancements(Datasheet sheet, RosterUnit unit)
+	{
+		if (_detachment is null)
+			return Array.Empty<Enhancement>();
+
+		// Offer only enhancements this character is eligible for (R6), but keep any current pick visible.
+		return _detachment.Enhancements
+			.Where(e => e.IsAvailableTo(sheet)
+				|| string.Equals(e.Id, unit.AssignedEnhancementId, StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static bool IsWargearSelected(RosterUnit unit, string groupId, string optionId)
+	{
+		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
+		return selection is not null && selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase);
+	}
+
+	private void ToggleWargear(RosterUnit unit, string groupId, string optionId)
+	{
+		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
+		if (selection is null)
+		{
+			selection = new WargearSelection { GroupId = groupId };
+			unit.Wargear.Add(selection);
+		}
+
+		if (selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase))
+			selection.OptionIds.RemoveAll(id => string.Equals(id, optionId, StringComparison.OrdinalIgnoreCase));
+		else
+			selection.OptionIds.Add(optionId);
+
+		if (selection.OptionIds.Count == 0)
+			unit.Wargear.Remove(selection);
+
+		MarkChanged();
+	}
+
+	private static string WargearRangeLabel(Warhammer40k.Core.Catalogue.WargearGroup group) =>
+		group.Min == group.Max ? $"exactly {group.Min}"
+		: group.Max > 0 ? $"{group.Min}–{group.Max}"
+		: $"{group.Min}+";
+
+	// ---- View helpers ----
+	private bool Over => _roster is not null && _validation.TotalPoints > _roster.PointsLimit;
+
+	private int ErrorCount => _validation.Errors.Count();
+
+	private int EnhancementCount =>
+		_roster?.Units.Count(u => !string.IsNullOrEmpty(u.AssignedEnhancementId)) ?? 0;
+
+	private Datasheet? SheetFor(RosterUnit unit) => _catalogue.FindById(unit.DatasheetId);
+
+	private int UnitPoints(RosterUnit unit) => RosterCalculator.UnitPoints(unit, SheetFor(unit));
+
+	private int Remaining(Datasheet sheet)
+	{
+		var used = _roster?.Units.Count(u => string.Equals(u.DatasheetId, sheet.Id, StringComparison.OrdinalIgnoreCase)) ?? 0;
+		return sheet.MaxCopies - used;
+	}
+
+	private string? AttachedToName(RosterUnit unit)
+	{
+		if (string.IsNullOrEmpty(unit.AttachedToRosterUnitId) || _roster is null)
+			return null;
+		var target = _roster.FindUnit(unit.AttachedToRosterUnitId);
+		return target is null ? null : SheetFor(target)?.Name;
+	}
+
+	private string? EnhancementName(RosterUnit unit)
+	{
+		if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
+			return null;
+		return _detachment?.FindEnhancement(unit.AssignedEnhancementId)?.Name ?? unit.AssignedEnhancementId;
+	}
+
+	private IEnumerable<(string Id, string Name)> LeaderTargets(RosterUnit leader)
+	{
+		var sheet = SheetFor(leader);
+		if (sheet is null || _roster is null)
+			yield break;
+
+		foreach (var other in _roster.Units)
+		{
+			if (ReferenceEquals(other, leader))
+				continue;
+			var otherSheet = SheetFor(other);
+			if (otherSheet is not null && sheet.LeaderTargetIds.Contains(otherSheet.Id, StringComparer.OrdinalIgnoreCase))
+				yield return (other.Id, otherSheet.Name);
+		}
+	}
+
+	private IEnumerable<UnitEntry> PickerUnits()
+	{
+		var q = _pickQuery.Trim();
+		return _catalogue.Datasheets
+			.Where(d => Matches(d, q))
+			.OrderBy(d => RoleRank(d.PrimaryRole))
+			.ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+			.Select(d => new UnitEntry(d));
+	}
+
+	private IEnumerable<PickerGroup> PickerGroups() =>
+		PickerUnits()
+			.GroupBy(e => string.IsNullOrWhiteSpace(e.Sheet.PrimaryRole) ? "Other" : e.Sheet.PrimaryRole)
+			.OrderBy(g => RoleRank(g.Key))
+			.Select(g => new PickerGroup(g.Key, g.ToList()));
+
+	private IEnumerable<UnitGroup> UnitGroups()
+	{
+		if (_roster is null)
+			return Array.Empty<UnitGroup>();
+
+		return _roster.Units
+			.Select(u => new UnitEntryResolved(u, SheetFor(u)))
+			.Where(e => e.Sheet is not null)
+			.GroupBy(e => string.IsNullOrWhiteSpace(e.Sheet!.PrimaryRole) ? "Other" : e.Sheet!.PrimaryRole)
+			.OrderBy(g => RoleRank(g.Key))
+			.ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+			.Select(g => new UnitGroup(g.Key, g.Select(e => (e.Unit, e.Sheet!)).ToList()));
+	}
+
+	private IEnumerable<ValidationMessage> OrderedMessages() =>
+		_validation.Messages
+			.OrderByDescending(m => m.Severity)
+			.ThenBy(m => m.RuleId, StringComparer.Ordinal);
+
+	private string BuildSummary()
+	{
+		if (_roster is null)
+			return "";
+
+		var sb = new System.Text.StringBuilder();
+		sb.AppendLine(_roster.Name);
+		sb.AppendLine($"{_detachment?.Name ?? "No detachment"} · {_validation.TotalPoints}/{_roster.PointsLimit} pts · {(_validation.IsReady ? "Ready" : $"{ErrorCount} issue(s)")}");
+
+		foreach (var group in UnitGroups())
+		{
+			sb.AppendLine();
+			sb.AppendLine(group.Role);
+			foreach (var (unit, sheet) in group.Units)
+			{
+				var bits = new List<string>();
+				if (unit.IsWarlord)
+					bits.Add("Warlord");
+				if (AttachedToName(unit) is { } target)
+					bits.Add($"→ {target}");
+				if (EnhancementName(unit) is { } enh)
+					bits.Add(enh);
+				if (unit.AppliedBindingId is { } binding)
+					bits.Add($"{binding} +{unit.BindingSurcharge}");
+
+				var size = unit.ModelCount > 1 ? $" ×{unit.ModelCount}" : "";
+				var suffix = bits.Count > 0 ? $" [{string.Join(", ", bits)}]" : "";
+				sb.AppendLine($"  - {sheet.Name}{size} — {UnitPoints(unit)} pts{suffix}");
+			}
+		}
+
+		return sb.ToString().TrimEnd();
+	}
+
+	private static bool Matches(Datasheet d, string q)
+	{
+		if (q.Length == 0)
+			return true;
+		return d.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+			|| d.Keywords.Any(k => k.Contains(q, StringComparison.OrdinalIgnoreCase));
+	}
+
+	private static int RoleRank(string role)
+	{
+		var i = Array.FindIndex(RoleOrder, r => string.Equals(r, role, StringComparison.OrdinalIgnoreCase));
+		return i < 0 ? RoleOrder.Length : i;
+	}
+
+	private static string PointsLabel(Datasheet d) =>
+		d.PointsOptions.Count > 1
+			? $"from {d.PointsOptions.Min(p => p.Points)} pts"
+			: $"{d.Points} pts";
+
+	private static string Sev(ValidationSeverity s) => s switch
+	{
+		ValidationSeverity.Error => "error",
+		ValidationSeverity.Warning => "warn",
+		_ => "info",
+	};
+
+	private sealed record UnitEntry(Datasheet Sheet);
+	private sealed record PickerGroup(string Role, IReadOnlyList<UnitEntry> Units);
+	private sealed record UnitEntryResolved(RosterUnit Unit, Datasheet? Sheet);
+	private sealed record UnitGroup(string Role, IReadOnlyList<(RosterUnit Unit, Datasheet Sheet)> Units);
+}
