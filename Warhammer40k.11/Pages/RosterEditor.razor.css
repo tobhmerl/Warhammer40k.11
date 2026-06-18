@@ -742,6 +742,22 @@
     gap: 0.5rem;
 }
 
+.ds-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.ds-toggle .cfg-label {
+    cursor: pointer;
+}
+
 .cfg-label {
     font-size: 0.74rem;
     font-weight: 600;

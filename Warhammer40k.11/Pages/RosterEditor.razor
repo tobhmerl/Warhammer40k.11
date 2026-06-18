@@ -285,6 +285,17 @@ else
 				</div>
 			}
 
+			<div class="cfg-block">
+				<button type="button" class="ds-toggle" @onclick="() => _showDatasheet = !_showDatasheet" aria-expanded="@_showDatasheet">
+					<span class="cfg-label">Datasheet</span>
+					<span class="chev" aria-hidden="true">@(_showDatasheet ? "▾" : "▸")</span>
+				</button>
+				@if (_showDatasheet)
+				{
+					<DatasheetDetail Datasheet="sheet" Catalogue="_catalogue" />
+				}
+			</div>
+
 			<div class="cfg-actions">
 				<button class="btn danger" type="button" @onclick="() => RemoveUnit(u)">Remove unit</button>
 				<button class="btn ghost" type="button" @onclick="CloseConfig">Done</button>
@@ -390,6 +401,7 @@ else
 	private RosterUnit? _configuring;
 	private bool _summaryOpen;
 	private bool _detachInfoOpen;
+	private bool _showDatasheet;
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -487,7 +499,11 @@ else
 
 	private void ClosePicker() => _picking = false;
 
-	private void OpenConfig(RosterUnit unit) => _configuring = unit;
+	private void OpenConfig(RosterUnit unit)
+	{
+		_configuring = unit;
+		_showDatasheet = false;
+	}
 
 	private void CloseConfig() => _configuring = null;
 
