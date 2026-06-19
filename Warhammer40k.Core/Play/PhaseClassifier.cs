@@ -25,6 +25,9 @@ public static class PhaseClassifier
     private static readonly Regex InvulnRegex =
         new(@"(\d\+)\s+invulnerable save", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly Regex FeelNoPainRegex =
+        new(@"feel no pain\s*\(?\s*(\d\+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     /// <summary>The phase a weapon is used in: Melee weapons fight, everything else shoots.</summary>
     public static BattlePhase PhaseForWeapon(WeaponProfile weapon) =>
         weapon.Type.Equals("Melee", StringComparison.OrdinalIgnoreCase)
@@ -62,6 +65,18 @@ public static class PhaseClassifier
         foreach (var ability in abilities)
         {
             var match = InvulnRegex.Match(ability.Text);
+            if (match.Success)
+                return match.Groups[1].Value;
+        }
+        return null;
+    }
+
+    /// <summary>Parses the unit's Feel No Pain value (e.g. "5+") from its ability name/text, or null when it has none.</summary>
+    public static string? FeelNoPain(IEnumerable<Ability> abilities)
+    {
+        foreach (var ability in abilities)
+        {
+            var match = FeelNoPainRegex.Match(ability.Name + " " + ability.Text);
             if (match.Success)
                 return match.Groups[1].Value;
         }

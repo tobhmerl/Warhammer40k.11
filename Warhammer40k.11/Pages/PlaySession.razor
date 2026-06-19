@@ -42,7 +42,10 @@ else
 		<header class="sticky">
 			<div class="title-row">
 				<h1 class="rname">@_roster.Name</h1>
-				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP and wounds">Reset</button>
+				<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
+					@(AllCollapsed ? "Expand all" : "Collapse all")
+				</button>
+				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP and models">Reset</button>
 			</div>
 			<div class="trackers">
 				<div class="tracker">
@@ -89,157 +92,171 @@ else
 				@foreach (var unit in _battle.Units)
 				{
 					var dead = IsDead(unit);
+					var collapsed = IsCollapsed(unit);
 					<li class="unit @(dead ? "dead" : "")" @key="unit.Id">
 						<div class="u-head">
-							<div class="u-titles">
-								<span class="u-name">@unit.Name</span>
-								<span class="u-chips">
-									@if (unit.IsWarlord)
-									{
-										<span class="chip warlord">Warlord</span>
-									}
-									@if (unit.Parts.Count > 1)
-									{
-										<span class="chip">@unit.Parts.Count units</span>
-									}
-									<span class="chip">@unit.ModelCount @(unit.ModelCount == 1 ? "model" : "models")</span>
-									@if (unit.InvulnerableSave is { } inv)
-									{
-										<span class="chip inv">@inv inv</span>
-									}
-									<button class="chip sheet-btn" type="button" @onclick="() => OpenDetail(unit)">Datasheet</button>
+							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
+									aria-expanded="@(!collapsed)" aria-label="@($"Toggle {unit.Name}")">
+								<span class="chev" aria-hidden="true">@(collapsed ? "▸" : "▾")</span>
+								<span class="u-titles">
+									<span class="u-name">@unit.Name</span>
+									<span class="u-chips">
+										@if (unit.IsWarlord)
+										{
+											<span class="chip warlord">Warlord</span>
+										}
+										@if (unit.InvulnerableSave is { } inv)
+										{
+											<span class="chip inv">@inv inv</span>
+										}
+										@if (unit.FeelNoPain is { } fnp)
+										{
+											<span class="chip fnp">FNP @fnp</span>
+										}
+									</span>
 								</span>
-							</div>
-							@if (unit.MaxWounds is { } max)
-							{
-								<div class="wounds">
-									<button type="button" @onclick="() => StepWounds(unit, -1)" aria-label="Lose a wound">−</button>
-									<span class="w-value @(dead ? "gone" : "")">@CurrentWounds(unit)<span class="w-max">/@max</span></span>
-									<button type="button" @onclick="() => StepWounds(unit, 1)" aria-label="Restore a wound">+</button>
-								</div>
-							}
+							</button>
+							<span class="u-models" title="Models remaining">
+								<span class="um-value @(dead ? "gone" : "")">@GroupModels(unit)</span>
+								<span class="um-label">@(GroupModels(unit) == 1 ? "model" : "models")</span>
+							</span>
 						</div>
 
-						<div class="u-body">
-							@* Per-member statlines (M/T/SV/W/LD/OC) so an attached group is read at a glance. *@
-							<div class="table-wrap">
-								<table class="stats">
-									<thead>
-										<tr>
-											<th class="lcell">Model</th>
-											<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
-										</tr>
-									</thead>
-									<tbody>
-										@foreach (var part in unit.Parts)
-										{
-											var p = part.Profile;
-											<tr @key="part.Unit.Id">
-												<td class="lcell">
-													<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
-													@if (part.ModelCount > 1)
-													{
-														<span class="scount">×@part.ModelCount</span>
-													}
-												</td>
-												<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
-												<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
-											</tr>
-										}
-									</tbody>
-								</table>
-							</div>
-
-							@{
-								var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
-								var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
-							}
-							@if (ranged.Count > 0)
-							{
-								<div class="table-wrap @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
-									<table class="weapons">
+						@if (!collapsed)
+						{
+							<div class="u-body">
+								@* Per-member statlines (M/T/SV/W/LD/OC) with an inline model counter at the end of each line. *@
+								<div class="table-wrap">
+									<table class="stats">
 										<thead>
 											<tr>
-												<th class="lcell">Ranged</th>
-												<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
+												<th class="lcell">Model</th>
+												<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
+												<th class="ccell">Models</th>
 											</tr>
 										</thead>
 										<tbody>
-											@foreach (var row in ranged)
+											@foreach (var part in unit.Parts)
 											{
-												<tr @key="row.Weapon">
+												var p = part.Profile;
+												<tr class="@(PartDown(part) ? "down" : "")" @key="part.Unit.Id">
 													<td class="lcell">
-														<span class="wname">@row.Weapon.Name</span>
-														@if (unit.Parts.Count > 1)
-														{
-															<span class="wsrc">@row.Part.Datasheet.Name</span>
-														}
-														@if (row.Weapon.Keywords.Count > 0)
-														{
-															<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
-														}
+														<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
 													</td>
-													<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
-													<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
+													<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
+													<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
+													<td class="ccell">
+														<span class="counter">
+															<button type="button" @onclick="() => StepModels(part, -1)" aria-label="Remove a model">−</button>
+															<span class="c-value">@PartModels(part)<span class="c-max">/@part.ModelCount</span></span>
+															<button type="button" @onclick="() => StepModels(part, 1)" aria-label="Add a model">+</button>
+														</span>
+													</td>
 												</tr>
 											}
 										</tbody>
 									</table>
 								</div>
-							}
-							@if (melee.Count > 0)
-							{
-								<div class="table-wrap @(_phase == BattlePhase.Fight ? "phase-on" : "")">
-									<table class="weapons">
-										<thead>
-											<tr>
-												<th class="lcell">Melee</th>
-												<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
-											</tr>
-										</thead>
-										<tbody>
-											@foreach (var row in melee)
-											{
-												<tr @key="row.Weapon">
-													<td class="lcell">
-														<span class="wname">@row.Weapon.Name</span>
-														@if (unit.Parts.Count > 1)
-														{
-															<span class="wsrc">@row.Part.Datasheet.Name</span>
-														}
-														@if (row.Weapon.Keywords.Count > 0)
-														{
-															<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
-														}
-													</td>
-													<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
-													<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
-												</tr>
-											}
-										</tbody>
-									</table>
-								</div>
-							}
 
-							@if (unit.CombinedAbilities.Count > 0)
-							{
-								<ul class="abilities">
-									@foreach (var a in unit.CombinedAbilities)
-									{
-										<li @key="a">
-											<span class="a-name">
-												@a.Ability.Name
-												@if (unit.Parts.Count > 1)
+								@{
+									var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
+									var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
+								}
+								@if (ranged.Count > 0)
+								{
+									<div class="table-wrap @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
+										<table class="weapons">
+											<thead>
+												<tr>
+													<th class="lcell">Ranged</th>
+													<th>Range</th><th>A</th><th class="acell">Total A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
+												</tr>
+											</thead>
+											<tbody>
+												@foreach (var row in ranged)
 												{
-													<span class="a-src">@a.Source</span>
+													<tr @key="row.Weapon">
+														<td class="lcell">
+															<span class="wname">@row.Weapon.Name</span>
+															@if (unit.Parts.Count > 1)
+															{
+																<span class="wsrc">@row.Part.Datasheet.Name</span>
+															}
+															@if (row.Weapon.Keywords.Count > 0)
+															{
+																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
+															}
+														</td>
+														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td>
+														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
+														<td>@Dash(row.Weapon.Skill)</td>
+														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
+													</tr>
 												}
+											</tbody>
+										</table>
+									</div>
+								}
+								@if (melee.Count > 0)
+								{
+									<div class="table-wrap @(_phase == BattlePhase.Fight ? "phase-on" : "")">
+										<table class="weapons">
+											<thead>
+												<tr>
+													<th class="lcell">Melee</th>
+													<th>Rng</th><th>A</th><th class="acell">Total A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
+												</tr>
+											</thead>
+											<tbody>
+												@foreach (var row in melee)
+												{
+													<tr @key="row.Weapon">
+														<td class="lcell">
+															<span class="wname">@row.Weapon.Name</span>
+															@if (unit.Parts.Count > 1)
+															{
+																<span class="wsrc">@row.Part.Datasheet.Name</span>
+															}
+															@if (row.Weapon.Keywords.Count > 0)
+															{
+																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
+															}
+														</td>
+														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td>
+														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
+														<td>@Dash(row.Weapon.Skill)</td>
+														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
+													</tr>
+												}
+											</tbody>
+										</table>
+									</div>
+								}
+
+								@if (unit.CombinedAbilities.Count > 0)
+								{
+									<ul class="abilities">
+										@foreach (var a in unit.CombinedAbilities)
+										{
+											<li @key="a">
+												<span class="a-name">
+													@a.Ability.Name
+													@if (unit.Parts.Count > 1)
+													{
+														<span class="a-src">@a.Source</span>
+													}
 											</span>
 											<span class="a-text">@Clean(a.Ability.Text)</span>
 										</li>
 									}
 								</ul>
 							}
+
+								<div class="u-foot">
+									<button class="ds-link" type="button" @onclick="() => OpenDetail(unit)">Full datasheet →</button>
+								</div>
 						</div>
+					}
 					</li>
 				}
 			</ul>
@@ -276,7 +293,10 @@ else
 	private BattlePhase _phase = BattlePhase.Command;
 	private int _round = 1;
 	private int _cp;
-	private readonly Dictionary<string, int> _currentWounds = new(StringComparer.Ordinal);
+	// Per-part current model count, keyed by roster-unit id (in-memory, like the round/CP trackers).
+	private readonly Dictionary<string, int> _models = new(StringComparer.Ordinal);
+	// Cards collapsed by the user, keyed by group id.
+	private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
 
 	protected override async Task OnParametersSetAsync()
@@ -326,30 +346,64 @@ else
 		_round = 1;
 		_cp = 0;
 		_phase = BattlePhase.Command;
-		_currentWounds.Clear();
+		_models.Clear();
+		_collapsed.Clear();
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
-		{
-			if (unit.MaxWounds is { } max)
-				_currentWounds[unit.Id] = max;
-		}
+			foreach (var part in unit.Parts)
+				_models[part.Unit.Id] = part.ModelCount;
 	}
 
-	private int CurrentWounds(BattleUnit unit) =>
-		_currentWounds.TryGetValue(unit.Id, out var w) ? w : unit.MaxWounds ?? 0;
+	// ---- Per-part model tracking ----
+	private int PartModels(BattlePart part) =>
+		_models.TryGetValue(part.Unit.Id, out var m) ? m : part.ModelCount;
 
-	private void StepWounds(BattleUnit unit, int delta)
+	private void StepModels(BattlePart part, int delta)
 	{
-		if (unit.MaxWounds is not { } max)
-			return;
-		var next = Math.Clamp(CurrentWounds(unit) + delta, 0, max);
-		_currentWounds[unit.Id] = next;
+		var next = Math.Clamp(PartModels(part) + delta, 0, Math.Max(1, part.ModelCount));
+		_models[part.Unit.Id] = next;
 	}
 
-	private bool IsDead(BattleUnit unit) => unit.MaxWounds is not null && CurrentWounds(unit) == 0;
+	private bool PartDown(BattlePart part) => PartModels(part) == 0;
+
+	private int GroupModels(BattleUnit unit) => unit.Parts.Sum(PartModels);
+
+	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
+
+	private string TotalAttacks(BattlePart part, WeaponProfile weapon) =>
+		WeaponMath.TotalAttacks(PartModels(part), weapon.Attacks);
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
+
+	// ---- Collapse ----
+	private bool IsCollapsed(BattleUnit unit) => _collapsed.Contains(unit.Id);
+
+	private void ToggleCard(BattleUnit unit)
+	{
+		if (!_collapsed.Remove(unit.Id))
+			_collapsed.Add(unit.Id);
+	}
+
+	private void CollapseAll()
+	{
+		if (_battle is null)
+			return;
+		foreach (var unit in _battle.Units)
+			_collapsed.Add(unit.Id);
+	}
+
+	private void ExpandAll() => _collapsed.Clear();
+
+	private bool AllCollapsed => _battle is not null && _battle.Units.All(u => _collapsed.Contains(u.Id));
+
+	private void ToggleCollapseAll()
+	{
+		if (AllCollapsed)
+			ExpandAll();
+		else
+			CollapseAll();
+	}
 
 	private void OpenDetail(BattleUnit unit) => _detail = unit;
 

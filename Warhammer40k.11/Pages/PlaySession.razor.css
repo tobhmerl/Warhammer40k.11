@@ -186,6 +186,29 @@
     border-bottom: 1px solid var(--border);
 }
 
+/* ---- Collapsible header ---- */
+.u-toggle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.chev {
+    flex: none;
+    margin-top: 0.15rem;
+    color: var(--accent);
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
 .u-titles {
     flex: 1;
     min-width: 0;
@@ -199,6 +222,10 @@
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.01em;
+}
+
+.u-toggle:hover .u-name {
+    color: var(--accent-strong);
 }
 
 .u-chips {
@@ -231,46 +258,69 @@
     color: #cfe0ff;
 }
 
-/* Datasheet chip-button in the card header. */
-.chip.sheet-btn {
-    cursor: pointer;
-    font-family: var(--font-ui);
-    color: var(--text-dim);
-    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+.chip.fnp {
+    color: #ffd9b0;
 }
 
-.chip.sheet-btn:hover {
-    color: var(--accent-strong);
-    border-color: var(--accent);
-    background: var(--accent-soft);
-}
-
-/* ---- Wound tracker ---- */
-.wounds {
+/* ---- Group model summary (in the header) ---- */
+.u-models {
     flex: none;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
+    line-height: 1.1;
 }
 
-.wounds button {
-    width: 1.8rem;
-    height: 1.8rem;
+.um-value {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+}
+
+.um-value.gone {
+    color: var(--danger);
+}
+
+.um-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+/* ---- Inline per-part model counter (stat-strip trailing cell) ---- */
+.ccell {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.counter button {
+    width: 1.6rem;
+    height: 1.6rem;
+    flex: none;
     border-radius: 50%;
     border: 1px solid var(--border-strong);
     background: var(--surface-2);
     color: var(--accent);
-    font-size: 1.05rem;
+    font-size: 1rem;
     line-height: 1;
     cursor: pointer;
     transition: border-color 0.15s var(--ease);
 }
 
-.wounds button:hover {
+.counter button:hover {
     border-color: var(--accent);
 }
 
-.w-value {
+.c-value {
     min-width: 2.6rem;
     text-align: center;
     font-family: var(--font-display);
@@ -278,14 +328,20 @@
     color: var(--text);
 }
 
-.w-value.gone {
-    color: var(--danger);
+.c-max {
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
-.w-max {
-    color: var(--text-faint);
-    font-size: 0.8rem;
-    font-weight: 600;
+/* A wiped-out part is greyed within the stat strip. */
+table.stats tr.down td {
+    opacity: 0.45;
+}
+
+table.stats tr.down .c-value {
+    color: var(--danger);
+    opacity: 1;
 }
 
 /* ---- Unit body / parts ---- */
@@ -404,6 +460,41 @@ table.weapons tr:last-child td {
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.04em;
+}
+
+/* Total-attacks cell: the live models × A figure, emphasised. */
+.acell {
+    color: var(--accent-strong) !important;
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+table.weapons th.acell {
+    color: var(--accent) !important;
+    font-family: inherit;
+}
+
+/* ---- Card footer (full datasheet link) ---- */
+.u-foot {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ds-link {
+    background: none;
+    border: none;
+    padding: 0.2rem 0;
+    color: var(--text-dim);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: color 0.15s var(--ease);
+}
+
+.ds-link:hover {
+    color: var(--accent-strong);
 }
 
 /* ---- Abilities ---- */

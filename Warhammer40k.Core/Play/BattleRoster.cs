@@ -115,6 +115,10 @@ public sealed class BattleUnit
     public string? InvulnerableSave =>
         Parts.Select(p => PhaseClassifier.InvulnerableSave(p.Datasheet.Abilities)).FirstOrDefault(s => s is not null);
 
+    /// <summary>The group's Feel No Pain value (first found across parts), or null when none.</summary>
+    public string? FeelNoPain =>
+        Parts.Select(p => PhaseClassifier.FeelNoPain(p.Datasheet.Abilities)).FirstOrDefault(s => s is not null);
+
     /// <summary>Total trackable wound pool (sum of parts with a fixed Wounds value), or null when none are fixed.</summary>
     public int? MaxWounds
     {

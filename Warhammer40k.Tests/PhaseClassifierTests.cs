@@ -90,4 +90,20 @@ public class PhaseClassifierTests
         var abilities = new[] { Ab("Tough", "This model is hard to kill.") };
         Assert.Null(PhaseClassifier.InvulnerableSave(abilities));
     }
+
+    [Theory]
+    [InlineData("This model has Feel No Pain 5+.", "5+")]
+    [InlineData("Models in this unit have a Feel No Pain (4+) ability.", "4+")]
+    public void Parses_feel_no_pain_value(string text, string expected)
+    {
+        var abilities = new[] { Ab("Reanimation", text) };
+        Assert.Equal(expected, PhaseClassifier.FeelNoPain(abilities));
+    }
+
+    [Fact]
+    public void Returns_null_when_no_feel_no_pain()
+    {
+        var abilities = new[] { Ab("Invulnerable Save", "This model has a 4+ invulnerable save.") };
+        Assert.Null(PhaseClassifier.FeelNoPain(abilities));
+    }
 }
