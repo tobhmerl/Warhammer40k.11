@@ -153,12 +153,6 @@
     letter-spacing: 0.04em;
 }
 
-.ph-count {
-    font-size: 0.66rem;
-    font-weight: 600;
-    opacity: 0.75;
-}
-
 /* ---- Unit cards ---- */
 .unit-list {
     list-style: none;
@@ -192,29 +186,19 @@
     border-bottom: 1px solid var(--border);
 }
 
-.u-title {
+.u-titles {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.35rem;
-    background: none;
-    border: none;
-    padding: 0;
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
+    gap: 0.4rem;
 }
 
 .u-name {
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.01em;
-}
-
-.u-title:hover .u-name {
-    color: var(--accent-strong);
 }
 
 .u-chips {
@@ -245,6 +229,20 @@
 
 .chip.inv {
     color: #cfe0ff;
+}
+
+/* Datasheet chip-button in the card header. */
+.chip.sheet-btn {
+    cursor: pointer;
+    font-family: var(--font-ui);
+    color: var(--text-dim);
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.chip.sheet-btn:hover {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+    background: var(--accent-soft);
 }
 
 /* ---- Wound tracker ---- */
@@ -298,25 +296,59 @@
     gap: 0.9rem;
 }
 
-.part {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.part-name {
-    margin: 0;
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-
 .table-wrap {
     overflow-x: auto;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+    transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+/* The weapon section for the currently selected phase gets a subtle phosphor edge. */
+.table-wrap.phase-on {
+    border-color: var(--accent-line);
+    box-shadow: var(--glow-sm);
+}
+
+/* ---- Stat strip (per-member M/T/SV/W/LD/OC) ---- */
+table.stats {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    min-width: 22rem;
+}
+
+table.stats th {
+    padding: 0.45rem 0.5rem;
+    text-align: center;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+}
+
+table.stats td {
+    padding: 0.45rem 0.5rem;
+    text-align: center;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+
+table.stats tr:last-child td {
+    border-bottom: none;
+}
+
+.sname {
+    color: #eafff5;
+    font-weight: 600;
+}
+
+.scount {
+    margin-left: 0.35rem;
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.8rem;
 }
 
 table.weapons {
@@ -365,6 +397,15 @@ table.weapons tr:last-child td {
     font-size: 0.73rem;
 }
 
+.wsrc {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
 /* ---- Abilities ---- */
 .abilities {
     list-style: none;
@@ -383,11 +424,25 @@ table.weapons tr:last-child td {
 }
 
 .a-name {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     font-weight: 700;
     font-size: 0.9rem;
     color: var(--accent-strong);
     margin-bottom: 0.15rem;
+}
+
+.a-src {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    color: var(--text-faint);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: none;
 }
 
 .a-text {

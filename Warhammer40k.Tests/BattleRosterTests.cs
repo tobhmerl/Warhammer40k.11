@@ -144,4 +144,66 @@ public class BattleRosterTests
         Assert.Equal(2, part.AbilitiesIn(BattlePhase.Command).Count);
         Assert.Equal("4+", group.InvulnerableSave);
     }
+
+    [Fact]
+    public void Part_weapons_honour_setup_selection()
+    {
+        var sheet = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons:
+            [
+                new WeaponProfile { Name = "Close combat weapon", Type = "Melee" },
+                new WeaponProfile { Name = "Gauss flayer", Type = "Ranged" },
+                new WeaponProfile { Name = "Gauss reaper", Type = "Ranged" },
+            ]);
+        sheet.WargearGroups =
+        [
+            new WargearGroup
+            {
+                Id = "g", Name = "Weapon", Min = 0, Max = 1,
+                Options = [new() { Id = "gauss-flayer", Name = "Gauss flayer" }, new() { Id = "gauss-reaper", Name = "Gauss reaper" }],
+            },
+        ];
+        var unit = Unit("u1", "necron-warriors", models: 10);
+        unit.Wargear = [new WargearSelection { GroupId = "g", OptionIds = ["gauss-flayer"] }];
+        var roster = new Roster { Units = [unit] };
+
+        var part = Assert.Single(BattleRoster.Build(roster, Catalogue(sheet)).Units).Primary;
+        var names = part.Weapons.Select(w => w.Name).ToList();
+
+        Assert.Contains("Gauss flayer", names);
+        Assert.Contains("Close combat weapon", names);
+        Assert.DoesNotContain("Gauss reaper", names);
+    }
+
+    [Fact]
+    public void Combined_abilities_merge_across_parts_and_dedupe()
+    {
+        var overlord = Sheet("overlord", "Overlord", abilities:
+        [
+            new Ability { Name = "Leader", Text = "Can be attached." },
+            new Ability { Name = "My Will Be Done", Text = "Buff." },
+        ]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", abilities:
+        [
+            new Ability { Name = "Reanimation Protocols", Text = "Heal." },
+            new Ability { Name = "Leader", Text = "Duplicate name should be deduped." },
+        ]);
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("u1", "overlord", attachedTo: "u2"),
+                Unit("u2", "necron-warriors", models: 10),
+            ],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
+        var abilities = group.CombinedAbilities;
+        var names = abilities.Select(a => a.Ability.Name).ToList();
+
+        // Primary (warriors) first, then leader (overlord); "Leader" appears once (deduped).
+        Assert.Equal(new[] { "Reanimation Protocols", "Leader", "My Will Be Done" }, names);
+        Assert.Equal("Necron Warriors", abilities[0].Source);
+        Assert.Equal("Overlord", abilities.Single(a => a.Ability.Name == "My Will Be Done").Source);
+    }
 }

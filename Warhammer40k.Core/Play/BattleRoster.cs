@@ -136,7 +136,28 @@ public sealed class BattleUnit
 
     /// <summary>True when any part has content (weapons or abilities) to show in the given phase.</summary>
     public bool HasContentIn(BattlePhase phase) => Parts.Any(p => p.HasContentIn(phase));
+
+    /// <summary>
+    /// Every ability across the group (primary unit first, then attached Leaders), de-duplicated by name so
+    /// shared rules aren't repeated. Each entry records which member it came from for display.
+    /// </summary>
+    public IReadOnlyList<BattleAbility> CombinedAbilities
+    {
+        get
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<BattleAbility>();
+            foreach (var part in Parts)
+                foreach (var ability in part.Datasheet.Abilities)
+                    if (seen.Add(ability.Name))
+                        result.Add(new BattleAbility(ability, part.Datasheet.Name));
+            return result;
+        }
+    }
 }
+
+/// <summary>An ability shown on a battle card, tagged with the member datasheet it belongs to.</summary>
+public sealed record BattleAbility(Ability Ability, string Source);
 
 /// <summary>One datasheet's contribution to a <see cref="BattleUnit"/> (the unit itself, or an attached Leader).</summary>
 public sealed class BattlePart
@@ -146,8 +167,10 @@ public sealed class BattlePart
         Unit = unit;
         Datasheet = datasheet;
         IsLeader = isLeader;
-        RangedWeapons = datasheet.Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
-        MeleeWeapons = datasheet.Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
+        // Only the weapons actually selected in setup are in play (always-on weapons are always included).
+        Weapons = WargearResolver.SelectedWeapons(datasheet, unit);
+        RangedWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
+        MeleeWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
     }
 
     /// <summary>The underlying roster unit (size, warlord flag, wargear, …).</summary>
@@ -171,10 +194,13 @@ public sealed class BattlePart
     /// <summary>This part's trackable wound pool (per-model wounds × models), or null when variable.</summary>
     public int? MaxWounds => WoundsPerModel is { } w ? w * Math.Max(1, ModelCount) : null;
 
-    /// <summary>Ranged weapons (used in the Shooting phase).</summary>
+    /// <summary>The weapons actually in play for this part (always-on + wargear selected in setup), datasheet order.</summary>
+    public IReadOnlyList<WeaponProfile> Weapons { get; }
+
+    /// <summary>Ranged weapons in play (used in the Shooting phase).</summary>
     public IReadOnlyList<WeaponProfile> RangedWeapons { get; }
 
-    /// <summary>Melee weapons (used in the Fight phase).</summary>
+    /// <summary>Melee weapons in play (used in the Fight phase).</summary>
     public IReadOnlyList<WeaponProfile> MeleeWeapons { get; }
 
     /// <summary>

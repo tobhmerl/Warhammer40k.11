@@ -73,45 +73,43 @@ else
 			{
 				<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
 					<span class="ph-name">@BattlePhases.Label(phase)</span>
-					<span class="ph-count">@UnitsWithContent(phase)</span>
 				</button>
 			}
 		</nav>
 
-		@{
-			var units = _battle.Units.Where(u => u.HasContentIn(_phase)).ToList();
-		}
-		@if (units.Count == 0)
+		@if (_battle.Units.Count == 0)
 		{
 			<div class="card empty">
-				<p>No @BattlePhases.Label(_phase).ToLower() actions for this army.</p>
+				<p>This roster has no units yet.</p>
 			</div>
 		}
 		else
 		{
 			<ul class="unit-list">
-				@foreach (var unit in units)
+				@foreach (var unit in _battle.Units)
 				{
 					var dead = IsDead(unit);
 					<li class="unit @(dead ? "dead" : "")" @key="unit.Id">
 						<div class="u-head">
-							<button class="u-title" type="button" @onclick="() => OpenDetail(unit)">
+							<div class="u-titles">
 								<span class="u-name">@unit.Name</span>
 								<span class="u-chips">
 									@if (unit.IsWarlord)
 									{
 										<span class="chip warlord">Warlord</span>
 									}
-									@if (unit.ModelCount > 1)
+									@if (unit.Parts.Count > 1)
 									{
-										<span class="chip">@unit.ModelCount models</span>
+										<span class="chip">@unit.Parts.Count units</span>
 									}
+									<span class="chip">@unit.ModelCount @(unit.ModelCount == 1 ? "model" : "models")</span>
 									@if (unit.InvulnerableSave is { } inv)
 									{
 										<span class="chip inv">@inv inv</span>
 									}
+									<button class="chip sheet-btn" type="button" @onclick="() => OpenDetail(unit)">Datasheet</button>
 								</span>
-							</button>
+							</div>
 							@if (unit.MaxWounds is { } max)
 							{
 								<div class="wounds">
@@ -123,89 +121,123 @@ else
 						</div>
 
 						<div class="u-body">
-							@foreach (var part in unit.Parts)
+							@* Per-member statlines (M/T/SV/W/LD/OC) so an attached group is read at a glance. *@
+							<div class="table-wrap">
+								<table class="stats">
+									<thead>
+										<tr>
+											<th class="lcell">Model</th>
+											<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
+										</tr>
+									</thead>
+									<tbody>
+										@foreach (var part in unit.Parts)
+										{
+											var p = part.Profile;
+											<tr @key="part.Unit.Id">
+												<td class="lcell">
+													<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
+													@if (part.ModelCount > 1)
+													{
+														<span class="scount">×@part.ModelCount</span>
+													}
+												</td>
+												<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
+												<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+
+							@{
+								var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
+								var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
+							}
+							@if (ranged.Count > 0)
 							{
-								<div class="part" @key="part.Unit.Id">
-									@if (unit.Parts.Count > 1)
-									{
-										<p class="part-name">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</p>
-									}
-
-									@if (_phase == BattlePhase.Shooting && part.RangedWeapons.Count > 0)
-									{
-										<div class="table-wrap">
-											<table class="weapons">
-												<thead>
-													<tr>
-														<th class="lcell">Ranged</th>
-														<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
-													</tr>
-												</thead>
-												<tbody>
-													@foreach (var w in part.RangedWeapons)
-													{
-														<tr @key="w">
-															<td class="lcell">
-																<span class="wname">@w.Name</span>
-																@if (w.Keywords.Count > 0)
-																{
-																	<span class="wkw">@string.Join(", ", w.Keywords)</span>
-																}
-															</td>
-															<td>@Dash(w.Range)</td><td>@Dash(w.Attacks)</td><td>@Dash(w.Skill)</td>
-															<td>@Dash(w.Strength)</td><td>@Dash(w.ArmourPenetration)</td><td>@Dash(w.Damage)</td>
-														</tr>
-													}
-												</tbody>
-											</table>
-										</div>
-									}
-									@if (_phase == BattlePhase.Fight && part.MeleeWeapons.Count > 0)
-									{
-										<div class="table-wrap">
-											<table class="weapons">
-												<thead>
-													<tr>
-														<th class="lcell">Melee</th>
-														<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
-													</tr>
-												</thead>
-												<tbody>
-													@foreach (var w in part.MeleeWeapons)
-													{
-														<tr @key="w">
-															<td class="lcell">
-																<span class="wname">@w.Name</span>
-																@if (w.Keywords.Count > 0)
-																{
-																	<span class="wkw">@string.Join(", ", w.Keywords)</span>
-																}
-															</td>
-															<td>@Dash(w.Range)</td><td>@Dash(w.Attacks)</td><td>@Dash(w.Skill)</td>
-															<td>@Dash(w.Strength)</td><td>@Dash(w.ArmourPenetration)</td><td>@Dash(w.Damage)</td>
-														</tr>
-													}
-												</tbody>
-											</table>
-										</div>
-									}
-
-									@{
-										var abilities = part.AbilitiesIn(_phase);
-									}
-									@if (abilities.Count > 0)
-									{
-										<ul class="abilities">
-											@foreach (var a in abilities)
+								<div class="table-wrap @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
+									<table class="weapons">
+										<thead>
+											<tr>
+												<th class="lcell">Ranged</th>
+												<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
+											</tr>
+										</thead>
+										<tbody>
+											@foreach (var row in ranged)
 											{
-												<li @key="a.Name">
-													<span class="a-name">@a.Name</span>
-													<span class="a-text">@Clean(a.Text)</span>
-												</li>
+												<tr @key="row.Weapon">
+													<td class="lcell">
+														<span class="wname">@row.Weapon.Name</span>
+														@if (unit.Parts.Count > 1)
+														{
+															<span class="wsrc">@row.Part.Datasheet.Name</span>
+														}
+														@if (row.Weapon.Keywords.Count > 0)
+														{
+															<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
+														}
+													</td>
+													<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
+													<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
+												</tr>
 											}
-										</ul>
-									}
+										</tbody>
+									</table>
 								</div>
+							}
+							@if (melee.Count > 0)
+							{
+								<div class="table-wrap @(_phase == BattlePhase.Fight ? "phase-on" : "")">
+									<table class="weapons">
+										<thead>
+											<tr>
+												<th class="lcell">Melee</th>
+												<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
+											</tr>
+										</thead>
+										<tbody>
+											@foreach (var row in melee)
+											{
+												<tr @key="row.Weapon">
+													<td class="lcell">
+														<span class="wname">@row.Weapon.Name</span>
+														@if (unit.Parts.Count > 1)
+														{
+															<span class="wsrc">@row.Part.Datasheet.Name</span>
+														}
+														@if (row.Weapon.Keywords.Count > 0)
+														{
+															<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
+														}
+													</td>
+													<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
+													<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							}
+
+							@if (unit.CombinedAbilities.Count > 0)
+							{
+								<ul class="abilities">
+									@foreach (var a in unit.CombinedAbilities)
+									{
+										<li @key="a">
+											<span class="a-name">
+												@a.Ability.Name
+												@if (unit.Parts.Count > 1)
+												{
+													<span class="a-src">@a.Source</span>
+												}
+											</span>
+											<span class="a-text">@Clean(a.Ability.Text)</span>
+										</li>
+									}
+								</ul>
 							}
 						</div>
 					</li>
@@ -319,9 +351,6 @@ else
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
 
-	private int UnitsWithContent(BattlePhase phase) =>
-		_battle?.Units.Count(u => u.HasContentIn(phase)) ?? 0;
-
 	private void OpenDetail(BattleUnit unit) => _detail = unit;
 
 	private void CloseDetail() => _detail = null;
@@ -332,5 +361,5 @@ else
 			.Replace("**", " ", StringComparison.Ordinal)
 			.Replace("■", "•", StringComparison.Ordinal);
 
-	private static string Dash(string value) => string.IsNullOrWhiteSpace(value) ? "–" : value;
+	private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "–" : value;
 }
