@@ -58,20 +58,14 @@
 			<div class="filter-banner" role="status">
 				<span class="fb-mark" aria-hidden="true"></span>
 				<span class="fb-text">
-					Units <strong>@_filter.Name</strong> can attach to
+					Highlighting units <strong>@_filter.Name</strong> can attach to
 					<span class="fb-count">@PartnerCount</span>
 				</span>
-				<button class="fb-clear" type="button" @onclick="ClearFilter">Show all ✕</button>
+				<button class="fb-clear" type="button" @onclick="ClearFilter">Clear ✕</button>
 			</div>
 		}
 
-		@if (_filter is not null && PartnerCount == 0)
-		{
-			<div class="card pad">
-				<p class="status"><strong>@_filter.Name</strong> has no attachment options in the catalogue.</p>
-			</div>
-		}
-		else if (MatchCount == 0)
+		@if (MatchCount == 0)
 		{
 			<div class="card pad">
 				<p class="status">No units match “<strong>@_query</strong>”.</p>
@@ -90,9 +84,10 @@
 						@foreach (var d in group.Units)
 						{
 							<li @key="d.Id">
-								<div class="unit-card @(IsAnchor(d) ? "anchor" : "")" role="button" tabindex="0"
+								<div class="unit-card @CardState(d)" role="button" tabindex="0"
 									 @onclick="() => FilterBy(d)" @onkeydown="e => OnCardKey(e, d)"
-									 aria-label="@($"Show units {d.Name} can be attached to")">
+									 aria-pressed="@(IsAnchor(d) ? "true" : "false")"
+									 aria-label="@CardLabel(d)">
 									<span class="unit-name">@d.Name</span>
 									<span class="unit-meta">
 										@if (d.IsEpicHero)
@@ -137,7 +132,7 @@
 	private string _query = "";
 	private Datasheet? _selected;
 	private Datasheet? _filter;
-	private IReadOnlyList<Datasheet> _partners = [];
+	private HashSet<string> _partnerIds = new(StringComparer.OrdinalIgnoreCase);
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -156,21 +151,21 @@
 
 	private void FilterBy(Datasheet d)
 	{
-		// Clicking the anchored unit again clears the filter; otherwise anchor on the clicked unit.
+		// Clicking the anchored unit again clears the highlight; otherwise anchor on the clicked unit
+		// and highlight its attachment partners (every other card is dimmed via CardState).
 		if (IsAnchor(d))
 		{
 			ClearFilter();
 			return;
 		}
 		_filter = d;
-		_partners = _catalogue.AttachmentPartners(d);
-		_query = "";
+		_partnerIds = _catalogue.AttachmentPartners(d).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
 	}
 
 	private void ClearFilter()
 	{
 		_filter = null;
-		_partners = [];
+		_partnerIds = new(StringComparer.OrdinalIgnoreCase);
 	}
 
 	private void OnCardKey(KeyboardEventArgs e, Datasheet d)
@@ -182,16 +177,36 @@
 	private bool IsAnchor(Datasheet d) =>
 		_filter is not null && string.Equals(_filter.Id, d.Id, StringComparison.OrdinalIgnoreCase);
 
-	private int PartnerCount => _partners.Count;
+	private bool IsPartner(Datasheet d) => _partnerIds.Contains(d.Id);
 
-	private int MatchCount => Filtered().Count(d => Matches(d, _query.Trim()));
+	private int PartnerCount => _partnerIds.Count;
 
-	private IEnumerable<Datasheet> Filtered() => _filter is null ? _catalogue.Datasheets : _partners;
+	// Card CSS state under an active highlight: the clicked unit is the anchor, its valid
+	// attachment targets are highlighted partners, everything else is dimmed.
+	private string CardState(Datasheet d)
+	{
+		if (_filter is null)
+			return "";
+		if (IsAnchor(d))
+			return "anchor";
+		return IsPartner(d) ? "partner" : "dimmed";
+	}
+
+	private string CardLabel(Datasheet d)
+	{
+		if (_filter is null)
+			return $"Highlight units {d.Name} can be attached to";
+		if (IsAnchor(d))
+			return $"{d.Name} (selected) — clear highlight";
+		return IsPartner(d) ? $"{d.Name} can attach with {_filter.Name}" : d.Name;
+	}
+
+	private int MatchCount => _catalogue.Datasheets.Count(d => Matches(d, _query.Trim()));
 
 	private IEnumerable<RoleGroup> Groups()
 	{
 		var q = _query.Trim();
-		return Filtered()
+		return _catalogue.Datasheets
 			.Where(d => Matches(d, q))
 			.GroupBy(d => string.IsNullOrWhiteSpace(d.PrimaryRole) ? "Other" : d.PrimaryRole)
 			.OrderBy(g => RoleRank(g.Key))
