@@ -1,0 +1,202 @@
+using Warhammer40k.Core.Catalogue;
+using Warhammer40k.Core.Rosters;
+
+namespace Warhammer40k.Core.Play;
+
+/// <summary>
+/// A roster reshaped for play: units resolved against the catalogue, attached Leaders merged into the
+/// bodyguard they lead (so a led unit is commanded as one), and content pre-split by battle phase.
+/// Pure and deterministic — built once from a <see cref="Roster"/> + <see cref="CatalogueData"/>.
+/// </summary>
+public sealed class BattleRoster
+{
+    private BattleRoster(IReadOnlyList<BattleUnit> units) => Units = units;
+
+    /// <summary>The combat groups, in roster order (a group is a unit plus any Leaders attached to it).</summary>
+    public IReadOnlyList<BattleUnit> Units { get; }
+
+    /// <summary>Builds a battle roster, skipping units whose datasheet is missing from the catalogue.</summary>
+    public static BattleRoster Build(Roster roster, CatalogueData catalogue)
+    {
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(catalogue);
+
+        // First pass: a part for every roster unit that resolves to a datasheet, keyed by roster-unit id.
+        var parts = new Dictionary<string, BattlePart>(StringComparer.Ordinal);
+        var order = new List<string>();
+        foreach (var unit in roster.Units)
+        {
+            var sheet = catalogue.FindById(unit.DatasheetId);
+            if (sheet is null)
+                continue;
+            parts[unit.Id] = new BattlePart(unit, sheet, isLeader: false);
+            order.Add(unit.Id);
+        }
+
+        // Second pass: fold attached Leaders into their bodyguard; a dangling attachment stays standalone.
+        var attachedToHost = new Dictionary<string, List<BattlePart>>(StringComparer.Ordinal);
+        var absorbed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var unit in roster.Units)
+        {
+            if (string.IsNullOrEmpty(unit.AttachedToRosterUnitId))
+                continue;
+            if (!parts.TryGetValue(unit.Id, out var leaderPart))
+                continue;
+            if (!parts.ContainsKey(unit.AttachedToRosterUnitId))
+                continue; // dangling → leave the leader as its own group
+
+            leaderPart.IsLeader = true;
+            if (!attachedToHost.TryGetValue(unit.AttachedToRosterUnitId, out var list))
+                attachedToHost[unit.AttachedToRosterUnitId] = list = new List<BattlePart>();
+            list.Add(leaderPart);
+            absorbed.Add(unit.Id);
+        }
+
+        var units = new List<BattleUnit>();
+        foreach (var id in order)
+        {
+            if (absorbed.Contains(id))
+                continue;
+            var primary = parts[id];
+            var members = new List<BattlePart> { primary };
+            if (attachedToHost.TryGetValue(id, out var leaders))
+                members.AddRange(leaders);
+            units.Add(new BattleUnit(members));
+        }
+
+        return new BattleRoster(units);
+    }
+
+    /// <summary>
+    /// Parses a Wounds characteristic into a fixed number, or null when it is variable (e.g. "D6", "D3+1")
+    /// and therefore cannot be tracked numerically.
+    /// </summary>
+    public static int? ParseWounds(string? wounds)
+    {
+        if (string.IsNullOrWhiteSpace(wounds))
+            return null;
+        return int.TryParse(wounds.Trim(), out var value) && value > 0 ? value : null;
+    }
+}
+
+/// <summary>
+/// A combat group on the table: a primary unit plus any Leaders attached to it. Tracks the merged model
+/// count and total wound pool for the in-game trackers.
+/// </summary>
+public sealed class BattleUnit
+{
+    internal BattleUnit(IReadOnlyList<BattlePart> parts)
+    {
+        Parts = parts;
+        Primary = parts[0];
+    }
+
+    /// <summary>Stable id for tracker state — the primary (bodyguard) roster-unit id.</summary>
+    public string Id => Primary.Unit.Id;
+
+    /// <summary>The primary unit; Leaders (if any) follow in <see cref="Parts"/>.</summary>
+    public BattlePart Primary { get; }
+
+    /// <summary>The primary part plus any attached Leader parts, primary first.</summary>
+    public IReadOnlyList<BattlePart> Parts { get; }
+
+    /// <summary>Display name: the primary unit, with attached Leaders appended ("Warriors + Overlord").</summary>
+    public string Name => Parts.Count == 1
+        ? Primary.Datasheet.Name
+        : Primary.Datasheet.Name + " + " + string.Join(" + ", Parts.Skip(1).Select(p => p.Datasheet.Name));
+
+    /// <summary>True when any part of this group is the army Warlord.</summary>
+    public bool IsWarlord => Parts.Any(p => p.Unit.IsWarlord);
+
+    /// <summary>Total models across the group.</summary>
+    public int ModelCount => Parts.Sum(p => p.ModelCount);
+
+    /// <summary>The group's invulnerable save (first found across parts), or null when none.</summary>
+    public string? InvulnerableSave =>
+        Parts.Select(p => PhaseClassifier.InvulnerableSave(p.Datasheet.Abilities)).FirstOrDefault(s => s is not null);
+
+    /// <summary>Total trackable wound pool (sum of parts with a fixed Wounds value), or null when none are fixed.</summary>
+    public int? MaxWounds
+    {
+        get
+        {
+            var total = 0;
+            var any = false;
+            foreach (var part in Parts)
+            {
+                if (part.MaxWounds is { } w)
+                {
+                    total += w;
+                    any = true;
+                }
+            }
+            return any ? total : null;
+        }
+    }
+
+    /// <summary>True when any part has content (weapons or abilities) to show in the given phase.</summary>
+    public bool HasContentIn(BattlePhase phase) => Parts.Any(p => p.HasContentIn(phase));
+}
+
+/// <summary>One datasheet's contribution to a <see cref="BattleUnit"/> (the unit itself, or an attached Leader).</summary>
+public sealed class BattlePart
+{
+    internal BattlePart(RosterUnit unit, Datasheet datasheet, bool isLeader)
+    {
+        Unit = unit;
+        Datasheet = datasheet;
+        IsLeader = isLeader;
+        RangedWeapons = datasheet.Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
+        MeleeWeapons = datasheet.Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
+    }
+
+    /// <summary>The underlying roster unit (size, warlord flag, wargear, …).</summary>
+    public RosterUnit Unit { get; }
+
+    /// <summary>The resolved catalogue datasheet.</summary>
+    public Datasheet Datasheet { get; }
+
+    /// <summary>True when this part is a Leader attached to the group's primary unit.</summary>
+    public bool IsLeader { get; internal set; }
+
+    /// <summary>Models in this part.</summary>
+    public int ModelCount => Unit.ModelCount;
+
+    /// <summary>The full-health statline (first profile), or null when the datasheet has none.</summary>
+    public StatProfile? Profile => Datasheet.StatProfiles.FirstOrDefault();
+
+    /// <summary>Wounds per model, or null when variable.</summary>
+    public int? WoundsPerModel => BattleRoster.ParseWounds(Profile?.Wounds);
+
+    /// <summary>This part's trackable wound pool (per-model wounds × models), or null when variable.</summary>
+    public int? MaxWounds => WoundsPerModel is { } w ? w * Math.Max(1, ModelCount) : null;
+
+    /// <summary>Ranged weapons (used in the Shooting phase).</summary>
+    public IReadOnlyList<WeaponProfile> RangedWeapons { get; }
+
+    /// <summary>Melee weapons (used in the Fight phase).</summary>
+    public IReadOnlyList<WeaponProfile> MeleeWeapons { get; }
+
+    /// <summary>
+    /// Abilities relevant to a phase. Passive/always-on abilities are surfaced under
+    /// <see cref="BattlePhase.Command"/> so they are reviewed at the top of the round.
+    /// </summary>
+    public IReadOnlyList<Ability> AbilitiesIn(BattlePhase phase) =>
+        Datasheet.Abilities
+            .Where(a =>
+            {
+                var phases = PhaseClassifier.Classify(a);
+                return phases.Contains(phase) || (phase == BattlePhase.Command && phases.Count == 0);
+            })
+            .ToList();
+
+    /// <summary>True when this part has weapons or abilities to display in the given phase.</summary>
+    public bool HasContentIn(BattlePhase phase)
+    {
+        if (phase == BattlePhase.Shooting && RangedWeapons.Count > 0)
+            return true;
+        if (phase == BattlePhase.Fight && MeleeWeapons.Count > 0)
+            return true;
+        return AbilitiesIn(phase).Count > 0;
+    }
+}

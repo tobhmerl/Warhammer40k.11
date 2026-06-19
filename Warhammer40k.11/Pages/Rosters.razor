@@ -63,6 +63,7 @@
 						</span>
 					</a>
 					<div class="row-actions">
+						<a class="btn small ghost" href="@($"play/{roster.Id}")">Play</a>
 						<button class="btn small ghost" type="button" @onclick="() => DuplicateAsync(roster)">Duplicate</button>
 						<button class="btn small danger" type="button" @onclick="() => DeleteAsync(roster)">Delete</button>
 					</div>

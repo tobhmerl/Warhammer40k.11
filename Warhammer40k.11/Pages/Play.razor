@@ -1,0 +1,128 @@
+@page "/play"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k.Core.Rosters.Validation
+@inject IApiClient Api
+@inject SettingsState Settings
+
+<PageTitle>TombForge — Play</PageTitle>
+
+<div class="play-pick">
+	<header class="head">
+		<div>
+			<p class="eyebrow">Battle command</p>
+			<h1>Play</h1>
+		</div>
+		@if (_authenticated && !_loading)
+		{
+			<span class="count">@_rosters.Count @(_rosters.Count == 1 ? "roster" : "rosters")</span>
+		}
+	</header>
+
+	<p class="lede">Pick a roster to enter the phase-by-phase command screen for your next battle.</p>
+
+	@if (_loading)
+	{
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading&hellip;</p>
+		</div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad signin">
+			<p class="status">Sign in to command your armies on the table.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else if (_rosters.Count == 0)
+	{
+		<div class="card empty">
+			<span class="empty-mark" aria-hidden="true"></span>
+			<p>No rosters yet &mdash; forge one before you march to war.</p>
+			<a class="btn primary" href="rosters">Go to rosters</a>
+		</div>
+	}
+	else
+	{
+		<ul class="list">
+			@foreach (var roster in _rosters)
+			{
+				var s = Summary(roster);
+				<li class="play-card" @key="roster.Id">
+					<a class="open" href="@($"play/{roster.Id}")">
+						<span class="play-glyph" aria-hidden="true">▶</span>
+						<span class="info">
+							<span class="name">@roster.Name</span>
+							<span class="meta">@s.Detachment · @s.Units @(s.Units == 1 ? "unit" : "units")</span>
+						</span>
+						<span class="numbers">
+							<span class="pts"><strong>@s.Total</strong> / @roster.PointsLimit</span>
+							<span class="pill @(s.Errors == 0 ? "ready" : "issues")">
+								@(s.Errors == 0 ? "Ready" : $"{s.Errors} {(s.Errors == 1 ? "issue" : "issues")}")
+							</span>
+						</span>
+					</a>
+				</li>
+			}
+		</ul>
+	}
+
+	@if (_error is not null)
+	{
+		<p class="error">@_error</p>
+	}
+</div>
+
+@code {
+	private readonly List<Roster> _rosters = new();
+	private readonly Dictionary<string, PlaySummary> _summaries = new();
+	private CatalogueData _catalogue = new();
+	private readonly RosterValidator _validator = new();
+
+	private bool _loading = true;
+	private bool _authenticated;
+	private string? _error;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var user = await Api.GetCurrentUserAsync();
+			_authenticated = user.IsAuthenticated;
+			if (_authenticated)
+			{
+				await Settings.InitializeAsync();
+				_catalogue = await Api.GetCatalogueAsync();
+				var rosters = await Api.GetRostersAsync();
+				_rosters.AddRange(rosters);
+				foreach (var roster in _rosters)
+					_summaries[roster.Id] = Compute(roster);
+			}
+		}
+		catch (Exception)
+		{
+			_error = "Could not load your rosters. Please try again.";
+		}
+		finally
+		{
+			_loading = false;
+		}
+	}
+
+	private PlaySummary Compute(Roster roster)
+	{
+		var detachment = DetachmentCatalogue.FindById(roster.DetachmentId);
+		var result = _validator.Validate(roster, _catalogue);
+		return new PlaySummary(
+			detachment?.Name ?? "No detachment",
+			result.TotalPoints,
+			result.Errors.Count(),
+			roster.Units.Count);
+	}
+
+	private PlaySummary Summary(Roster roster) =>
+		_summaries.TryGetValue(roster.Id, out var s) ? s : new PlaySummary("", 0, 0, 0);
+
+	private sealed record PlaySummary(string Detachment, int Total, int Errors, int Units);
+}

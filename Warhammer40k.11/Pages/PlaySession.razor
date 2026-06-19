@@ -1,0 +1,336 @@
+@page "/play/{Id}"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Play
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k._11.Components
+@inject IApiClient Api
+
+<PageTitle>TombForge — @(_roster?.Name ?? "Play")</PageTitle>
+
+@if (_loading)
+{
+	<div class="play">
+		<div class="card pad">
+			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading roster&hellip;</p>
+		</div>
+	</div>
+}
+else if (!_authenticated)
+{
+	<div class="play">
+		<div class="card pad signin">
+			<p class="status">Sign in to play with your rosters.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	</div>
+}
+else if (_notFound || _roster is null || _battle is null)
+{
+	<div class="play">
+		<div class="card pad signin">
+			<p class="status">That roster could not be found.</p>
+			<a class="btn ghost" href="play">&larr; Back to play</a>
+		</div>
+	</div>
+}
+else
+{
+	<div class="play">
+		<a class="back" href="play">&larr; Play</a>
+
+		<header class="sticky">
+			<div class="title-row">
+				<h1 class="rname">@_roster.Name</h1>
+				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP and wounds">Reset</button>
+			</div>
+			<div class="trackers">
+				<div class="tracker">
+					<span class="t-label">Round</span>
+					<div class="stepper">
+						<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous round">−</button>
+						<span class="t-value">@_round</span>
+						<button type="button" @onclick="() => StepRound(1)" aria-label="Next round">+</button>
+					</div>
+				</div>
+				<div class="tracker">
+					<span class="t-label">CP</span>
+					<div class="stepper">
+						<button type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
+						<span class="t-value">@_cp</span>
+						<button type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
+					</div>
+				</div>
+				<div class="tracker units-left">
+					<span class="t-label">Units</span>
+					<span class="t-value">@AliveCount/@_battle.Units.Count</span>
+				</div>
+			</div>
+		</header>
+
+		<nav class="phases" aria-label="Battle phases">
+			@foreach (var phase in BattlePhases.Ordered)
+			{
+				<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
+					<span class="ph-name">@BattlePhases.Label(phase)</span>
+					<span class="ph-count">@UnitsWithContent(phase)</span>
+				</button>
+			}
+		</nav>
+
+		@{
+			var units = _battle.Units.Where(u => u.HasContentIn(_phase)).ToList();
+		}
+		@if (units.Count == 0)
+		{
+			<div class="card empty">
+				<p>No @BattlePhases.Label(_phase).ToLower() actions for this army.</p>
+			</div>
+		}
+		else
+		{
+			<ul class="unit-list">
+				@foreach (var unit in units)
+				{
+					var dead = IsDead(unit);
+					<li class="unit @(dead ? "dead" : "")" @key="unit.Id">
+						<div class="u-head">
+							<button class="u-title" type="button" @onclick="() => OpenDetail(unit)">
+								<span class="u-name">@unit.Name</span>
+								<span class="u-chips">
+									@if (unit.IsWarlord)
+									{
+										<span class="chip warlord">Warlord</span>
+									}
+									@if (unit.ModelCount > 1)
+									{
+										<span class="chip">@unit.ModelCount models</span>
+									}
+									@if (unit.InvulnerableSave is { } inv)
+									{
+										<span class="chip inv">@inv inv</span>
+									}
+								</span>
+							</button>
+							@if (unit.MaxWounds is { } max)
+							{
+								<div class="wounds">
+									<button type="button" @onclick="() => StepWounds(unit, -1)" aria-label="Lose a wound">−</button>
+									<span class="w-value @(dead ? "gone" : "")">@CurrentWounds(unit)<span class="w-max">/@max</span></span>
+									<button type="button" @onclick="() => StepWounds(unit, 1)" aria-label="Restore a wound">+</button>
+								</div>
+							}
+						</div>
+
+						<div class="u-body">
+							@foreach (var part in unit.Parts)
+							{
+								<div class="part" @key="part.Unit.Id">
+									@if (unit.Parts.Count > 1)
+									{
+										<p class="part-name">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</p>
+									}
+
+									@if (_phase == BattlePhase.Shooting && part.RangedWeapons.Count > 0)
+									{
+										<div class="table-wrap">
+											<table class="weapons">
+												<thead>
+													<tr>
+														<th class="lcell">Ranged</th>
+														<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
+													</tr>
+												</thead>
+												<tbody>
+													@foreach (var w in part.RangedWeapons)
+													{
+														<tr @key="w">
+															<td class="lcell">
+																<span class="wname">@w.Name</span>
+																@if (w.Keywords.Count > 0)
+																{
+																	<span class="wkw">@string.Join(", ", w.Keywords)</span>
+																}
+															</td>
+															<td>@Dash(w.Range)</td><td>@Dash(w.Attacks)</td><td>@Dash(w.Skill)</td>
+															<td>@Dash(w.Strength)</td><td>@Dash(w.ArmourPenetration)</td><td>@Dash(w.Damage)</td>
+														</tr>
+													}
+												</tbody>
+											</table>
+										</div>
+									}
+									@if (_phase == BattlePhase.Fight && part.MeleeWeapons.Count > 0)
+									{
+										<div class="table-wrap">
+											<table class="weapons">
+												<thead>
+													<tr>
+														<th class="lcell">Melee</th>
+														<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
+													</tr>
+												</thead>
+												<tbody>
+													@foreach (var w in part.MeleeWeapons)
+													{
+														<tr @key="w">
+															<td class="lcell">
+																<span class="wname">@w.Name</span>
+																@if (w.Keywords.Count > 0)
+																{
+																	<span class="wkw">@string.Join(", ", w.Keywords)</span>
+																}
+															</td>
+															<td>@Dash(w.Range)</td><td>@Dash(w.Attacks)</td><td>@Dash(w.Skill)</td>
+															<td>@Dash(w.Strength)</td><td>@Dash(w.ArmourPenetration)</td><td>@Dash(w.Damage)</td>
+														</tr>
+													}
+												</tbody>
+											</table>
+										</div>
+									}
+
+									@{
+										var abilities = part.AbilitiesIn(_phase);
+									}
+									@if (abilities.Count > 0)
+									{
+										<ul class="abilities">
+											@foreach (var a in abilities)
+											{
+												<li @key="a.Name">
+													<span class="a-name">@a.Name</span>
+													<span class="a-text">@Clean(a.Text)</span>
+												</li>
+											}
+										</ul>
+									}
+								</div>
+							}
+						</div>
+					</li>
+				}
+			</ul>
+		}
+	</div>
+}
+
+<Sheet Open="_detail is not null" Eyebrow="Datasheet" Title="@_detail?.Name" OnCloseRequested="CloseDetail">
+	@if (_detail is { } d)
+	{
+		<DatasheetDetail Datasheet="d.Primary.Datasheet" Catalogue="_catalogue" />
+		@foreach (var part in d.Parts.Skip(1))
+		{
+			<div class="detail-extra">
+				<h3 class="detail-extra-title">@part.Datasheet.Name (Leader)</h3>
+				<DatasheetDetail Datasheet="part.Datasheet" Catalogue="_catalogue" />
+			</div>
+		}
+	}
+</Sheet>
+
+@code {
+	[Parameter] public string Id { get; set; } = "";
+
+	private CatalogueData _catalogue = new();
+	private Roster? _roster;
+	private BattleRoster? _battle;
+
+	private string? _loadedId;
+	private bool _loading = true;
+	private bool _authenticated;
+	private bool _notFound;
+
+	private BattlePhase _phase = BattlePhase.Command;
+	private int _round = 1;
+	private int _cp;
+	private readonly Dictionary<string, int> _currentWounds = new(StringComparer.Ordinal);
+	private BattleUnit? _detail;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (_loadedId == Id)
+			return;
+		_loadedId = Id;
+		await LoadAsync();
+	}
+
+	private async Task LoadAsync()
+	{
+		_loading = true;
+		_notFound = false;
+
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			if (_catalogue.Datasheets.Count == 0)
+				_catalogue = await Api.GetCatalogueAsync();
+
+			var roster = await Api.GetRosterAsync(Id);
+			if (roster is null)
+			{
+				_notFound = true;
+			}
+			else
+			{
+				_roster = roster;
+				_battle = BattleRoster.Build(roster, _catalogue);
+				ResetTrackers();
+			}
+		}
+
+		_loading = false;
+	}
+
+	private void SelectPhase(BattlePhase phase) => _phase = phase;
+
+	private void StepRound(int delta) => _round = Math.Max(1, _round + delta);
+
+	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
+
+	private void ResetTrackers()
+	{
+		_round = 1;
+		_cp = 0;
+		_phase = BattlePhase.Command;
+		_currentWounds.Clear();
+		if (_battle is null)
+			return;
+		foreach (var unit in _battle.Units)
+		{
+			if (unit.MaxWounds is { } max)
+				_currentWounds[unit.Id] = max;
+		}
+	}
+
+	private int CurrentWounds(BattleUnit unit) =>
+		_currentWounds.TryGetValue(unit.Id, out var w) ? w : unit.MaxWounds ?? 0;
+
+	private void StepWounds(BattleUnit unit, int delta)
+	{
+		if (unit.MaxWounds is not { } max)
+			return;
+		var next = Math.Clamp(CurrentWounds(unit) + delta, 0, max);
+		_currentWounds[unit.Id] = next;
+	}
+
+	private bool IsDead(BattleUnit unit) => unit.MaxWounds is not null && CurrentWounds(unit) == 0;
+
+	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
+
+	private int UnitsWithContent(BattlePhase phase) =>
+		_battle?.Units.Count(u => u.HasContentIn(phase)) ?? 0;
+
+	private void OpenDetail(BattleUnit unit) => _detail = unit;
+
+	private void CloseDetail() => _detail = null;
+
+	private static string Clean(string text) =>
+		text.Replace("^^**", " ", StringComparison.Ordinal)
+			.Replace("^^", " ", StringComparison.Ordinal)
+			.Replace("**", " ", StringComparison.Ordinal)
+			.Replace("■", "•", StringComparison.Ordinal);
+
+	private static string Dash(string value) => string.IsNullOrWhiteSpace(value) ? "–" : value;
+}
