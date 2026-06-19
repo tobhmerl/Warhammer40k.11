@@ -292,25 +292,26 @@
 
 /* ---- Inline per-part model counter (stat-strip trailing cell) ---- */
 .ccell {
-    width: 1%;
     white-space: nowrap;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
 }
 
 .counter {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
 }
 
 .counter button {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.5rem;
+    height: 1.5rem;
     flex: none;
     border-radius: 50%;
     border: 1px solid var(--border-strong);
     background: var(--surface-2);
     color: var(--accent);
-    font-size: 1rem;
+    font-size: 0.95rem;
     line-height: 1;
     cursor: pointer;
     transition: border-color 0.15s var(--ease);
@@ -321,7 +322,7 @@
 }
 
 .c-value {
-    min-width: 2.6rem;
+    min-width: 2.1rem;
     text-align: center;
     font-family: var(--font-display);
     font-weight: 700;
@@ -330,7 +331,7 @@
 
 .c-max {
     color: var(--text-faint);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
 }
 
@@ -434,6 +435,25 @@ table.weapons td {
 
 table.weapons tr:last-child td {
     border-bottom: none;
+}
+
+/* Shared fixed grid so the stats table and both weapon tables line up column-for-column:
+   name | counter | 6 equal data columns. M/T/SV/W/LD/OC align under Range/A/BS/S/AP/D. */
+table.grid {
+    table-layout: fixed;
+    min-width: 30rem;
+}
+
+table.grid col.col-name {
+    width: 11rem;
+}
+
+table.grid col.col-count {
+    width: 6.5rem;
+}
+
+table.grid col:not(.col-name):not(.col-count) {
+    width: auto;
 }
 
 .lcell {

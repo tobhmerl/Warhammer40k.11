@@ -127,12 +127,16 @@ else
 							<div class="u-body">
 								@* Per-member statlines (M/T/SV/W/LD/OC) with an inline model counter at the end of each line. *@
 								<div class="table-wrap">
-									<table class="stats">
+									<table class="stats grid">
+										<colgroup>
+											<col class="col-name" /><col class="col-count" />
+											<col /><col /><col /><col /><col /><col />
+										</colgroup>
 										<thead>
 											<tr>
 												<th class="lcell">Model</th>
-												<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
 												<th class="ccell">Models</th>
+												<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -143,8 +147,6 @@ else
 													<td class="lcell">
 														<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
 													</td>
-													<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
-													<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
 													<td class="ccell">
 														<span class="counter">
 															<button type="button" @onclick="() => StepModels(part, -1)" aria-label="Remove a model">−</button>
@@ -152,6 +154,8 @@ else
 															<button type="button" @onclick="() => StepModels(part, 1)" aria-label="Add a model">+</button>
 														</span>
 													</td>
+													<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
+													<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
 												</tr>
 											}
 										</tbody>
@@ -165,11 +169,16 @@ else
 								@if (ranged.Count > 0)
 								{
 									<div class="table-wrap @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
-										<table class="weapons">
+										<table class="weapons grid">
+											<colgroup>
+												<col class="col-name" /><col class="col-count" />
+												<col /><col /><col /><col /><col /><col />
+											</colgroup>
 											<thead>
 												<tr>
 													<th class="lcell">Ranged</th>
-													<th>Range</th><th>A</th><th class="acell">Total A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
+													<th class="acell">Total A</th>
+													<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
 												</tr>
 											</thead>
 											<tbody>
@@ -187,9 +196,8 @@ else
 																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
 															}
 														</td>
-														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td>
 														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
-														<td>@Dash(row.Weapon.Skill)</td>
+														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
 														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
 													</tr>
 												}
@@ -200,11 +208,16 @@ else
 								@if (melee.Count > 0)
 								{
 									<div class="table-wrap @(_phase == BattlePhase.Fight ? "phase-on" : "")">
-										<table class="weapons">
+										<table class="weapons grid">
+											<colgroup>
+												<col class="col-name" /><col class="col-count" />
+												<col /><col /><col /><col /><col /><col />
+											</colgroup>
 											<thead>
 												<tr>
 													<th class="lcell">Melee</th>
-													<th>Rng</th><th>A</th><th class="acell">Total A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
+													<th class="acell">Total A</th>
+													<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
 												</tr>
 											</thead>
 											<tbody>
@@ -222,9 +235,8 @@ else
 																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
 															}
 														</td>
-														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td>
 														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
-														<td>@Dash(row.Weapon.Skill)</td>
+														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
 														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
 													</tr>
 												}
