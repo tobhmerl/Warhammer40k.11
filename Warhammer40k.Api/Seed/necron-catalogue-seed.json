@@ -3006,22 +3006,6 @@
       ],
       "wargearGroups": [
         {
-          "id": "bfbd-40ed-e9db-b4ac::51e3-dc14-b91a-ae13",
-          "name": "Weapon",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "rod-of-covenant",
-              "name": "Rod of covenant"
-            },
-            {
-              "id": "triarch-praetorian",
-              "name": "Triarch Praetorian"
-            }
-          ]
-        },
-        {
           "id": "bfbd-40ed-e9db-b4ac::b531-e9e2-c8c6-9e90",
           "name": "Weapons",
           "min": 0,
@@ -3557,16 +3541,16 @@
           "max": 1,
           "options": [
             {
-              "id": "canoptek-macrocyte-w-gauss-scalpel",
-              "name": "Canoptek Macrocyte w/ gauss scalpel"
+              "id": "gauss-scalpel",
+              "name": "Gauss scalpel"
             },
             {
-              "id": "canoptek-macrocyte-w-atomiser-beam",
-              "name": "Canoptek Macrocyte w/ atomiser beam"
+              "id": "atomiser-beam",
+              "name": "Atomiser beam"
             },
             {
-              "id": "canoptek-macrocyte-w-accelerator-mandible",
-              "name": "Canoptek Macrocyte w/ accelerator mandible"
+              "id": "accelerator-mandible",
+              "name": "Accelerator mandible"
             }
           ]
         }
@@ -3660,22 +3644,6 @@
         {
           "id": "f642-9374-0f45-2991::d9a7-8561-d713-e351",
           "name": "Weapon",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "tomb-crawler-w-twin-gauss-reaper",
-              "name": "Tomb Crawler w/ twin gauss reaper"
-            },
-            {
-              "id": "tomb-crawler-w-dimensional-isolator",
-              "name": "Tomb Crawler w/ dimensional isolator"
-            }
-          ]
-        },
-        {
-          "id": "f642-9374-0f45-2991::da0b-10d5-755b-f41d",
-          "name": "Weapon choice",
           "min": 0,
           "max": 1,
           "options": [
@@ -3803,24 +3771,24 @@
               "name": "Vicious claws"
             },
             {
-              "id": "wraith-w-claws-and-beamer",
-              "name": "Wraith w/ claws and beamer"
+              "id": "claws-and-beamer",
+              "name": "Claws and beamer"
             },
             {
-              "id": "wraith-w-claws-and-particle-caster",
-              "name": "Wraith w/ claws and particle caster"
+              "id": "claws-and-particle-caster",
+              "name": "Claws and particle caster"
             },
             {
               "id": "whip-coils",
               "name": "Whip coils"
             },
             {
-              "id": "wraith-w-coils-and-beamer",
-              "name": "Wraith w/ coils and beamer"
+              "id": "coils-and-beamer",
+              "name": "Coils and beamer"
             },
             {
-              "id": "wraith-w-coils-and-particle-caster",
-              "name": "Wraith w/ coils and particle caster"
+              "id": "coils-and-particle-caster",
+              "name": "Coils and particle caster"
             }
           ]
         }
@@ -5051,24 +5019,7 @@
           "points": 425
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "169-6293-f763-76d8::3c7e-7670-f674-7663",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "ctan-powers",
-              "name": "C'tan Powers"
-            },
-            {
-              "id": "tesla-sphere",
-              "name": "Tesla sphere"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Triarch Stalker",

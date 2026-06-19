@@ -520,6 +520,19 @@
     background: rgba(120, 80, 220, 0.18);
 }
 
+.chip.wargear {
+    color: var(--text);
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+}
+
+.chip.wargear::before {
+    content: "?";
+    margin-right: 0.3rem;
+    color: var(--accent);
+    font-size: 0.7rem;
+}
+
 /* ---- Buttons / fab ---- */
 .btn {
     display: inline-flex;

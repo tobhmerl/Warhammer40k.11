@@ -135,6 +135,10 @@ else
 											{
 												<span class="chip binding">@binding +@entry.Unit.BindingSurcharge</span>
 											}
+											@foreach (var wargear in WargearNames(entry.Unit))
+											{
+												<span class="chip wargear" @key="wargear">@wargear</span>
+											}
 										</span>
 									</span>
 									<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
@@ -653,6 +657,25 @@ else
 		if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
 			return null;
 		return _detachment?.FindEnhancement(unit.AssignedEnhancementId)?.Name ?? unit.AssignedEnhancementId;
+	}
+
+	private IEnumerable<string> WargearNames(RosterUnit unit)
+	{
+		if (unit.Wargear.Count == 0 || SheetFor(unit) is not { } sheet)
+			yield break;
+
+		foreach (var selection in unit.Wargear)
+		{
+			var group = sheet.WargearGroups.FirstOrDefault(g => string.Equals(g.Id, selection.GroupId, StringComparison.OrdinalIgnoreCase));
+			if (group is null)
+				continue;
+			foreach (var optionId in selection.OptionIds)
+			{
+				var option = group.Options.FirstOrDefault(o => string.Equals(o.Id, optionId, StringComparison.OrdinalIgnoreCase));
+				if (option is not null && !string.IsNullOrWhiteSpace(option.Name))
+					yield return option.Name;
+			}
+		}
 	}
 
 	private IEnumerable<(string Id, string Name)> LeaderTargets(RosterUnit leader)

@@ -30,6 +30,8 @@ WEAPON_TYPES = {"Ranged Weapons", "Melee Weapons", "C'tan Powers"}
 RANGED_TYPES = {"Ranged Weapons", "C'tan Powers"}
 ABILITY_TYPES = {"Abilities", "Triarch Abilities"}
 GENERIC_WEAPONS = {"close combat weapon", "armoured bulk"}
+# Option labels that are not real, selectable weapons (profile groups, not wargear choices).
+GENERIC_OPTION_LABELS = {"c'tan powers", "armoured bulk", "close combat weapon"}
 
 
 def slug(name):
@@ -46,6 +48,34 @@ def slug(name):
 			out.append("-")
 			last_dash = True
 	return "".join(out).rstrip("-")
+
+
+def clean_option_label(label, unit_name):
+	"""
+	Tidy a wargear option label for display: strip a leading "<Unit> w/ " (or "with") prefix that the
+	NewRecruit export bakes into model names, so "Tomb Crawler w/ twin gauss reaper" -> "Twin gauss reaper".
+	Only strips when the prefix is the unit/model name, leaving genuine labels untouched.
+	"""
+	text = label.strip()
+	m = re.match(r"^(.*?)\s+w/\s+(.+)$", text) or re.match(r"^(.*?)\s+with\s+(.+)$", text, re.IGNORECASE)
+	if m:
+		prefix, rest = m.group(1).strip(), m.group(2).strip()
+		# Only treat it as a leak prefix when it looks like the unit/model name (shares its slug stem).
+		if prefix and (slug(prefix) in slug(unit_name) or slug(unit_name) in slug(prefix) or _singular(slug(unit_name)) in slug(prefix)):
+			rest = rest[0].upper() + rest[1:] if rest else rest
+			return rest
+	return text
+
+
+def _singular(s):
+	return s[:-1] if s.endswith("s") else s
+
+
+def is_unit_name_leak(label, unit_name):
+	"""True when an option label is just the unit/model name (singular or plural) rather than a weapon."""
+	ls, us = slug(label), slug(unit_name)
+	return ls == us or ls == _singular(us) or _singular(ls) == us
+
 
 
 def chars(profile):
@@ -228,10 +258,11 @@ def build(data, existing):
 		seen_option_sets = set()
 		for egid, gg in acc["groups"].items():
 			labels = []
-			for label in gg["options"].keys():
-				if label.lower() in GENERIC_WEAPONS:
+			for raw in gg["options"].keys():
+				label = clean_option_label(raw, name)
+				if label.lower() in GENERIC_OPTION_LABELS or label.lower() in GENERIC_WEAPONS:
 					continue
-				if label == name or slug(label) == ds_slug:
+				if is_unit_name_leak(label, name) or slug(label) == ds_slug:
 					continue  # unit/model name leaked in as an option
 				if label not in labels:
 					labels.append(label)
