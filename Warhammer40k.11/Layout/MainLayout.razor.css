@@ -4,15 +4,18 @@
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
+    /* iOS: keep content clear of the notch / rounded corners in landscape */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
 
 /* ---- Floating glass app bar ---- */
 .appbar {
     position: sticky;
-    top: 0.85rem;
+    top: calc(0.85rem + env(safe-area-inset-top));
     z-index: 50;
     width: min(72rem, calc(100% - 1.6rem));
-    margin: 0.85rem auto 0;
+    margin: calc(0.85rem + env(safe-area-inset-top)) auto 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -50,6 +53,65 @@
     font-size: 1.15rem;
     letter-spacing: 0.06em;
     color: var(--text);
+}
+
+/* ---- Hamburger toggle (mobile only) ---- */
+.nav-toggle {
+    display: none; /* revealed under the mobile breakpoint */
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+.nav-toggle:hover,
+.nav-toggle.is-open {
+    background: var(--accent-soft);
+    border-color: var(--border-strong);
+}
+
+.nav-toggle-box {
+    position: relative;
+    width: 20px;
+    height: 14px;
+}
+
+.nav-toggle-bar {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: top 0.2s var(--ease), transform 0.2s var(--ease), opacity 0.2s var(--ease);
+}
+
+.nav-toggle-bar:nth-child(1) { top: 0; }
+.nav-toggle-bar:nth-child(2) { top: 6px; }
+.nav-toggle-bar:nth-child(3) { top: 12px; }
+
+.nav-toggle.is-open .nav-toggle-bar:nth-child(1) {
+    top: 6px;
+    transform: rotate(45deg);
+}
+
+.nav-toggle.is-open .nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.is-open .nav-toggle-bar:nth-child(3) {
+    top: 6px;
+    transform: rotate(-45deg);
 }
 
 .nav {
@@ -97,7 +159,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
-    padding: 1.5rem 1rem 2rem;
+    padding: 1.5rem 1rem calc(2rem + env(safe-area-inset-bottom));
     color: var(--text-faint);
     font-size: 0.8rem;
     letter-spacing: 0.08em;
@@ -113,19 +175,87 @@
     border-radius: 1px;
 }
 
+/* ---- Scrim behind the open mobile menu (mobile only) ---- */
+.nav-scrim {
+    display: none;
+}
+
+/* ============================================================
+   Mobile (iOS-first): collapse the nav into a hamburger menu so
+   the bar can never overflow the viewport horizontally.
+   ============================================================ */
+@media (max-width: 720px) {
+    .nav-toggle {
+        display: inline-flex;
+    }
+
+    .nav {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: rgba(10, 16, 14, 0.96);
+        -webkit-backdrop-filter: blur(16px) saturate(1.3);
+        backdrop-filter: blur(16px) saturate(1.3);
+        box-shadow: var(--shadow), var(--shadow-inset);
+        /* closed state */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-0.4rem) scale(0.98);
+        transform-origin: top right;
+        transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s linear 0.18s;
+    }
+
+    .nav.is-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+        transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s;
+    }
+
+    .nav ::deep a.navlink {
+        width: 100%;
+        min-height: 48px; /* comfortable iOS tap target */
+        padding: 0.7rem 0.95rem;
+        border-radius: var(--radius);
+        font-size: 1.05rem;
+    }
+
+    .nav-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 40; /* below the sticky app bar (50), above page content */
+        background: rgba(4, 7, 6, 0.55);
+        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(2px);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s var(--ease), visibility 0s linear 0.2s;
+    }
+
+    .nav-scrim.is-open {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.2s var(--ease), visibility 0s;
+    }
+}
+
 @media (max-width: 480px) {
     .appbar {
         width: calc(100% - 1rem);
-        margin-top: 0.5rem;
-        top: 0.5rem;
+        margin-top: calc(0.5rem + env(safe-area-inset-top));
+        top: calc(0.5rem + env(safe-area-inset-top));
         padding: 0.5rem 0.5rem 0.5rem 0.85rem;
     }
 
     .brand-name {
         font-size: 1rem;
-    }
-
-    .nav ::deep a.navlink {
-        padding: 0.45rem 0.7rem;
     }
 }

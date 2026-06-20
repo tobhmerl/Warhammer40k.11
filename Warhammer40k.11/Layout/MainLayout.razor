@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @inject SettingsState Settings
+@inject NavigationManager Navigation
 
 <div class="shell">
     <header class="appbar">
@@ -7,7 +9,21 @@
             <span class="brand-mark" aria-hidden="true"></span>
             <span class="brand-name">TombForge</span>
         </a>
-        <nav class="nav" aria-label="Primary">
+
+        <button type="button"
+                class="nav-toggle @(_navOpen ? "is-open" : null)"
+                aria-label="@(_navOpen ? "Close navigation menu" : "Open navigation menu")"
+                aria-controls="primary-nav"
+                aria-expanded="@(_navOpen ? "true" : "false")"
+                @onclick="ToggleNav">
+            <span class="nav-toggle-box" aria-hidden="true">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </span>
+        </button>
+
+        <nav id="primary-nav" class="nav @(_navOpen ? "is-open" : null)" aria-label="Primary">
             <NavLink class="navlink" href="/" Match="NavLinkMatch.All">Home</NavLink>
             <NavLink class="navlink" href="catalogue">Catalogue</NavLink>
             <NavLink class="navlink" href="rosters">Rosters</NavLink>
@@ -15,6 +31,8 @@
             <NavLink class="navlink" href="settings">Settings</NavLink>
         </nav>
     </header>
+
+    <div class="nav-scrim @(_navOpen ? "is-open" : null)" @onclick="CloseNav" aria-hidden="true"></div>
 
     <main class="content">
         @Body
@@ -27,9 +45,34 @@
 </div>
 
 @code {
+    private bool _navOpen;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
             await Settings.InitializeAsync();
+    }
+
+    private void ToggleNav() => _navOpen = !_navOpen;
+
+    private void CloseNav() => _navOpen = false;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!_navOpen)
+            return;
+
+        _navOpen = false;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

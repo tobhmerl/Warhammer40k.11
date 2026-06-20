@@ -87,11 +87,16 @@
 
 html {
     -webkit-text-size-adjust: 100%;
+    /* iOS: never allow sideways scrolling; clip (not hidden) keeps sticky working */
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
     margin: 0;
     min-height: 100dvh;
+    max-width: 100%;
+    overflow-x: clip;
     font-family: var(--font-ui);
     font-size: 17px;
     line-height: 1.5;
@@ -176,6 +181,16 @@ code {
 
 *::-webkit-scrollbar-track {
     background: transparent;
+}
+
+/* iOS: a font-size below 16px makes Safari zoom in when a field is focused.
+   Enforce a 16px floor on touch devices without changing the desktop look. */
+@media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+        font-size: max(16px, 1rem);
+    }
 }
 
 /* ---- Blazor form validation ---- */
@@ -266,7 +281,7 @@ code {
     box-sizing: border-box;
     display: none;
     left: 0;
-    padding: 0.7rem 1.25rem;
+    padding: 0.7rem 1.25rem calc(0.7rem + env(safe-area-inset-bottom));
     position: fixed;
     width: 100%;
     z-index: 1000;
