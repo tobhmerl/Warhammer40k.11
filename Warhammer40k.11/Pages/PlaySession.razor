@@ -69,6 +69,16 @@ else
 					<span class="t-value">@AliveCount/@_battle.Units.Count</span>
 				</div>
 			</div>
+			<div class="turn-toggle" role="group" aria-label="Whose turn it is">
+				<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
+						aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)">
+					Your turn
+				</button>
+				<button type="button" class="turn opp @(_turn == BattleTurn.Opponent ? "on" : "")"
+						aria-pressed="@(_turn == BattleTurn.Opponent)" @onclick="() => SetTurn(BattleTurn.Opponent)">
+					Opponent's turn
+				</button>
+			</div>
 		</header>
 
 		<nav class="phases" aria-label="Battle phases">
@@ -79,6 +89,67 @@ else
 				</button>
 			}
 		</nav>
+
+		@{
+			var strats = UsableStratagems;
+		}
+		<section class="strats" aria-label="Core stratagems usable now">
+			<header class="strats-head">
+				<span class="strats-title">Stratagems</span>
+				<span class="strats-sub">@BattlePhases.Label(_phase) · @(_turn == BattleTurn.Player ? "your turn" : "opponent's turn")</span>
+				<span class="strats-count">@strats.Count</span>
+			</header>
+			@if (strats.Count == 0)
+			{
+				<p class="strats-empty">No core stratagems for this phase and turn.</p>
+			}
+			else
+			{
+				<ul class="strat-list">
+					@foreach (var s in strats)
+					{
+						<li class="strat @(CanAfford(s) ? "" : "broke")" @key="s.Id">
+							<div class="s-head">
+								<span class="s-name">@s.Name</span>
+								<span class="s-id">@s.Id</span>
+								<span class="s-cp">@s.Cost CP</span>
+								<button class="btn small s-use" type="button"
+										disabled="@(!CanAfford(s))" @onclick="() => UseStratagem(s)"
+										title="@(CanAfford(s) ? $"Spend {s.Cost} CP" : "Not enough CP")">
+									Use
+								</button>
+							</div>
+							@if (!string.IsNullOrWhiteSpace(s.Flavour))
+							{
+								<p class="s-flavour">@s.Flavour</p>
+							}
+							<dl class="s-body">
+								@if (!string.IsNullOrWhiteSpace(s.When))
+								{
+									<dt>When</dt>
+									<dd>@s.When</dd>
+								}
+								@if (!string.IsNullOrWhiteSpace(s.Target))
+								{
+									<dt>Target</dt>
+									<dd>@s.Target</dd>
+								}
+								@if (!string.IsNullOrWhiteSpace(s.Effect))
+								{
+									<dt>Effect</dt>
+									<dd>@s.Effect</dd>
+								}
+								@if (!string.IsNullOrWhiteSpace(s.Restrictions))
+								{
+									<dt>Restrictions</dt>
+									<dd>@s.Restrictions</dd>
+								}
+							</dl>
+						</li>
+					}
+				</ul>
+			}
+		</section>
 
 		@if (_battle.Units.Count == 0)
 		{
@@ -303,6 +374,7 @@ else
 	private bool _notFound;
 
 	private BattlePhase _phase = BattlePhase.Command;
+	private BattleTurn _turn = BattleTurn.Player;
 	private int _round = 1;
 	private int _cp;
 	// Per-part current model count, keyed by roster-unit id (in-memory, like the round/CP trackers).
@@ -349,6 +421,15 @@ else
 
 	private void SelectPhase(BattlePhase phase) => _phase = phase;
 
+	private void SetTurn(BattleTurn turn) => _turn = turn;
+
+	// Core Stratagems usable "in the actual second": filtered by the current phase + whose turn it is.
+	private IReadOnlyList<CoreStratagem> UsableStratagems => CoreStratagemCatalogue.Usable(_phase, _turn);
+
+	private bool CanAfford(CoreStratagem stratagem) => _cp >= stratagem.Cost;
+
+	private void UseStratagem(CoreStratagem stratagem) => StepCp(-stratagem.Cost);
+
 	private void StepRound(int delta) => _round = Math.Max(1, _round + delta);
 
 	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
@@ -358,6 +439,7 @@ else
 		_round = 1;
 		_cp = 0;
 		_phase = BattlePhase.Command;
+		_turn = BattleTurn.Player;
 		_models.Clear();
 		_collapsed.Clear();
 		if (_battle is null)
