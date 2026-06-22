@@ -275,10 +275,10 @@ public class BattleRosterTests
         var warUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "necron-warriors");
 
         // Cryptek's ranged weapons gain [ASSAULT]; its melee weapons do not.
-        Assert.Contains("Assault", battle.GrantedWeaponAbilities(crypUnit.Primary, ranged: true), StringComparer.OrdinalIgnoreCase);
-        Assert.Empty(battle.GrantedWeaponAbilities(crypUnit.Primary, ranged: false));
+        Assert.Contains("Assault", battle.GrantedWeaponAbilities(crypUnit, crypUnit.Primary, ranged: true), StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(battle.GrantedWeaponAbilities(crypUnit, crypUnit.Primary, ranged: false));
         // A non-Cryptek model gets nothing (model-targeted, not unit-targeted).
-        Assert.Empty(battle.GrantedWeaponAbilities(warUnit.Primary, ranged: true));
+        Assert.Empty(battle.GrantedWeaponAbilities(warUnit, warUnit.Primary, ranged: true));
     }
 
     [Fact]
@@ -319,7 +319,44 @@ public class BattleRosterTests
         var battle = BattleRoster.Build(roster, Catalogue(cryptek));
         var unit = Assert.Single(battle.Units);
 
-        Assert.Empty(battle.GrantedWeaponAbilities(unit.Primary, ranged: true));
+        Assert.Empty(battle.GrantedWeaponAbilities(unit, unit.Primary, ranged: true));
         Assert.Empty(battle.WeaponChoicesFor(unit));
+    }
+
+    [Fact]
+    public void Hand_of_the_Dynasty_grants_Assault_to_every_model_in_Warriors_or_Immortals_units()
+    {
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged" }]);
+        warriors.Keywords = ["Infantry", "Battleline", "Necron Warriors"];
+        var cryptek = Sheet("plasmancer", "Plasmancer", wounds: "4",
+            weapons: [new WeaponProfile { Name = "Gauntlet", Type = "Ranged" }]);
+        cryptek.Keywords = ["Cryptek"];
+        var lokhust = Sheet("lokhust", "Lokhust Destroyers", wounds: "3",
+            weapons: [new WeaponProfile { Name = "Gauss cannon", Type = "Ranged" }]);
+        lokhust.Keywords = ["Infantry", "Lokhust Destroyers"];
+
+        var roster = new Roster
+        {
+            DetachmentId = "hand-of-the-dynasty",
+            Units =
+            [
+                Unit("w", "necron-warriors", models: 10),
+                Unit("c", "plasmancer", attachedTo: "w"), // Cryptek attached to a Warriors unit
+                Unit("l", "lokhust", models: 3),          // not Warriors/Immortals
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(warriors, cryptek, lokhust));
+        var warUnit = battle.Units.Single(u => u.Parts.Count == 2);
+        var loneLokhust = battle.Units.Single(u => u.Primary.Datasheet.Id == "lokhust");
+        var warriorsPart = warUnit.Parts.Single(p => p.Datasheet.Id == "necron-warriors");
+        var crypPart = warUnit.Parts.Single(p => p.Datasheet.Id == "plasmancer");
+
+        // Unit-scoped: every model in the Warriors unit benefits — including the attached Cryptek.
+        Assert.Contains("Assault", battle.GrantedWeaponAbilities(warUnit, warriorsPart, ranged: true), StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Assault", battle.GrantedWeaponAbilities(warUnit, crypPart, ranged: true), StringComparer.OrdinalIgnoreCase);
+        // A unit that is neither Warriors nor Immortals gets nothing.
+        Assert.Empty(battle.GrantedWeaponAbilities(loneLokhust, loneLokhust.Primary, ranged: true));
     }
 }

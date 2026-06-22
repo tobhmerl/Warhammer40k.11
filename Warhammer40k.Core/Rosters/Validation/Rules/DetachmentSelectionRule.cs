@@ -32,5 +32,18 @@ public sealed class DetachmentSelectionRule : IRosterRule
             yield return ValidationMessage.Error(Id,
                 $"Your detachments cost {spent} DP, but only {budget} are available at {context.Roster.PointsLimit} pts.");
         }
+
+        // Exclusivity tags: a "Unique: X" detachment cannot be taken with another X detachment.
+        foreach (var tag in context.SelectedDetachments.SelectMany(d => d.Tags).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var clashing = context.SelectedDetachments
+                .Where(d => d.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            if (clashing.Count > 1)
+            {
+                yield return ValidationMessage.Error(Id,
+                    $"Only one {tag.ToUpperInvariant()} detachment may be taken ({string.Join(", ", clashing.Select(d => d.Name))}).");
+            }
+        }
     }
 }

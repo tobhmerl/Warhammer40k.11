@@ -76,6 +76,16 @@ public class RosterValidatorTests
         Assert.Contains(Run(new DetachmentSelectionRule(), roster, Cat()), m => m.Text.Contains("DP"));
     }
 
+    [Fact]
+    public void R2_flags_two_detachments_sharing_an_exclusivity_tag()
+    {
+        var a = new Detachment { Id = "a", Name = "Alpha", Enabled = true, Tags = ["Dynasty"] };
+        var b = new Detachment { Id = "b", Name = "Bravo", Enabled = true, Tags = ["Dynasty"] };
+        var roster = Roster("", limit: 2000);
+        roster.DetachmentIds = ["a", "b"];
+        Assert.Contains(Run(new DetachmentSelectionRule(), roster, Cat(), new List<Detachment> { a, b }), m => m.Text.Contains("DYNASTY"));
+    }
+
     // ---------- R3: copy limits ----------
 
     [Fact]

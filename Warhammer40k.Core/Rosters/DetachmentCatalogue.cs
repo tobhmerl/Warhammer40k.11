@@ -18,7 +18,7 @@ public static class DetachmentCatalogue
     /// <summary>The seven detachments offered by the New-Roster wizard (§2), in line-up order.</summary>
     public static IReadOnlyList<Detachment> BuiltIn { get; } =
     [
-        Make("Hand of the Dynasty"),
+        HandOfTheDynasty(),
         Make("Skyshroud Spearhead"),
         Make("The Phaeron's Armoury"),
         Make("Starshatter Arsenal",
@@ -45,6 +45,38 @@ public static class DetachmentCatalogue
 
     /// <summary>Detachment Points available at a points level (11th edition): 1000 or under = 2, otherwise 3.</summary>
     public static int Budget(int pointsLimit) => pointsLimit <= 1000 ? 2 : 3;
+
+    // Hand of the Dynasty (1 DP, DYNASTY) — "Hypermotility Protocols".
+    private static Detachment HandOfTheDynasty()
+    {
+        var d = Make("Hand of the Dynasty");
+        d.Enabled = true;
+        d.DetachmentPoints = 1;
+        d.Tags = ["Dynasty"];
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Hypermotility Protocols",
+                Text =
+                    "Friendly IMMORTALS/NECRON WARRIORS units' ranged attacks have the [ASSAULT] ability.\n" +
+                    "When a friendly IMMORTALS/NECRON WARRIORS unit is selected to make an Advance move, that " +
+                    "move does not prevent the unit from being eligible to start an action.\n" +
+                    "This detachment has the DYNASTY tag and cannot be taken with another DYNASTY detachment.",
+            },
+        ];
+        d.WeaponGrants =
+        [
+            new WeaponAbilityGrant
+            {
+                Keywords = ["Immortals", "Necron Warriors"],
+                Scope = GrantScope.Unit,
+                WeaponClass = DetachmentWeaponClass.Ranged,
+                Abilities = ["Assault"],
+            },
+        ];
+        return d;
+    }
 
     // Cryptek Conclave (2 DP) — "Technosorcerous Augmentations" expressed as data-driven smart effects.
     private static Detachment Cryptek()
@@ -73,7 +105,8 @@ public static class DetachmentCatalogue
         [
             new WeaponAbilityGrant
             {
-                RequiresModelKeyword = "Cryptek",
+                Keywords = ["Cryptek"],
+                Scope = GrantScope.Model,
                 WeaponClass = DetachmentWeaponClass.Ranged,
                 Abilities = ["Assault"],
             },

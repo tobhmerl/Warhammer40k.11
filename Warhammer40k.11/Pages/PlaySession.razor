@@ -336,7 +336,7 @@ else
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
 													</div>
 													@{
-														var rGrants = _battle.GrantedWeaponAbilities(row.Part, ranged: true);
+														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true);
 														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
 													}
 													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
@@ -386,7 +386,7 @@ else
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
 													</div>
 													@{
-														var mGrants = _battle.GrantedWeaponAbilities(row.Part, ranged: false);
+														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false);
 													}
 													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
 													{

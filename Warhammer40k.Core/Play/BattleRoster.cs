@@ -96,15 +96,22 @@ public sealed class BattleRoster
     /// models gain [ASSAULT] on their ranged weapons. Targets the model by keyword, so an attached Leader's
     /// grant never spills onto its bodyguard.
     /// </summary>
-    public IReadOnlyList<string> GrantedWeaponAbilities(BattlePart part, bool ranged)
+    public IReadOnlyList<string> GrantedWeaponAbilities(BattleUnit unit, BattlePart part, bool ranged)
     {
         var result = new List<string>();
         foreach (var detachment in Detachments)
         {
             foreach (var grant in detachment.WeaponGrants)
             {
-                if (!ClassMatches(grant.WeaponClass, ranged) || !ModelHasKeyword(part, grant.RequiresModelKeyword))
+                if (!ClassMatches(grant.WeaponClass, ranged))
                     continue;
+
+                var applies = grant.Scope == GrantScope.Unit
+                    ? unit.Parts.Any(p => MatchesAny(p, grant.Keywords))
+                    : MatchesAny(part, grant.Keywords);
+                if (!applies)
+                    continue;
+
                 foreach (var ability in grant.Abilities)
                 {
                     if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
@@ -133,6 +140,10 @@ public sealed class BattleRoster
     private static bool ModelHasKeyword(BattlePart part, string keyword) =>
         string.IsNullOrEmpty(keyword)
         || part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase);
+
+    private static bool MatchesAny(BattlePart part, IReadOnlyList<string> keywords) =>
+        keywords.Count == 0
+        || keywords.Any(k => part.Datasheet.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase));
 
     private static bool ClassMatches(DetachmentWeaponClass weaponClass, bool ranged) =>
         weaponClass == DetachmentWeaponClass.Any

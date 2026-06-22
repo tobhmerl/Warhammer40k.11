@@ -25,6 +25,12 @@ public sealed class Detachment
     /// <summary>Whether this detachment is selectable in setup. Only detachments with authored rules are enabled.</summary>
     public bool Enabled { get; set; }
 
+    /// <summary>
+    /// Exclusivity tags (e.g. "Dynasty"). A roster may take at most one detachment per tag — a "Unique: X"
+    /// detachment cannot be taken with another X detachment (enforced by rule R2).
+    /// </summary>
+    public List<string> Tags { get; set; } = [];
+
     /// <summary>Enhancements selectable from this detachment. Empty where 11th-edition points aren't authored yet.</summary>
     public List<Enhancement> Enhancements { get; set; } = [];
 
@@ -142,16 +148,31 @@ public sealed class DetachmentRule
     public string Text { get; set; } = string.Empty;
 }
 
+/// <summary>Whether a weapon-ability grant targets the matching <b>model</b>, or the whole <b>unit</b>.</summary>
+public enum GrantScope
+{
+    /// <summary>Only models that carry one of the keywords gain the abilities (e.g. CRYPTEK models).</summary>
+    Model = 0,
+
+    /// <summary>Every model in a unit that contains a keyword match gains the abilities (e.g. NECRON WARRIORS units).</summary>
+    Unit = 1,
+}
+
 /// <summary>
-/// A passive detachment buff: every model carrying <see cref="RequiresModelKeyword"/> grants the listed weapon
-/// <see cref="Abilities"/> to its weapons of the given <see cref="WeaponClass"/> — the MODEL, not the unit.
+/// A passive detachment buff: grants the listed weapon <see cref="Abilities"/> (to weapons of the given
+/// <see cref="WeaponClass"/>) to models matching one of <see cref="Keywords"/>. <see cref="Scope"/> decides
+/// whether only the matching model benefits (e.g. CRYPTEK models) or every model in a unit that contains a
+/// match (e.g. NECRON WARRIORS units — so an attached Leader benefits too).
 /// </summary>
 public sealed class WeaponAbilityGrant
 {
-    /// <summary>The model keyword that triggers the grant, e.g. "Cryptek". Empty = every model.</summary>
-    public string RequiresModelKeyword { get; set; } = string.Empty;
+    /// <summary>Trigger keywords (any one matches), e.g. ["Cryptek"] or ["Immortals", "Necron Warriors"]. Empty = every model.</summary>
+    public List<string> Keywords { get; set; } = [];
 
-    /// <summary>Which of the model's weapons receive the abilities.</summary>
+    /// <summary>Model-scoped (only the matching model) or unit-scoped (every model in a matching unit).</summary>
+    public GrantScope Scope { get; set; } = GrantScope.Model;
+
+    /// <summary>Which weapons receive the abilities.</summary>
     public DetachmentWeaponClass WeaponClass { get; set; } = DetachmentWeaponClass.Ranged;
 
     /// <summary>The weapon abilities granted, in catalogue spelling (e.g. "Assault").</summary>
