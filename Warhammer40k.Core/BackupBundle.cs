@@ -11,7 +11,7 @@ namespace Warhammer40k.Core;
 public sealed class BackupBundle
 {
     /// <summary>Schema/app marker so a future import can detect the format.</summary>
-    public string Format { get; set; } = "tombforge-backup-v1";
+    public string Format { get; set; } = "tombworld-backup-v1";
 
     public DateTimeOffset CreatedUtc { get; set; }
 

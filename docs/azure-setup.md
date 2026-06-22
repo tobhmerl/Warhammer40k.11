@@ -1,4 +1,4 @@
-# TombForge / Warhammer40k.11 — Setup & Azure Checklist (M0 → M1)
+# TombWorld / Warhammer40k.11 — Setup & Azure Checklist (M0 → M1)
 
 This is the list of things **you** do outside the code: local tooling, GitHub, and the
 Azure Portal. Items are tagged **[NOW]** (needed to run/deploy the M0 skeleton) or
@@ -91,8 +91,8 @@ the Static Web App.
 1. https://portal.azure.com → **Create a resource** → search **Static Web App** → Create.
 2. Fill in:
    - **Subscription**: your subscription.
-   - **Resource Group**: Create new, e.g. `rg-tombforge`.
-   - **Name**: e.g. `tombforge`.
+   - **Resource Group**: Create new, e.g. `rg-tombworld`.
+   - **Name**: e.g. `tombworld`.
    - **Plan type**: **Free**.
    - **Region**: nearest to you.
    - **Deployment source**: **GitHub** → authorize → pick **Organization / Repository / Branch = main**.
@@ -154,7 +154,7 @@ RowKey = army id). The table is **created automatically** on first write, so the
 provisioning step. The API reads its connection string from the **`TablesConnectionString`** setting.
 
 1. Portal → **Create a resource** → **Storage account**:
-   - Resource group `rg-tombforge`, **Name** e.g. `tombforgestore` (globally unique, lowercase),
+   - Resource group `rg-tombworld`, **Name** e.g. `tombworldstore` (globally unique, lowercase),
 	 **Redundancy** LRS (cheapest).
 2. After creation → **Security + networking → Access keys** → copy a **connection string**.
 3. SWA resource → **Settings → Environment variables** → add

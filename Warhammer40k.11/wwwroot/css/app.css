@@ -1,7 +1,15 @@
 /* ============================================================
-   TombForge — Necron design system
+   TombWorld — Necron design system
    Cold gunmetal-black surfaces, phosphor-green energy accents.
    ============================================================ */
+
+@font-face {
+    font-family: "Enchanted Land";
+    src: url("../fonts/enchanted-land.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
     color-scheme: dark;
@@ -49,6 +57,7 @@
     /* Type */
     --font-ui: "Rajdhani", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
     --font-display: "Orbitron", "Rajdhani", system-ui, sans-serif;
+    --font-brand: "Enchanted Land", "Orbitron", "Rajdhani", system-ui, sans-serif;
 }
 
 /* ---- Themes (AB8): swap the accent palette; tints/glows follow --accent-rgb ---- */
@@ -102,16 +111,14 @@ body {
     line-height: 1.5;
     color: var(--text);
     background-color: var(--bg);
-    background-image:
-        radial-gradient(1200px 600px at 50% -10%, rgba(var(--accent-rgb), 0.10), transparent 60%),
-        radial-gradient(900px 520px at 100% 0%, rgba(21, 196, 127, 0.06), transparent 55%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
 
-/* faint tomb-glyph grid, faded toward the edges */
+/* Fixed, darkened cover image as a calm backdrop for every page. A
+   position:fixed pseudo-element is used instead of background-attachment:fixed
+   because the latter is unreliable on iOS Safari. The dark veil keeps the image
+   subtle so page content stays readable. */
 body::before {
     content: "";
     position: fixed;
@@ -119,11 +126,11 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background-image:
-        linear-gradient(rgba(var(--accent-rgb), 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(var(--accent-rgb), 0.035) 1px, transparent 1px);
-    background-size: 46px 46px;
-    -webkit-mask-image: radial-gradient(circle at 50% 28%, #000 0%, transparent 75%);
-    mask-image: radial-gradient(circle at 50% 28%, #000 0%, transparent 75%);
+        linear-gradient(180deg, rgba(7, 11, 10, 0.82), rgba(7, 11, 10, 0.9)),
+        url("../background.jpg");
+    background-position: center, center;
+    background-size: cover, cover;
+    background-repeat: no-repeat, no-repeat;
 }
 
 h1, h2, h3, h4 {
@@ -219,11 +226,11 @@ code {
 }
 
 .boot-brand {
-    font-family: var(--font-display);
-    font-weight: 900;
-    letter-spacing: 0.35em;
-    font-size: 1.6rem;
-    margin: 0 0 1.75rem 0.35em;
+    font-family: var(--font-brand);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-size: 2.6rem;
+    margin: 0 0 1.75rem;
     color: var(--accent);
     text-shadow: var(--glow);
 }

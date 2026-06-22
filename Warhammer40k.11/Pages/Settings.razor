@@ -6,7 +6,7 @@
 @inject SettingsState SettingsState
 @inject IJSRuntime JS
 
-<PageTitle>TombForge — Settings</PageTitle>
+<PageTitle>TombWorld — Settings</PageTitle>
 
 <div class="settings">
 	<header class="head">
@@ -181,7 +181,7 @@
 			}
 
 			var json = JsonSerializer.Serialize(bundle, Json);
-			await JS.InvokeVoidAsync("tombforge.download", $"tombforge-backup-{DateTime.UtcNow:yyyyMMdd}.json", json);
+			await JS.InvokeVoidAsync("tombworld.download", $"tombworld-backup-{DateTime.UtcNow:yyyyMMdd}.json", json);
 		}
 		catch (Exception)
 		{

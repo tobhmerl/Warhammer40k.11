@@ -5,7 +5,7 @@ namespace Warhammer40k._11;
 
 /// <summary>
 /// Scoped app state for user settings (AB8): loads the user's settings once, applies the chosen theme via the
-/// <c>tombforge</c> JS helper, and exposes the default points limit to the New-Roster wizard. Components can
+/// <c>tombworld</c> JS helper, and exposes the default points limit to the New-Roster wizard. Components can
 /// subscribe to <see cref="Changed"/> to refresh when settings change.
 /// </summary>
 public sealed class SettingsState(IApiClient api, IJSRuntime js)
@@ -67,7 +67,7 @@ public sealed class SettingsState(IApiClient api, IJSRuntime js)
     {
         try
         {
-            await js.InvokeVoidAsync("tombforge.setTheme", AppThemes.Normalize(theme));
+            await js.InvokeVoidAsync("tombworld.setTheme", AppThemes.Normalize(theme));
         }
         catch (JSException)
         {

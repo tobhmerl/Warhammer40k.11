@@ -10,9 +10,9 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TombForge" />
+    <meta name="apple-mobile-web-app-title" content="TombWorld" />
     <meta name="format-detection" content="telephone=no" />
-    <title>TombForge — Warhammer 40k Army Forge</title>
+    <title>TombWorld — Warhammer 40k Army Forge</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,7 +32,7 @@
 <body>
     <div id="app">
         <div class="boot">
-            <p class="boot-brand">TOMBFORGE</p>
+            <p class="boot-brand">TombWorld</p>
             <svg class="loading-progress">
                 <circle r="40%" cx="50%" cy="50%" />
                 <circle r="40%" cx="50%" cy="50%" />
@@ -51,7 +51,7 @@
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
     <script>
         // Minimal interop for the Settings tab (AB8): theme switch + JSON file download.
-        window.tombforge = {
+        window.tombworld = {
             setTheme: function (id) {
                 document.documentElement.setAttribute('data-theme', id || 'phosphor');
             },

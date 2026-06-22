@@ -74,7 +74,7 @@ public class SettingsAndBackupTests
         var back = JsonSerializer.Deserialize<BackupBundle>(json, Web);
 
         Assert.NotNull(back);
-        Assert.Equal("tombforge-backup-v1", back!.Format);
+        Assert.Equal("tombworld-backup-v1", back!.Format);
         Assert.Equal(1250, back.Settings.DefaultPointsLimit);
         Assert.Equal("blood", back.Settings.Theme);
         Assert.NotNull(back.Catalogue);

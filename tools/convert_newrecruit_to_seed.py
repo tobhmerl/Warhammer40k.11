@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Convert a NewRecruit / BattleScribe 10th-edition Necron *roster* export into the TombForge
+Convert a NewRecruit / BattleScribe 10th-edition Necron *roster* export into the TombWorld
 catalogue seed (necron-catalogue-seed.json).
 
 The export must contain every datasheet with all of its weapon loadout variations added (so that
@@ -9,7 +9,7 @@ by name; the mutually-exclusive options of a wargear group are reconstructed fro
 `entryGroupId`.
 
 Points options and Pantheon bindings are merged from the existing seed (a roster export only carries
-the unit sizes that were actually added, and bindings are a TombForge concept the export lacks).
+the unit sizes that were actually added, and bindings are a TombWorld concept the export lacks).
 
 Derived fields (id, isMonster, maxCopies, leaderTargetIds, ...) are intentionally NOT written:
 CatalogueSeedLoader.Enrich computes them at load time.

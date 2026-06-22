@@ -48,16 +48,16 @@
 }
 
 .brand-name {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
-    letter-spacing: 0.06em;
+    font-family: var(--font-brand);
+    font-weight: 400;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
     color: var(--text);
 }
 
-/* ---- Hamburger toggle (mobile only) ---- */
+/* ---- Menu toggle (always collapses the nav) ---- */
 .nav-toggle {
-    display: none; /* revealed under the mobile breakpoint */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: none;
@@ -65,17 +65,18 @@
     height: 44px;
     padding: 0;
     margin: 0;
-    color: var(--accent);
+    color: var(--text-dim);
     background: transparent;
     border: 1px solid var(--border);
     border-radius: 12px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background 0.18s var(--ease), border-color 0.18s var(--ease);
+    transition: background 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease);
 }
 
 .nav-toggle:hover,
 .nav-toggle.is-open {
+    color: var(--accent);
     background: var(--accent-soft);
     border-color: var(--border-strong);
 }
@@ -115,19 +116,48 @@
 }
 
 .nav {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 60;
     display: flex;
-    align-items: center;
-    gap: 0.3rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    min-width: 12rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: rgba(10, 16, 14, 0.96);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    backdrop-filter: blur(16px) saturate(1.3);
+    box-shadow: var(--shadow), var(--shadow-inset);
+    transform-origin: top right;
+    /* closed state */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.4rem) scale(0.98);
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s linear 0.18s;
+}
+
+.nav.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s;
 }
 
 .nav ::deep a.navlink {
     display: inline-flex;
     align-items: center;
-    padding: 0.45rem 0.95rem;
-    min-height: 40px;
-    border-radius: 999px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius);
     color: var(--text-dim);
     font-weight: 600;
+    font-size: 1rem;
     letter-spacing: 0.04em;
     text-decoration: none;
     transition: color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease);
@@ -175,76 +205,23 @@
     border-radius: 1px;
 }
 
-/* ---- Scrim behind the open mobile menu (mobile only) ---- */
+/* ---- Scrim behind the open menu ---- */
 .nav-scrim {
-    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 40; /* below the sticky app bar (50), above page content */
+    background: rgba(4, 7, 6, 0.55);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s var(--ease), visibility 0s linear 0.2s;
 }
 
-/* ============================================================
-   Mobile (iOS-first): collapse the nav into a hamburger menu so
-   the bar can never overflow the viewport horizontally.
-   ============================================================ */
-@media (max-width: 720px) {
-    .nav-toggle {
-        display: inline-flex;
-    }
-
-    .nav {
-        position: absolute;
-        top: calc(100% + 0.5rem);
-        left: 0;
-        right: 0;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.25rem;
-        padding: 0.5rem;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        background: rgba(10, 16, 14, 0.96);
-        -webkit-backdrop-filter: blur(16px) saturate(1.3);
-        backdrop-filter: blur(16px) saturate(1.3);
-        box-shadow: var(--shadow), var(--shadow-inset);
-        /* closed state */
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-0.4rem) scale(0.98);
-        transform-origin: top right;
-        transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s linear 0.18s;
-    }
-
-    .nav.is-open {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0) scale(1);
-        transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s;
-    }
-
-    .nav ::deep a.navlink {
-        width: 100%;
-        min-height: 48px; /* comfortable iOS tap target */
-        padding: 0.7rem 0.95rem;
-        border-radius: var(--radius);
-        font-size: 1.05rem;
-    }
-
-    .nav-scrim {
-        display: block;
-        position: fixed;
-        inset: 0;
-        z-index: 40; /* below the sticky app bar (50), above page content */
-        background: rgba(4, 7, 6, 0.55);
-        -webkit-backdrop-filter: blur(2px);
-        backdrop-filter: blur(2px);
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s var(--ease), visibility 0s linear 0.2s;
-    }
-
-    .nav-scrim.is-open {
-        opacity: 1;
-        visibility: visible;
-        transition: opacity 0.2s var(--ease), visibility 0s;
-    }
+.nav-scrim.is-open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s var(--ease), visibility 0s;
 }
 
 @media (max-width: 480px) {
@@ -256,6 +233,6 @@
     }
 
     .brand-name {
-        font-size: 1rem;
+        font-size: 1.25rem;
     }
 }
