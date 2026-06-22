@@ -206,4 +206,46 @@ public class BattleRosterTests
         Assert.Equal("Necron Warriors", abilities[0].Source);
         Assert.Equal("Overlord", abilities.Single(a => a.Ability.Name == "My Will Be Done").Source);
     }
+
+    [Fact]
+    public void Single_multi_wound_model_tracks_wounds_even_when_attached()
+    {
+        var catalogue = Catalogue(
+            Sheet("imotekh", "Imotekh", wounds: "6"),
+            Sheet("necron-warriors", "Necron Warriors", wounds: "1"));
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("u1", "imotekh", attachedTo: "u2"),
+                Unit("u2", "necron-warriors", models: 10),
+            ],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, catalogue).Units);
+        var warriors = group.Primary;
+        var imotekh = group.Parts.Single(p => p.Datasheet.Id == "imotekh");
+
+        // The lone Character tracks wounds (6); the multi-model bodyguard tracks models (10).
+        Assert.True(imotekh.TracksWounds);
+        Assert.Equal(6, imotekh.TrackMax);
+        Assert.False(warriors.TracksWounds);
+        Assert.Equal(10, warriors.TrackMax);
+    }
+
+    [Theory]
+    [InlineData(1, "1", false, 1)]   // lone single-wound model → still a model count
+    [InlineData(1, "6", true, 6)]    // lone multi-wound model → tracks 6 wounds
+    [InlineData(5, "2", false, 5)]   // multi-model unit → tracks 5 models
+    [InlineData(1, "D6", false, 1)]  // variable wounds can't be tracked numerically
+    public void TracksWounds_and_TrackMax_follow_models_and_wounds(int models, string wounds, bool tracksWounds, int trackMax)
+    {
+        var catalogue = Catalogue(Sheet("u", "Unit", wounds: wounds));
+        var roster = new Roster { Units = [Unit("r", "u", models: models)] };
+
+        var part = Assert.Single(BattleRoster.Build(roster, catalogue).Units).Primary;
+
+        Assert.Equal(tracksWounds, part.TracksWounds);
+        Assert.Equal(trackMax, part.TrackMax);
+    }
 }

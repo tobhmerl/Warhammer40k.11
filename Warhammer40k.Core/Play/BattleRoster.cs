@@ -198,6 +198,18 @@ public sealed class BattlePart
     /// <summary>This part's trackable wound pool (per-model wounds × models), or null when variable.</summary>
     public int? MaxWounds => WoundsPerModel is { } w ? w * Math.Max(1, ModelCount) : null;
 
+    /// <summary>
+    /// True when this part is a single multi-wound model (e.g. a Character): in Play Mode its <b>wounds</b>
+    /// are tracked rather than a 1/1 model count — even when it is attached as a Leader.
+    /// </summary>
+    public bool TracksWounds => ModelCount == 1 && WoundsPerModel is > 1;
+
+    /// <summary>
+    /// The trackable maximum for the Play-Mode counter: this part's wounds when it is a single multi-wound
+    /// model, otherwise its model count.
+    /// </summary>
+    public int TrackMax => TracksWounds ? MaxWounds!.Value : Math.Max(1, ModelCount);
+
     /// <summary>The weapons actually in play for this part (always-on + wargear selected in setup), datasheet order.</summary>
     public IReadOnlyList<WeaponProfile> Weapons { get; }
 

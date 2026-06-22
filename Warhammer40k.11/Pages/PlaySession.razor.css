@@ -465,6 +465,12 @@ html[data-scroll="up"] .hud {
     color: var(--danger);
 }
 
+.um-max {
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
 .um-label {
     font-size: 0.62rem;
     font-weight: 700;
@@ -509,6 +515,15 @@ html[data-scroll="up"] .hud {
     color: var(--text-faint);
     font-size: 0.72rem;
     font-weight: 600;
+}
+
+/* Marks the counter as tracking wounds (single multi-wound models). */
+.c-tag {
+    margin-left: 0.1rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
 }
 
 /* ---- Unit body / parts ---- */
