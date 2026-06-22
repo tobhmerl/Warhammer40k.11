@@ -17,20 +17,55 @@
     color: var(--accent);
 }
 
-/* ---- Sticky command header ---- */
-.sticky {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: linear-gradient(180deg, var(--bg) 65%, transparent);
-    padding: 0.5rem 0 0.75rem;
-}
-
-.title-row {
+/* ---- Static top bar (title + actions); scrolls away ---- */
+.topbar {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+}
+
+/* ---- Floating control HUD: sticky, auto-hides while scrolling up ---- */
+.hud {
+    position: sticky;
+    top: calc(0.4rem + env(safe-area-inset-top));
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(13, 22, 19, 0.85);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    backdrop-filter: blur(14px) saturate(1.3);
+    box-shadow: var(--shadow), var(--shadow-inset);
+    transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
+}
+
+/* The JS scroll watcher sets data-scroll on <html>: hide the HUD while scrolling up. */
+html[data-scroll="up"] .hud {
+    transform: translateY(calc(-100% - 1.5rem));
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hud-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.hud-meta .tracker {
+    flex: 1 1 6rem;
 }
 
 .rname {
@@ -43,11 +78,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.trackers {
-    display: flex;
-    gap: 0.6rem;
 }
 
 .tracker {
@@ -77,10 +107,6 @@
     color: var(--accent-strong);
 }
 
-.units-left .t-value {
-    color: var(--text);
-}
-
 .stepper {
     display: flex;
     align-items: center;
@@ -106,11 +132,99 @@
     background: var(--surface-3);
 }
 
+/* ---- Victory points mini-card (You / Opp x Primary / Secondary) ---- */
+.vp {
+    flex: 1 1 100%;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.vp-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 0.2rem 0.4rem;
+    align-items: center;
+}
+
+.vp-corner {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+.vp-h {
+    text-align: center;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.vp-rl {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.vp-rl.total {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+.vp-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.vp-cell button {
+    width: 1.3rem;
+    height: 1.3rem;
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--accent);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.vp-cell button:hover {
+    border-color: var(--accent);
+    background: var(--surface-3);
+}
+
+.vp-n {
+    min-width: 1.3rem;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.vp-total {
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent-strong);
+}
+
 /* ---- Phase tab bar ---- */
 .phases {
     display: flex;
     gap: 0.35rem;
-    margin-bottom: 1rem;
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -735,7 +849,6 @@
 .turn-toggle {
     display: flex;
     gap: 0.4rem;
-    margin-top: 0.6rem;
 }
 
 .turn {
@@ -785,9 +898,15 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
     padding: 0.55rem 0.8rem;
+    border: none;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.06), transparent);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 
 .strats-title {

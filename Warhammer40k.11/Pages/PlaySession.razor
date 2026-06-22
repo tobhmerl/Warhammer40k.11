@@ -5,6 +5,7 @@
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k._11.Components
 @inject IApiClient Api
+@inject IJSRuntime JS
 
 <PageTitle>TombWorld — @(_roster?.Name ?? "Play")</PageTitle>
 
@@ -39,19 +40,23 @@ else
 	<div class="play">
 		<a class="back" href="play">&larr; Play</a>
 
-		<header class="sticky">
-			<div class="title-row">
-				<h1 class="rname">@_roster.Name</h1>
+		<div class="topbar">
+			<h1 class="rname">@_roster.Name</h1>
+			<div class="topbar-actions">
 				<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
 					@(AllCollapsed ? "Expand all" : "Collapse all")
 				</button>
-				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP and models">Reset</button>
+				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP, VP and models">Reset</button>
 				@if (ArmyRules.Count > 0)
 				{
 					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Show the army rule reference">Army rule</button>
 				}
 			</div>
-			<div class="trackers">
+		</div>
+
+		@* Floating control HUD: sticks to the top, hides while scrolling up, reappears while scrolling down. *@
+		<div class="hud">
+			<div class="hud-meta">
 				<div class="tracker">
 					<span class="t-label">Round</span>
 					<div class="stepper">
@@ -68,11 +73,43 @@ else
 						<button type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
 					</div>
 				</div>
-				<div class="tracker units-left">
-					<span class="t-label">Units</span>
-					<span class="t-value">@AliveCount/@_battle.Units.Count</span>
+				<div class="vp" aria-label="Victory points">
+					<div class="vp-grid">
+						<span class="vp-corner">VP</span>
+						<span class="vp-h">You</span>
+						<span class="vp-h">Opp</span>
+
+						<span class="vp-rl">Primary</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(0, -1)" aria-label="Your primary minus">−</button>
+							<span class="vp-n">@_vpYouPrimary</span>
+							<button type="button" @onclick="() => StepVp(0, 1)" aria-label="Your primary plus">+</button>
+						</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(1, -1)" aria-label="Opponent primary minus">−</button>
+							<span class="vp-n">@_vpOppPrimary</span>
+							<button type="button" @onclick="() => StepVp(1, 1)" aria-label="Opponent primary plus">+</button>
+						</span>
+
+						<span class="vp-rl">Second.</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(2, -1)" aria-label="Your secondary minus">−</button>
+							<span class="vp-n">@_vpYouSecondary</span>
+							<button type="button" @onclick="() => StepVp(2, 1)" aria-label="Your secondary plus">+</button>
+						</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(3, -1)" aria-label="Opponent secondary minus">−</button>
+							<span class="vp-n">@_vpOppSecondary</span>
+							<button type="button" @onclick="() => StepVp(3, 1)" aria-label="Opponent secondary plus">+</button>
+						</span>
+
+						<span class="vp-rl total">Total</span>
+						<span class="vp-total">@(_vpYouPrimary + _vpYouSecondary)</span>
+						<span class="vp-total">@(_vpOppPrimary + _vpOppSecondary)</span>
+					</div>
 				</div>
 			</div>
+
 			<div class="turn-toggle" role="group" aria-label="Whose turn it is">
 				<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
 						aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)">
@@ -83,16 +120,16 @@ else
 					Opponent's turn
 				</button>
 			</div>
-		</header>
 
-		<nav class="phases" aria-label="Battle phases">
-			@foreach (var phase in BattlePhases.Ordered)
-			{
-				<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
-					<span class="ph-name">@BattlePhases.Label(phase)</span>
-				</button>
-			}
-		</nav>
+			<nav class="phases" aria-label="Battle phases">
+				@foreach (var phase in BattlePhases.Ordered)
+				{
+					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
+						<span class="ph-name">@BattlePhases.Label(phase)</span>
+					</button>
+				}
+			</nav>
+		</div>
 
 		@if (MyCommandPhase && (ReanimateCount > 0 || BattleShockCount > 0))
 		{
@@ -113,11 +150,14 @@ else
 			var strats = UsableStratagems;
 		}
 		<section class="strats" aria-label="Core stratagems usable now">
-			<header class="strats-head">
+			<button type="button" class="strats-head" @onclick="ToggleStrats" aria-expanded="@_stratsOpen">
+				<span class="chev" aria-hidden="true">@(_stratsOpen ? "▾" : "▸")</span>
 				<span class="strats-title">Stratagems</span>
 				<span class="strats-sub">@BattlePhases.Label(_phase) · @(_turn == BattleTurn.Player ? "your turn" : "opponent's turn")</span>
 				<span class="strats-count">@strats.Count</span>
-			</header>
+			</button>
+			@if (_stratsOpen)
+			{
 			@if (strats.Count == 0)
 			{
 				<p class="strats-empty">No core stratagems for this phase and turn.</p>
@@ -167,6 +207,7 @@ else
 						</li>
 					}
 				</ul>
+			}
 			}
 		</section>
 
@@ -415,6 +456,13 @@ else
 	private BattleTurn _turn = BattleTurn.Player;
 	private int _round = 1;
 	private int _cp;
+	// Victory points: primary + secondary for each side (in-memory trackers).
+	private int _vpYouPrimary;
+	private int _vpYouSecondary;
+	private int _vpOppPrimary;
+	private int _vpOppSecondary;
+	// Whether the Stratagems panel is expanded (collapsible like the unit cards).
+	private bool _stratsOpen = true;
 	// Per-part current model count, keyed by roster-unit id (in-memory, like the round/CP trackers).
 	private readonly Dictionary<string, int> _models = new(StringComparer.Ordinal);
 	// Cards collapsed by the user, keyed by group id.
@@ -427,6 +475,12 @@ else
 			return;
 		_loadedId = Id;
 		await LoadAsync();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+			await JS.InvokeVoidAsync("tombworld.initScroll");
 	}
 
 	private async Task LoadAsync()
@@ -495,10 +549,25 @@ else
 
 	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
 
+	// Victory points: 0 = your primary, 1 = opponent primary, 2 = your secondary, 3 = opponent secondary.
+	private void StepVp(int which, int delta)
+	{
+		switch (which)
+		{
+			case 0: _vpYouPrimary = Math.Max(0, _vpYouPrimary + delta); break;
+			case 1: _vpOppPrimary = Math.Max(0, _vpOppPrimary + delta); break;
+			case 2: _vpYouSecondary = Math.Max(0, _vpYouSecondary + delta); break;
+			case 3: _vpOppSecondary = Math.Max(0, _vpOppSecondary + delta); break;
+		}
+	}
+
+	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
+
 	private void ResetTrackers()
 	{
 		_round = 1;
 		_cp = 0;
+		_vpYouPrimary = _vpYouSecondary = _vpOppPrimary = _vpOppSecondary = 0;
 		_phase = BattlePhase.Command;
 		_turn = BattleTurn.Player;
 		_models.Clear();

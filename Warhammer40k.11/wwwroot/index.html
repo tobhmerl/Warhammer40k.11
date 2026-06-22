@@ -64,6 +64,27 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+            },
+            // Reflects scroll direction on <html data-scroll="top|down|up"> so CSS can float/auto-hide the
+            // Play HUD: shown at the top and while scrolling down, hidden while scrolling up. Idempotent.
+            initScroll: function () {
+                if (window.tombworld._scroll) return;
+                window.tombworld._scroll = true;
+                const root = document.documentElement;
+                let lastY = window.scrollY || 0;
+                let ticking = false;
+                const apply = function () {
+                    const y = window.scrollY || 0;
+                    if (y <= 6) root.setAttribute('data-scroll', 'top');
+                    else if (y > lastY + 4) root.setAttribute('data-scroll', 'down');
+                    else if (y < lastY - 4) root.setAttribute('data-scroll', 'up');
+                    lastY = y;
+                    ticking = false;
+                };
+                root.setAttribute('data-scroll', 'top');
+                window.addEventListener('scroll', function () {
+                    if (!ticking) { window.requestAnimationFrame(apply); ticking = true; }
+                }, { passive: true });
             }
         };
     </script>
