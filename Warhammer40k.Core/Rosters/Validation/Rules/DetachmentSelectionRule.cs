@@ -1,8 +1,9 @@
 namespace Warhammer40k.Core.Rosters.Validation.Rules;
 
 /// <summary>
-/// R2 (Error): exactly one, known detachment must be selected (§4). Enhancement membership and per-enhancement
-/// eligibility — "all enhancements belong to the detachment" — are enforced by <see cref="EnhancementRule"/> (R6).
+/// R2 (Error): at least one known detachment must be selected, and the total Detachment-Points cost must fit
+/// the budget for the points level (11th edition). Enhancement membership/eligibility is enforced by
+/// <see cref="EnhancementRule"/> (R6).
 /// </summary>
 public sealed class DetachmentSelectionRule : IRosterRule
 {
@@ -10,13 +11,26 @@ public sealed class DetachmentSelectionRule : IRosterRule
 
     public IEnumerable<ValidationMessage> Evaluate(RosterValidationContext context)
     {
-        if (string.IsNullOrWhiteSpace(context.Roster.DetachmentId))
+        var ids = context.Roster.EffectiveDetachmentIds;
+        if (ids.Count == 0)
         {
             yield return ValidationMessage.Error(Id, "Select a detachment.");
+            yield break;
         }
-        else if (context.Detachment is null)
+
+        foreach (var id in ids)
         {
-            yield return ValidationMessage.Error(Id, $"Unknown detachment '{context.Roster.DetachmentId}'.");
+            if (!context.Detachments.Any(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase)))
+                yield return ValidationMessage.Error(Id, $"Unknown detachment '{id}'.");
+        }
+
+        // 11th edition: detachments are purchased with Detachment Points, capped by the points level.
+        var budget = DetachmentCatalogue.Budget(context.Roster.PointsLimit);
+        var spent = context.SelectedDetachments.Sum(d => d.DetachmentPoints);
+        if (spent > budget)
+        {
+            yield return ValidationMessage.Error(Id,
+                $"Your detachments cost {spent} DP, but only {budget} are available at {context.Roster.PointsLimit} pts.");
         }
     }
 }

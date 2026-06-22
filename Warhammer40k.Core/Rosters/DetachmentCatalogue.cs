@@ -26,11 +26,7 @@ public static class DetachmentCatalogue
             ("Demanding Leader", 10),
             ("Dread Majesty", 30),
             ("Miniaturised Nebuloscope", 15)),
-        Make("Cryptek Conclave",
-            ("Atomic Disintegrators", 10),
-            ("Gauntlet of Compression", 20),
-            ("Gravitic Bolas", 15),
-            ("Quantum Abacus", 15)),
+        Cryptek(),
         Make("Cursed Legion",
             ("Cursed Circlet", 25),
             ("Destroyer Ankh", 20),
@@ -42,6 +38,58 @@ public static class DetachmentCatalogue
     /// <summary>Finds a built-in detachment by its derived id, or <c>null</c>.</summary>
     public static Detachment? FindById(string id) =>
         BuiltIn.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The detachments currently offered in setup — only those with authored 11th-edition rules.</summary>
+    public static IReadOnlyList<Detachment> Selectable { get; } =
+        BuiltIn.Where(d => d.Enabled).ToList();
+
+    /// <summary>Detachment Points available at a points level (11th edition): 1000 or under = 2, otherwise 3.</summary>
+    public static int Budget(int pointsLimit) => pointsLimit <= 1000 ? 2 : 3;
+
+    // Cryptek Conclave (2 DP) — "Technosorcerous Augmentations" expressed as data-driven smart effects.
+    private static Detachment Cryptek()
+    {
+        var d = Make("Cryptek Conclave",
+            ("Atomic Disintegrators", 10),
+            ("Gauntlet of Compression", 20),
+            ("Gravitic Bolas", 15),
+            ("Quantum Abacus", 15));
+        d.Enabled = true;
+        d.DetachmentPoints = 2;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Technosorcerous Augmentations",
+                Text =
+                    "Ranged weapons equipped by CRYPTEK models from your army have the [ASSAULT] ability.\n" +
+                    "In your Shooting phase, each time a CRYPTEK unit from your army is selected to shoot, select " +
+                    "one of the following abilities: [ANTI-INFANTRY 3+], [ANTI-MOUNTED 4+], [ASSAULT], [HEAVY], " +
+                    "[IGNORES COVER]. Until the end of the phase, ranged weapons equipped by models in that unit " +
+                    "have that ability.",
+            },
+        ];
+        d.WeaponGrants =
+        [
+            new WeaponAbilityGrant
+            {
+                RequiresModelKeyword = "Cryptek",
+                WeaponClass = DetachmentWeaponClass.Ranged,
+                Abilities = ["Assault"],
+            },
+        ];
+        d.WeaponChoices =
+        [
+            new WeaponAbilityChoice
+            {
+                Name = "Technosorcerous Augmentations",
+                RequiresModelKeyword = "Cryptek",
+                WeaponClass = DetachmentWeaponClass.Ranged,
+                Options = ["Anti-INFANTRY 3+", "Anti-MOUNTED 4+", "Assault", "Heavy", "Ignores Cover"],
+            },
+        ];
+        return d;
+    }
 
     private static Detachment Make(string name, params (string Name, int Points)[] enhancements) => new()
     {

@@ -16,8 +16,12 @@ public sealed class RosterValidationContext
         Roster = roster;
         Catalogue = catalogue;
         Detachments = detachments;
-        Detachment = detachments.FirstOrDefault(d =>
-            string.Equals(d.Id, roster.DetachmentId, StringComparison.OrdinalIgnoreCase));
+        SelectedDetachments = roster.EffectiveDetachmentIds
+            .Select(id => detachments.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase)))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList();
+        Detachment = SelectedDetachments.FirstOrDefault();
     }
 
     public Roster Roster { get; }
@@ -27,8 +31,25 @@ public sealed class RosterValidationContext
     /// <summary>All detachments the roster could have chosen (used by R2 to test "exactly one, known").</summary>
     public IReadOnlyList<Detachment> Detachments { get; }
 
-    /// <summary>The detachment resolved from <see cref="Roster.DetachmentId"/>, or <c>null</c> when unset/unknown.</summary>
+    /// <summary>The detachments the roster has actually selected (from <see cref="Roster.EffectiveDetachmentIds"/>).</summary>
+    public IReadOnlyList<Detachment> SelectedDetachments { get; }
+
+    /// <summary>The primary selected detachment (first), or <c>null</c>. Back-compat for single-detachment code.</summary>
     public Detachment? Detachment { get; }
+
+    /// <summary>Finds an enhancement across all selected detachments, or <c>null</c>.</summary>
+    public Enhancement? FindEnhancement(string enhancementId)
+    {
+        foreach (var d in SelectedDetachments)
+        {
+            if (d.FindEnhancement(enhancementId) is { } e)
+                return e;
+        }
+        return null;
+    }
+
+    /// <summary>True when any selected detachment has authored enhancements (so R6 membership is enforceable).</summary>
+    public bool AnyEnhancementsAuthored => SelectedDetachments.Any(d => d.Enhancements.Count > 0);
 
     /// <summary>The catalogue datasheet for a unit, or <c>null</c> when the reference is dangling.</summary>
     public Datasheet? DatasheetFor(RosterUnit unit) => Catalogue.FindById(unit.DatasheetId);
@@ -46,8 +67,8 @@ public sealed class RosterValidationContext
 
     public int UnitPoints(RosterUnit unit) => RosterCalculator.UnitPoints(unit, DatasheetFor(unit));
 
-    public int EnhancementPoints(RosterUnit unit) => RosterCalculator.EnhancementPoints(unit, Detachment);
+    public int EnhancementPoints(RosterUnit unit) => RosterCalculator.EnhancementPoints(unit, SelectedDetachments);
 
     /// <summary>Memoised roster total (rule R1 input).</summary>
-    public int TotalPoints => _totalPoints ??= RosterCalculator.TotalPoints(Roster, Catalogue, Detachment);
+    public int TotalPoints => _totalPoints ??= RosterCalculator.TotalPoints(Roster, Catalogue, SelectedDetachments);
 }

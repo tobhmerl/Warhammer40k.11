@@ -28,7 +28,6 @@ public sealed class EnhancementRule : IRosterRule
                 $"Enhancement '{EnhancementName(context, dup.Key)}' is assigned to {dup.Count()} units; each may be taken once.");
         }
 
-        var detachment = context.Detachment;
         foreach (var unit in assigned)
         {
             var sheet = context.DatasheetFor(unit);
@@ -41,14 +40,14 @@ public sealed class EnhancementRule : IRosterRule
                 continue;
             }
 
-            // Membership + eligibility apply once the detachment's enhancements are authored.
-            if (detachment is null || detachment.Enhancements.Count == 0)
+            // Membership + eligibility apply once a selected detachment's enhancements are authored.
+            if (!context.AnyEnhancementsAuthored)
                 continue;
 
-            var enhancement = detachment.FindEnhancement(unit.AssignedEnhancementId!);
+            var enhancement = context.FindEnhancement(unit.AssignedEnhancementId!);
             if (enhancement is null)
             {
-                yield return ValidationMessage.Error(Id, $"That Enhancement is not part of the {detachment.Name} detachment.", unit.Id);
+                yield return ValidationMessage.Error(Id, "That Enhancement is not part of your selected detachment(s).", unit.Id);
             }
             else if (!enhancement.IsAvailableTo(sheet))
             {
@@ -58,5 +57,5 @@ public sealed class EnhancementRule : IRosterRule
     }
 
     private static string EnhancementName(RosterValidationContext context, string enhancementId) =>
-        context.Detachment?.FindEnhancement(enhancementId)?.Name ?? enhancementId;
+        context.FindEnhancement(enhancementId)?.Name ?? enhancementId;
 }

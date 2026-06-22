@@ -43,6 +43,9 @@ public sealed class RosterEntity : ITableEntity
     public string Faction { get; set; } = string.Empty;
     public int PointsLimit { get; set; }
     public string DetachmentId { get; set; } = string.Empty;
+
+    /// <summary>The full detachment list as CSV (Table Storage cannot store collections natively).</summary>
+    public string DetachmentIdsCsv { get; set; } = string.Empty;
     public string? CatalogueVersion { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
 
@@ -56,6 +59,7 @@ public sealed class RosterEntity : ITableEntity
         Faction = Faction,
         PointsLimit = PointsLimit,
         DetachmentId = DetachmentId,
+        DetachmentIds = SplitCsv(DetachmentIdsCsv),
         CatalogueVersion = CatalogueVersion,
         CreatedUtc = CreatedUtc,
         ModifiedUtc = Timestamp ?? CreatedUtc,
@@ -69,7 +73,8 @@ public sealed class RosterEntity : ITableEntity
         Name = roster.Name,
         Faction = roster.Faction,
         PointsLimit = roster.PointsLimit,
-        DetachmentId = roster.DetachmentId,
+        DetachmentId = roster.EffectiveDetachmentIds.Count > 0 ? roster.EffectiveDetachmentIds[0] : string.Empty,
+        DetachmentIdsCsv = string.Join(',', roster.EffectiveDetachmentIds),
         CatalogueVersion = roster.CatalogueVersion,
         CreatedUtc = roster.CreatedUtc,
         UnitsJson = JsonSerializer.Serialize(roster.Units, UnitsJsonOptions),
@@ -79,7 +84,6 @@ public sealed class RosterEntity : ITableEntity
     {
         if (string.IsNullOrWhiteSpace(json))
             return [];
-
         try
         {
             return JsonSerializer.Deserialize<List<RosterUnit>>(json, UnitsJsonOptions) ?? [];
@@ -89,6 +93,11 @@ public sealed class RosterEntity : ITableEntity
             return [];
         }
     }
+
+    private static List<string> SplitCsv(string? csv) =>
+        string.IsNullOrWhiteSpace(csv)
+            ? []
+            : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 }
 
 /// <summary>

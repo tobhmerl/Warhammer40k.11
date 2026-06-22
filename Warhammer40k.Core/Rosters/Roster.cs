@@ -37,8 +37,32 @@ public sealed class Roster
     [Range(0, 100_000, ErrorMessage = "Points limit must be between 0 and 100,000.")]
     public int PointsLimit { get; set; } = DefaultPointsLimit;
 
-    /// <summary>The single chosen detachment id (rule R2). One of the seven 11th-edition detachments.</summary>
+    /// <summary>
+    /// Legacy single detachment id (pre-11th-edition rosters). Prefer <see cref="DetachmentIds"/>; kept
+    /// populated with the primary detachment so older readers keep working.
+    /// </summary>
     public string DetachmentId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The detachments chosen for this roster (11th edition: one or more, purchased within the
+    /// Detachment-Points budget for the points level).
+    /// </summary>
+    public List<string> DetachmentIds { get; set; } = [];
+
+    /// <summary>
+    /// The effective detachment ids: <see cref="DetachmentIds"/> when set, otherwise the legacy
+    /// <see cref="DetachmentId"/> (so existing single-detachment rosters keep working). Not persisted.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<string> EffectiveDetachmentIds
+    {
+        get
+        {
+            if (DetachmentIds.Count > 0)
+                return DetachmentIds;
+            return string.IsNullOrEmpty(DetachmentId) ? [] : [DetachmentId];
+        }
+    }
 
     /// <summary>Catalogue version this roster was built against (so points can be re-resolved after edits).</summary>
     public string? CatalogueVersion { get; set; }

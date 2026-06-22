@@ -19,11 +19,32 @@ public sealed class Detachment
 
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Detachment Points spent to field this detachment (11th edition). 0 until costed.</summary>
+    public int DetachmentPoints { get; set; }
+
+    /// <summary>Whether this detachment is selectable in setup. Only detachments with authored rules are enabled.</summary>
+    public bool Enabled { get; set; }
+
     /// <summary>Enhancements selectable from this detachment. Empty where 11th-edition points aren't authored yet.</summary>
     public List<Enhancement> Enhancements { get; set; } = [];
 
     /// <summary>The detachment's stratagems (reference only — they affect play, not roster validation).</summary>
     public List<Stratagem> Stratagems { get; set; } = [];
+
+    /// <summary>The detachment rule(s), shown as reference text in Play Mode.</summary>
+    public List<DetachmentRule> Rules { get; set; } = [];
+
+    /// <summary>
+    /// Passive weapon-ability grants applied in Play Mode (e.g. CRYPTEK <b>models'</b> ranged weapons gain
+    /// the [ASSAULT] ability). Targets individual models by keyword, not the whole unit.
+    /// </summary>
+    public List<WeaponAbilityGrant> WeaponGrants { get; set; } = [];
+
+    /// <summary>
+    /// Selectable weapon abilities offered in Play Mode (e.g. a unit containing a CRYPTEK model picks one when
+    /// it shoots; it applies to that unit's ranged weapons until the end of the phase).
+    /// </summary>
+    public List<WeaponAbilityChoice> WeaponChoices { get; set; } = [];
 
     /// <summary>True only for Pantheon of Woe: every Necrons Monster auto-takes its Necrodermal Binding (rule R10).</summary>
     public bool AppliesPantheonBindings { get; set; }
@@ -103,4 +124,55 @@ public sealed class Stratagem
 
     /// <summary>Rules text.</summary>
     public string Text { get; set; } = string.Empty;
+}
+
+/// <summary>Which of a model's/unit's weapons a detachment effect targets.</summary>
+public enum DetachmentWeaponClass
+{
+    Any = 0,
+    Ranged = 1,
+    Melee = 2,
+}
+
+/// <summary>A detachment rule shown as reference text in Play Mode.</summary>
+public sealed class DetachmentRule
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Text { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A passive detachment buff: every model carrying <see cref="RequiresModelKeyword"/> grants the listed weapon
+/// <see cref="Abilities"/> to its weapons of the given <see cref="WeaponClass"/> — the MODEL, not the unit.
+/// </summary>
+public sealed class WeaponAbilityGrant
+{
+    /// <summary>The model keyword that triggers the grant, e.g. "Cryptek". Empty = every model.</summary>
+    public string RequiresModelKeyword { get; set; } = string.Empty;
+
+    /// <summary>Which of the model's weapons receive the abilities.</summary>
+    public DetachmentWeaponClass WeaponClass { get; set; } = DetachmentWeaponClass.Ranged;
+
+    /// <summary>The weapon abilities granted, in catalogue spelling (e.g. "Assault").</summary>
+    public List<string> Abilities { get; set; } = [];
+}
+
+/// <summary>
+/// A selectable detachment buff: a unit that contains a model with <see cref="RequiresModelKeyword"/> may pick
+/// one of <see cref="Options"/>; it applies to the unit's weapons of <see cref="WeaponClass"/> for the phase.
+/// </summary>
+public sealed class WeaponAbilityChoice
+{
+    /// <summary>Display label for the chooser, e.g. "Technosorcerous Augmentations".</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>A unit qualifies when it contains a model with this keyword, e.g. "Cryptek".</summary>
+    public string RequiresModelKeyword { get; set; } = string.Empty;
+
+    /// <summary>Which of the unit's weapons the chosen ability applies to.</summary>
+    public DetachmentWeaponClass WeaponClass { get; set; } = DetachmentWeaponClass.Ranged;
+
+    /// <summary>The selectable abilities, in catalogue spelling.</summary>
+    public List<string> Options { get; set; } = [];
 }
