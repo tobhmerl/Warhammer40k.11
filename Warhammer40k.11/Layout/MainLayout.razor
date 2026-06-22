@@ -3,36 +3,39 @@
 @inject SettingsState Settings
 @inject NavigationManager Navigation
 
-<div class="shell">
-    <header class="appbar">
-        <a class="brand" href="/">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-name">TombWorld</span>
-        </a>
+<div class="shell @(_immersive ? "shell--immersive" : null)">
+    @if (!_immersive)
+    {
+        <header class="appbar">
+            <a class="brand" href="/">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">TombWorld</span>
+            </a>
 
-        <button type="button"
-                class="nav-toggle @(_navOpen ? "is-open" : null)"
-                aria-label="@(_navOpen ? "Close navigation menu" : "Open navigation menu")"
-                aria-controls="primary-nav"
-                aria-expanded="@(_navOpen ? "true" : "false")"
-                @onclick="ToggleNav">
-            <span class="nav-toggle-box" aria-hidden="true">
-                <span class="nav-toggle-bar"></span>
-                <span class="nav-toggle-bar"></span>
-                <span class="nav-toggle-bar"></span>
-            </span>
-        </button>
+            <button type="button"
+                    class="nav-toggle @(_navOpen ? "is-open" : null)"
+                    aria-label="@(_navOpen ? "Close navigation menu" : "Open navigation menu")"
+                    aria-controls="primary-nav"
+                    aria-expanded="@(_navOpen ? "true" : "false")"
+                    @onclick="ToggleNav">
+                <span class="nav-toggle-box" aria-hidden="true">
+                    <span class="nav-toggle-bar"></span>
+                    <span class="nav-toggle-bar"></span>
+                    <span class="nav-toggle-bar"></span>
+                </span>
+            </button>
 
-        <nav id="primary-nav" class="nav @(_navOpen ? "is-open" : null)" aria-label="Primary">
-            <NavLink class="navlink" href="/" Match="NavLinkMatch.All">Home</NavLink>
-            <NavLink class="navlink" href="catalogue">Catalogue</NavLink>
-            <NavLink class="navlink" href="rosters">Rosters</NavLink>
-            <NavLink class="navlink" href="play">Play</NavLink>
-            <NavLink class="navlink" href="settings">Settings</NavLink>
-        </nav>
-    </header>
+            <nav id="primary-nav" class="nav @(_navOpen ? "is-open" : null)" aria-label="Primary">
+                <NavLink class="navlink" href="/" Match="NavLinkMatch.All">Home</NavLink>
+                <NavLink class="navlink" href="catalogue">Catalogue</NavLink>
+                <NavLink class="navlink" href="rosters">Rosters</NavLink>
+                <NavLink class="navlink" href="play">Play</NavLink>
+                <NavLink class="navlink" href="settings">Settings</NavLink>
+            </nav>
+        </header>
 
-    <div class="nav-scrim @(_navOpen ? "is-open" : null)" @onclick="CloseNav" aria-hidden="true"></div>
+        <div class="nav-scrim @(_navOpen ? "is-open" : null)" @onclick="CloseNav" aria-hidden="true"></div>
+    }
 
     <main class="content">
         @Body
@@ -46,10 +49,12 @@
 
 @code {
     private bool _navOpen;
+    private bool _immersive;
 
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        _immersive = IsImmersiveRoute();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -62,13 +67,32 @@
 
     private void CloseNav() => _navOpen = false;
 
+    // The active play session (/play/{id}) is an immersive screen: hide the app bar.
+    // That page carries its own "← Play" exit link, so navigation isn't lost.
+    private bool IsImmersiveRoute()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var cut = path.IndexOfAny(new[] { '?', '#' });
+        if (cut >= 0)
+            path = path[..cut];
+
+        return path.StartsWith("play/", StringComparison.OrdinalIgnoreCase);
+    }
+
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (!_navOpen)
-            return;
+        var immersive = IsImmersiveRoute();
+        var changed = immersive != _immersive;
+        _immersive = immersive;
 
-        _navOpen = false;
-        StateHasChanged();
+        if (_navOpen)
+        {
+            _navOpen = false;
+            changed = true;
+        }
+
+        if (changed)
+            StateHasChanged();
     }
 
     public void Dispose()

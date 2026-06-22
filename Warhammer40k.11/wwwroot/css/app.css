@@ -3,14 +3,6 @@
    Cold gunmetal-black surfaces, phosphor-green energy accents.
    ============================================================ */
 
-@font-face {
-    font-family: "Enchanted Land";
-    src: url("../fonts/enchanted-land.otf") format("opentype");
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
 :root {
     color-scheme: dark;
 
@@ -54,10 +46,10 @@
     --radius-lg: 22px;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-    /* Type */
-    --font-ui: "Rajdhani", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
-    --font-display: "Orbitron", "Rajdhani", system-ui, sans-serif;
-    --font-brand: "Enchanted Land", "Orbitron", "Rajdhani", system-ui, sans-serif;
+    /* Type — Helvetica across the whole app */
+    --font-ui: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-brand: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 /* ---- Themes (AB8): swap the accent palette; tints/glows follow --accent-rgb ---- */
@@ -126,7 +118,7 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background-image:
-        linear-gradient(180deg, rgba(7, 11, 10, 0.82), rgba(7, 11, 10, 0.9)),
+        linear-gradient(180deg, rgba(7, 11, 10, 0.35), rgba(7, 11, 10, 0.55)),
         url("../background.jpg");
     background-position: center, center;
     background-size: cover, cover;
