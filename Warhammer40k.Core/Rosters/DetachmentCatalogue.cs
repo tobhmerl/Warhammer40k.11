@@ -1,3 +1,4 @@
+using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Text;
 
 namespace Warhammer40k.Core.Rosters;
@@ -119,6 +120,57 @@ public static class DetachmentCatalogue
                 RequiresModelKeyword = "Cryptek",
                 WeaponClass = DetachmentWeaponClass.Ranged,
                 Options = ["Anti-INFANTRY 3+", "Anti-MOUNTED 4+", "Assault", "Heavy", "Ignores Cover"],
+            },
+        ];
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "molecular-targeting", Name = "Molecular Targeting", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase.",
+                Target = "One NECRONS unit from your army that has not been selected to shoot or fight this phase.",
+                Effect = "Until the end of the phase, each time a model in your unit makes an attack, you can ignore any or all modifiers to the following: that attack's Ballistic Skill or Weapon Skill characteristic; the Hit roll. If your unit has the CRYPTEK keyword, you can also ignore any or all modifiers to the Wound roll.",
+            },
+            new Stratagem
+            {
+                Id = "microscarab-swarm", Name = "Microscarab Swarm", Type = "Wargear", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One CRYPTEK INFANTRY unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "If your unit has the NECRON WARRIORS keyword, until the end of the phase, models in your unit have a 5+ invulnerable save. If your unit has the IMMORTALS keyword, until the end of the phase, models in your unit have a 4+ invulnerable save.",
+            },
+            new Stratagem
+            {
+                Id = "animus-curse", Name = "Animus Curse", Type = "Wargear", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has shot or fought.",
+                Target = "One CRYPTEK model from your army that was destroyed by one of the attacking unit's attacks. You can use this Stratagem on that model even though it was just destroyed.",
+                Effect = "Until the end of the battle, each time a friendly NECRONS model makes an attack that targets the attacking unit, you can re-roll the Hit roll.",
+            },
+            new Stratagem
+            {
+                Id = "synergistic-empowerment", Name = "Synergistic Empowerment", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                When = "Start of your Shooting phase.",
+                Target = "One CRYPTEK unit from your army.",
+                Effect = "Select one friendly NECRONS model (excluding MONSTERS and VEHICLES) within 12\" of a CRYPTEK model in your unit. Until the end of the phase, that friendly NECRONS model has the CRYPTEK keyword.",
+            },
+            new Stratagem
+            {
+                Id = "untapped-power", Name = "Untapped Power", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                When = "Your Shooting phase.",
+                Target = "One CRYPTEK unit from your army that has not been selected to shoot this phase.",
+                Effect = "Until the end of the phase, each time your unit is selected to shoot, when selecting an ability for the Technosorcerous Augmentations Detachment Rule, you can select one additional ability from those available.",
+            },
+            new Stratagem
+            {
+                Id = "potentiality-syphon", Name = "Potentiality Syphon", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Command],
+                When = "Your opponent's Command phase.",
+                Target = "One NECRONS unit from your army within range of one or more objective markers.",
+                Effect = "Your unit's Reanimation Protocols activate. If it is a CRYPTEK unit, it reanimates an additional 1 wound.",
             },
         ];
         return d;

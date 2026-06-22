@@ -95,7 +95,7 @@ else
 		@{
 			var strats = UsableStratagems;
 		}
-		<section class="strats" aria-label="Core stratagems usable now">
+		<section class="strats" aria-label="Stratagems usable now">
 			<button type="button" class="strats-head" @onclick="ToggleStrats" aria-expanded="@_stratsOpen">
 				<span class="chev" aria-hidden="true">@(_stratsOpen ? "▾" : "▸")</span>
 				<span class="strats-title">Stratagems</span>
@@ -106,17 +106,21 @@ else
 			{
 			@if (strats.Count == 0)
 			{
-				<p class="strats-empty">No core stratagems for this phase and turn.</p>
+				<p class="strats-empty">No stratagems for this phase and turn.</p>
 			}
 			else
 			{
 				<ul class="strat-list">
 					@foreach (var s in strats)
 					{
-						<li class="strat @(CanAfford(s) ? "" : "broke")" @key="s.Id">
+						<li class="strat @(CanAfford(s) ? "" : "broke")" @key="(s.Source + s.Id)">
 							<div class="s-head">
 								<span class="s-name">@s.Name</span>
-								<span class="s-id">@s.Id</span>
+								<span class="s-id">@s.Source</span>
+								@if (!string.IsNullOrEmpty(s.Type))
+								{
+									<span class="s-type">@s.Type</span>
+								}
 								<span class="s-cp">@s.Cost CP</span>
 								<button class="btn small s-use" type="button"
 										disabled="@(!CanAfford(s))" @onclick="() => UseStratagem(s)"
@@ -625,11 +629,30 @@ else
 	private int BattleShockCount => _battle is null ? 0 : _battle.Units.Count(NeedsBattleShock);
 
 	// Core Stratagems usable "in the actual second": filtered by the current phase + whose turn it is.
-	private IReadOnlyList<CoreStratagem> UsableStratagems => CoreStratagemCatalogue.Usable(_phase, _turn);
+	// Core Stratagems (always available) plus the selected detachments' stratagems, filtered "in the actual
+	// second" by phase + whose turn it is. You can hold stratagems from more than one detachment.
+	private sealed record StratView(string Id, string Name, string Source, string Type, int Cost,
+		string Flavour, string When, string Target, string Effect, string? Restrictions);
 
-	private bool CanAfford(CoreStratagem stratagem) => _cp >= stratagem.Cost;
+	private IReadOnlyList<StratView> UsableStratagems
+	{
+		get
+		{
+			var list = new List<StratView>();
+			foreach (var s in CoreStratagemCatalogue.Usable(_phase, _turn))
+				list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
+			if (_battle is not null)
+				foreach (var det in _battle.Detachments)
+					foreach (var s in det.Stratagems)
+						if (s.AppliesInPhase(_phase) && s.AppliesInTurn(_turn))
+							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
+			return list;
+		}
+	}
 
-	private void UseStratagem(CoreStratagem stratagem) => StepCp(-stratagem.Cost);
+	private bool CanAfford(StratView stratagem) => _cp >= stratagem.Cost;
+
+	private void UseStratagem(StratView stratagem) => StepCp(-stratagem.Cost);
 
 	private void StepRound(int delta) => _round = Math.Max(1, _round + delta);
 

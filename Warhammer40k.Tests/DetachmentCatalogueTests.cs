@@ -1,3 +1,4 @@
+using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
 namespace Warhammer40k.Tests;
@@ -65,5 +66,26 @@ public class DetachmentCatalogueTests
         Assert.Contains("Necron Warriors", grant.Keywords);
         Assert.Contains("Assault", grant.Abilities);
         Assert.Empty(hotd.WeaponChoices); // no selectable shooting ability
+    }
+
+    [Fact]
+    public void Cryptek_Conclave_has_six_stratagems_filtered_by_phase_and_turn()
+    {
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
+        Assert.Equal(6, cryptek.Stratagems.Count);
+        Assert.All(cryptek.Stratagems, s => Assert.Equal(1, s.CpCost));
+
+        // "Untapped Power": your Shooting phase only.
+        var untapped = cryptek.Stratagems.Single(s => s.Name == "Untapped Power");
+        Assert.True(untapped.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(untapped.AppliesInTurn(BattleTurn.Player));
+        Assert.False(untapped.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(untapped.AppliesInPhase(BattlePhase.Command));
+
+        // "Potentiality Syphon": opponent's Command phase only.
+        var syphon = cryptek.Stratagems.Single(s => s.Name == "Potentiality Syphon");
+        Assert.True(syphon.AppliesInPhase(BattlePhase.Command));
+        Assert.True(syphon.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(syphon.AppliesInTurn(BattleTurn.Player));
     }
 }

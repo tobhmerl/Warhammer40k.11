@@ -1089,8 +1089,21 @@ html[data-scroll="up"] .hud {
 
 .s-id {
     font-size: 0.72rem;
-    color: var(--text-faint);
-    font-family: var(--font-display);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.s-type {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    color: var(--text-dim);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 .s-cp {

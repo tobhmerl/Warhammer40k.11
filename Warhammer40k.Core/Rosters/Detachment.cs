@@ -1,4 +1,5 @@
 using Warhammer40k.Core.Catalogue;
+using Warhammer40k.Core.Play;
 
 namespace Warhammer40k.Core.Rosters;
 
@@ -115,21 +116,48 @@ public sealed class EnhancementEligibility
     }
 }
 
-/// <summary>A detachment Stratagem (§11). Reference data shown in the UI; not part of roster validation.</summary>
+/// <summary>
+/// A detachment Stratagem (§11) shown contextually in Play Mode <b>alongside</b> the Core Stratagems. Like
+/// <see cref="Play.CoreStratagem"/>, its phase(s) and "Used in" turn drive the "need to know now" filter.
+/// </summary>
 public sealed class Stratagem
 {
     public string Id { get; set; } = string.Empty;
 
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Stratagem category, e.g. "Battle Tactic", "Epic Deed".</summary>
+    /// <summary>Stratagem category, e.g. "Battle Tactic", "Wargear", "Strategic Ploy".</summary>
     public string Type { get; set; } = string.Empty;
 
     /// <summary>Command Point cost.</summary>
     public int CpCost { get; set; }
 
-    /// <summary>Rules text.</summary>
-    public string Text { get; set; } = string.Empty;
+    /// <summary>Whose turn this may be used in (the coloured "Used in" marker).</summary>
+    public StratagemTurn Turn { get; set; } = StratagemTurn.Either;
+
+    /// <summary>The phase(s) this stratagem is used in. An empty list means it applies in any phase.</summary>
+    public List<BattlePhase> Phases { get; set; } = [];
+
+    /// <summary>The "WHEN" clause.</summary>
+    public string When { get; set; } = string.Empty;
+
+    /// <summary>The "TARGET" clause.</summary>
+    public string Target { get; set; } = string.Empty;
+
+    /// <summary>The "EFFECT" clause.</summary>
+    public string Effect { get; set; } = string.Empty;
+
+    /// <summary>True when this stratagem is relevant in the given phase.</summary>
+    public bool AppliesInPhase(BattlePhase phase) => Phases.Count == 0 || Phases.Contains(phase);
+
+    /// <summary>True when this stratagem can be used during the given turn.</summary>
+    public bool AppliesInTurn(BattleTurn turn) => Turn switch
+    {
+        StratagemTurn.Either => true,
+        StratagemTurn.Your => turn == BattleTurn.Player,
+        StratagemTurn.Opponent => turn == BattleTurn.Opponent,
+        _ => false,
+    };
 }
 
 /// <summary>Which of a model's/unit's weapons a detachment effect targets.</summary>
