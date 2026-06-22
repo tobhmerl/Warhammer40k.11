@@ -1,0 +1,136 @@
+using System.Text.Json.Serialization;
+
+namespace Warhammer40k.Core.Catalogue;
+
+/// <summary>
+/// Which weapons a conferred effect targets. Declared in the Catalogue namespace (not reusing
+/// <c>Rosters.DetachmentWeaponClass</c>) so a <see cref="Datasheet"/> can carry conferred effects without
+/// the Catalogue layer depending on the Rosters layer.
+/// </summary>
+public enum WeaponClass
+{
+    Any = 0,
+    Ranged = 1,
+    Melee = 2,
+}
+
+/// <summary>
+/// The characteristic a numeric <see cref="StatModifier"/> adjusts. Covers the unit statline
+/// (M/T/Sv/W/Ld/OC) and the per-weapon characteristics that can be improved on a battle card. A
+/// <c>+1 to the Hit roll</c> buff targets <see cref="Skill"/> (the weapon's BS/WS), so e.g. a 4+ shows as 3+.
+/// </summary>
+public enum StatTarget
+{
+    // Unit statline
+    Move = 0,
+    Toughness = 1,
+    Save = 2,
+    Wounds = 3,
+    Leadership = 4,
+    ObjectiveControl = 5,
+
+    // Weapon profile
+    Attacks = 10,
+
+    /// <summary>The weapon's Ballistic/Weapon Skill — i.e. the Hit roll target (a +1 buff improves 4+ to 3+).</summary>
+    Skill = 11,
+    Strength = 12,
+    Damage = 13,
+}
+
+/// <summary>
+/// A single numeric buff applied directly to a characteristic instead of being shown as ability prose, e.g.
+/// <c>+1 to Hit</c>. <see cref="WeaponClass"/> is only meaningful when <see cref="Target"/> is a weapon
+/// characteristic (it scopes the buff to ranged or melee weapons).
+/// </summary>
+public sealed class StatModifier
+{
+    [JsonPropertyName("target")] public StatTarget Target { get; set; }
+
+    /// <summary>The signed amount to change the characteristic by (e.g. <c>+1</c>).</summary>
+    [JsonPropertyName("delta")] public int Delta { get; set; }
+
+    /// <summary>For weapon-characteristic targets, which weapons are affected. Ignored for unit-statline targets.</summary>
+    [JsonPropertyName("weaponClass")] public WeaponClass WeaponClass { get; set; } = WeaponClass.Any;
+
+    /// <summary>Optional override for the short display label; <see cref="Describe"/> computes a default when empty.</summary>
+    [JsonPropertyName("label")] public string Label { get; set; } = "";
+
+    /// <summary>True when this modifier targets a weapon characteristic (vs. the unit statline).</summary>
+    [JsonIgnore]
+    public bool IsWeaponStat => Target is StatTarget.Attacks or StatTarget.Skill or StatTarget.Strength or StatTarget.Damage;
+
+    /// <summary>A short human label such as <c>"+1 to Hit"</c> or <c>"+1 Move"</c>.</summary>
+    public string Describe()
+    {
+        if (!string.IsNullOrWhiteSpace(Label))
+            return Label;
+        var sign = Delta >= 0 ? "+" : "−";
+        return $"{sign}{Math.Abs(Delta)} {Name(Target)}";
+    }
+
+    private static string Name(StatTarget target) => target switch
+    {
+        StatTarget.Move => "Move",
+        StatTarget.Toughness => "Toughness",
+        StatTarget.Save => "Save",
+        StatTarget.Wounds => "Wounds",
+        StatTarget.Leadership => "Leadership",
+        StatTarget.ObjectiveControl => "OC",
+        StatTarget.Attacks => "Attacks",
+        StatTarget.Skill => "to Hit",
+        StatTarget.Strength => "Strength",
+        StatTarget.Damage => "Damage",
+        _ => target.ToString(),
+    };
+}
+
+/// <summary>
+/// The structured effect parsed from a single datasheet ability that confers a buff on the unit a model
+/// leads (e.g. "While this model is leading a unit, melee weapons … have the [LETHAL HITS] ability."). Stored
+/// on <see cref="Datasheet.LeaderConferrals"/>, derived once at load so Play Mode can apply it to the led
+/// unit's card instead of showing the raw ability text.
+/// </summary>
+public sealed class ConferredEffect
+{
+    /// <summary>The name of the ability this was parsed from, so the card can mark it "Applied".</summary>
+    [JsonPropertyName("sourceAbility")] public string SourceAbility { get; set; } = "";
+
+    /// <summary>Which of the led unit's weapons the granted <see cref="WeaponAbilities"/> apply to.</summary>
+    [JsonPropertyName("weaponClass")] public WeaponClass WeaponClass { get; set; } = WeaponClass.Any;
+
+    /// <summary>Weapon abilities granted to the led unit's weapons, in catalogue spelling (e.g. "Lethal Hits").</summary>
+    [JsonPropertyName("weaponAbilities")] public List<string> WeaponAbilities { get; set; } = [];
+
+    /// <summary>Unit-wide abilities granted to the led unit (e.g. "Feel No Pain 5+").</summary>
+    [JsonPropertyName("unitAbilities")] public List<string> UnitAbilities { get; set; } = [];
+
+    /// <summary>Numeric characteristic buffs applied to the led unit / its weapons.</summary>
+    [JsonPropertyName("statModifiers")] public List<StatModifier> StatModifiers { get; set; } = [];
+
+    /// <summary>True when this effect grants nothing (used to drop no-op parses).</summary>
+    [JsonIgnore]
+    public bool IsEmpty => WeaponAbilities.Count == 0 && UnitAbilities.Count == 0 && StatModifiers.Count == 0;
+
+    /// <summary>A compact one-line summary for the "Applied: …" note, e.g. "LETHAL HITS on melee weapons".</summary>
+    [JsonIgnore]
+    public string Summary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (WeaponAbilities.Count > 0)
+                parts.Add($"{string.Join(", ", WeaponAbilities)} on {WeaponScope()}");
+            parts.AddRange(UnitAbilities);
+            parts.AddRange(StatModifiers.Select(m => m.Describe()));
+            return string.Join("; ", parts);
+        }
+    }
+
+    private string WeaponScope() => WeaponClass switch
+    {
+        WeaponClass.Ranged => "ranged weapons",
+        WeaponClass.Melee => "melee weapons",
+        _ => "weapons",
+    };
+}

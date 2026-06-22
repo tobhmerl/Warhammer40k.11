@@ -56,6 +56,10 @@ public static class CatalogueSeedLoader
             d.AllowsCoLeader = leaderText is not null
                 && leaderText.Contains("already been attached", StringComparison.OrdinalIgnoreCase);
             d.LeaderTargetIds.Clear();
+
+            // Structured effects this Leader confers on the unit it leads (e.g. [LETHAL HITS], Feel No Pain,
+            // +1 to Hit) — derived once here so Play Mode never re-parses ability text at runtime.
+            d.LeaderConferrals = LeaderConferralParser.Parse(d.Abilities);
         }
 
         // Second pass: resolve Leader targets by matching known unit names inside the leader text.

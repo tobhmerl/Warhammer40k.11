@@ -1,3 +1,4 @@
+using Warhammer40k.Api;
 using Warhammer40k.Core.Catalogue;
 using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
@@ -358,5 +359,195 @@ public class BattleRosterTests
         Assert.Contains("Assault", battle.GrantedWeaponAbilities(warUnit, crypPart, ranged: true), StringComparer.OrdinalIgnoreCase);
         // A unit that is neither Warriors nor Immortals gets nothing.
         Assert.Empty(battle.GrantedWeaponAbilities(loneLokhust, loneLokhust.Primary, ranged: true));
+    }
+
+    // ---------- Leader-conferred effects (weapon abilities / unit abilities / stat buffs) ----------
+
+    private static Datasheet LeaderSheet(string id, string name, string wounds, params ConferredEffect[] conferrals)
+    {
+        var sheet = Sheet(id, name, wounds);
+        sheet.LeaderConferrals = conferrals.ToList();
+        return sheet;
+    }
+
+    [Fact]
+    public void Attached_leader_confers_weapon_ability_to_led_units_matching_weapons()
+    {
+        var lord = LeaderSheet("skorpekh-lord", "Skorpekh Lord", "7",
+            new ConferredEffect
+            {
+                SourceAbility = "United In Destruction",
+                WeaponClass = WeaponClass.Melee,
+                WeaponAbilities = ["Lethal Hits"],
+            });
+        var destroyers = Sheet("skorpekh-destroyers", "Skorpekh Destroyers", wounds: "3",
+            weapons:
+            [
+                new WeaponProfile { Name = "Skorpekh hyperphase weapons", Type = "Melee" },
+                new WeaponProfile { Name = "Plasmacyte", Type = "Ranged" },
+            ]);
+
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("u1", "skorpekh-lord", attachedTo: "u2"),
+                Unit("u2", "skorpekh-destroyers", models: 3),
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(lord, destroyers));
+        var group = Assert.Single(battle.Units);
+        var destroyersPart = group.Parts.Single(p => p.Datasheet.Id == "skorpekh-destroyers");
+
+        // Melee weapons of the led unit gain [LETHAL HITS]; ranged weapons do not.
+        Assert.Contains("Lethal Hits", battle.GrantedWeaponAbilities(group, destroyersPart, ranged: false), StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(battle.GrantedWeaponAbilities(group, destroyersPart, ranged: true));
+        // The source ability is replaced by a short "Applied: …" note instead of full text.
+        Assert.Equal("Lethal Hits on melee weapons", group.AppliedSummaryFor("United In Destruction"));
+    }
+
+    [Fact]
+    public void Standalone_leader_confers_nothing()
+    {
+        var lord = LeaderSheet("skorpekh-lord", "Skorpekh Lord", "7",
+            new ConferredEffect
+            {
+                SourceAbility = "United In Destruction",
+                WeaponClass = WeaponClass.Melee,
+                WeaponAbilities = ["Lethal Hits"],
+            });
+        lord.Weapons = [new WeaponProfile { Name = "Hyperphase harvester", Type = "Melee" }];
+        var roster = new Roster { Units = [Unit("u1", "skorpekh-lord")] }; // not attached to anyone
+
+        var battle = BattleRoster.Build(roster, Catalogue(lord));
+        var group = Assert.Single(battle.Units);
+
+        Assert.Empty(battle.GrantedWeaponAbilities(group, group.Primary, ranged: false));
+        Assert.Null(group.AppliedSummaryFor("United In Destruction"));
+    }
+
+    [Fact]
+    public void Attached_leader_confers_unit_ability_with_applied_summary()
+    {
+        var techno = LeaderSheet("technomancer", "Technomancer", "4",
+            new ConferredEffect { SourceAbility = "Rites of Reanimation", UnitAbilities = ["Feel No Pain 5+"] });
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+
+        var roster = new Roster
+        {
+            Units = [Unit("u1", "technomancer", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(techno, warriors));
+        var group = Assert.Single(battle.Units);
+
+        Assert.Contains("Feel No Pain 5+", battle.ConferredUnitAbilities(group));
+        Assert.Equal("Feel No Pain 5+", group.AppliedSummaryFor("Rites of Reanimation"));
+    }
+
+    [Fact]
+    public void Attached_leader_can_confer_a_hit_roll_modifier_to_weapons()
+    {
+        var lord = LeaderSheet("overlord", "Overlord", "5",
+            new ConferredEffect
+            {
+                SourceAbility = "Awakened Command",
+                StatModifiers = [new StatModifier { Target = StatTarget.Skill, Delta = 1, WeaponClass = WeaponClass.Any }],
+            });
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged", Skill = "4+" }]);
+
+        var roster = new Roster
+        {
+            Units = [Unit("o", "overlord", attachedTo: "w"), Unit("w", "necron-warriors", models: 10)],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(lord, warriors));
+        var group = Assert.Single(battle.Units);
+        var warriorsPart = group.Parts.Single(p => p.Datasheet.Id == "necron-warriors");
+
+        var mods = battle.WeaponStatModifiers(group, warriorsPart, ranged: true);
+        Assert.Equal("3+", StatMath.ApplyAll("4+", mods)); // +1 to Hit: 4+ → 3+
+        Assert.Equal("+1 to Hit", group.AppliedSummaryFor("Awakened Command"));
+    }
+
+    // ---------- Detachment numeric stat buffs (the "Awaken Dynasty +1 to Hit" pattern) ----------
+
+    private static Detachment HitBuffDetachment(bool requiresLeader) => new()
+    {
+        Id = "awakened-dynasty",
+        Name = "Awakened Dynasty",
+        StatBuffs =
+        [
+            new DetachmentStatBuff
+            {
+                Scope = GrantScope.Unit,
+                RequiresAttachedLeader = requiresLeader,
+                Modifier = new StatModifier { Target = StatTarget.Skill, Delta = 1, WeaponClass = WeaponClass.Any },
+            },
+        ],
+    };
+
+    [Fact]
+    public void Detachment_stat_buff_improves_a_led_units_hit_roll()
+    {
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged", Skill = "4+" }]);
+        var overlord = Sheet("overlord", "Overlord", wounds: "5");
+
+        var roster = new Roster
+        {
+            Units = [Unit("o", "overlord", attachedTo: "w"), Unit("w", "necron-warriors", models: 10)],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(warriors, overlord), [HitBuffDetachment(requiresLeader: true)]);
+        var group = Assert.Single(battle.Units);
+        var warriorsPart = group.Parts.Single(p => p.Datasheet.Id == "necron-warriors");
+
+        var mods = battle.WeaponStatModifiers(group, warriorsPart, ranged: true);
+        var mod = Assert.Single(mods);
+        Assert.Equal(StatTarget.Skill, mod.Target);
+        Assert.Equal("3+", StatMath.ApplyAll("4+", mods)); // 4+ → 3+ for the whole led unit
+    }
+
+    [Fact]
+    public void Detachment_stat_buff_requiring_a_leader_skips_an_unled_unit()
+    {
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged", Skill = "4+" }]);
+
+        var roster = new Roster { Units = [Unit("w", "necron-warriors", models: 10)] }; // no leader attached
+
+        var battle = BattleRoster.Build(roster, Catalogue(warriors), [HitBuffDetachment(requiresLeader: true)]);
+        var group = Assert.Single(battle.Units);
+
+        Assert.Empty(battle.WeaponStatModifiers(group, group.Primary, ranged: true));
+    }
+
+    // ---------- Real-seed end-to-end: the actual Skorpekh Lord (user's scenario) ----------
+
+    [Fact]
+    public void Real_seed_Skorpekh_Lord_confers_Lethal_Hits_when_leading_Destroyers()
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var lord = catalogue.Datasheets.Single(d => d.Name == "Skorpekh Lord");
+        var destroyers = catalogue.Datasheets.Single(d => d.Name == "Skorpekh Destroyers");
+
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("u1", lord.Id, attachedTo: "u2"),
+                Unit("u2", destroyers.Id, models: 3),
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, catalogue);
+        var group = Assert.Single(battle.Units);
+        var destroyersPart = group.Parts.Single(p => p.Datasheet.Id == destroyers.Id);
+
+        Assert.Contains("Lethal Hits", battle.GrantedWeaponAbilities(group, destroyersPart, ranged: false), StringComparer.OrdinalIgnoreCase);
+        Assert.Equal("Lethal Hits on melee weapons", group.AppliedSummaryFor("United In Destruction"));
     }
 }

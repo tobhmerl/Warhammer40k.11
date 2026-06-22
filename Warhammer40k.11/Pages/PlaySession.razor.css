@@ -717,6 +717,18 @@ html[data-scroll="up"] .hud {
     overflow-wrap: anywhere;
 }
 
+/* A characteristic improved by an applied buff (a leader conferral or a detachment rule), e.g. +1 to Hit. */
+.st.buffed {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: var(--glow-sm);
+}
+
+.st.buffed .lab,
+.st.buffed .val {
+    color: var(--accent-strong);
+}
+
 /* ---- Weapon blocks (ranged / melee): name + Total A, then a wrapping stat-chip grid ---- */
 .weapon-block {
     border: 1px solid var(--border);
@@ -942,6 +954,69 @@ html[data-scroll="up"] .hud {
     font-size: 0.85rem;
     line-height: 1.45;
     white-space: pre-line;
+}
+
+/* Collapsible ability header: the text stays hidden until the row is clicked. */
+.a-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.a-toggle .chev {
+    flex: none;
+    color: var(--accent);
+    font-size: 0.7rem;
+}
+
+.a-toggle .a-name {
+    margin-bottom: 0;
+}
+
+.a-toggle:hover .a-name {
+    color: var(--accent);
+}
+
+.abilities li.open .a-text {
+    margin-top: 0.4rem;
+}
+
+/* An ability whose effect is applied straight to the card: shown as a short note, not full text. */
+.abilities li.applied {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+}
+
+.a-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem 0.6rem;
+}
+
+.a-row .a-name {
+    margin-bottom: 0;
+}
+
+.a-applied {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    color: #04130d;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 /* ---- Leader detail in sheet ---- */

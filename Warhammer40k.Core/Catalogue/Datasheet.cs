@@ -58,4 +58,11 @@ public sealed class Datasheet
 
     /// <summary>Datasheet ids this Leader can attach to (parsed from the Leader ability text against known unit names).</summary>
     [JsonPropertyName("leaderTargetIds")] public List<string> LeaderTargetIds { get; set; } = [];
+
+    /// <summary>
+    /// Effects this Leader confers on the unit it leads, parsed once at load from its "While this model is
+    /// leading a unit, …" abilities (see <see cref="LeaderConferralParser"/>). Drives Play Mode's applied
+    /// weapon abilities / stat buffs instead of showing the raw ability text.
+    /// </summary>
+    [JsonPropertyName("leaderConferrals")] public List<ConferredEffect> LeaderConferrals { get; set; } = [];
 }

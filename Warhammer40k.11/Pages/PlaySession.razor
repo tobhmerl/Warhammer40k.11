@@ -257,13 +257,14 @@ else
 													}
 												</span>
 											</div>
+											@{ var uMods = _battle.UnitStatModifiers(unit, part); }
 											<div class="statgrid">
-												<div class="st"><span class="lab">M</span><span class="val">@Dash(p?.Move)</span></div>
-												<div class="st"><span class="lab">T</span><span class="val">@Dash(p?.Toughness)</span></div>
-												<div class="st"><span class="lab">SV</span><span class="val">@Dash(p?.Save)</span></div>
-												<div class="st"><span class="lab">W</span><span class="val">@Dash(p?.Wounds)</span></div>
-												<div class="st"><span class="lab">LD</span><span class="val">@Dash(p?.Leadership)</span></div>
-												<div class="st"><span class="lab">OC</span><span class="val">@Dash(p?.ObjectiveControl)</span></div>
+												<div class="st @(StatBuffed(p?.Move, uMods, StatTarget.Move) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.Move)"><span class="lab">M</span><span class="val">@StatCell(p?.Move, uMods, StatTarget.Move)</span></div>
+												<div class="st @(StatBuffed(p?.Toughness, uMods, StatTarget.Toughness) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.Toughness)"><span class="lab">T</span><span class="val">@StatCell(p?.Toughness, uMods, StatTarget.Toughness)</span></div>
+												<div class="st @(StatBuffed(p?.Save, uMods, StatTarget.Save) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.Save)"><span class="lab">SV</span><span class="val">@StatCell(p?.Save, uMods, StatTarget.Save)</span></div>
+												<div class="st @(StatBuffed(p?.Wounds, uMods, StatTarget.Wounds) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.Wounds)"><span class="lab">W</span><span class="val">@StatCell(p?.Wounds, uMods, StatTarget.Wounds)</span></div>
+												<div class="st @(StatBuffed(p?.Leadership, uMods, StatTarget.Leadership) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.Leadership)"><span class="lab">LD</span><span class="val">@StatCell(p?.Leadership, uMods, StatTarget.Leadership)</span></div>
+												<div class="st @(StatBuffed(p?.ObjectiveControl, uMods, StatTarget.ObjectiveControl) ? "buffed" : "")" title="@StatTitle(uMods, StatTarget.ObjectiveControl)"><span class="lab">OC</span><span class="val">@StatCell(p?.ObjectiveControl, uMods, StatTarget.ObjectiveControl)</span></div>
 											</div>
 										</div>
 									}
@@ -294,14 +295,15 @@ else
 											@foreach (var row in ranged)
 											{
 												<li class="weapon" @key="row.Weapon">
-													<div class="w-top">
-														<span class="wname">@row.Weapon.Name</span>
-														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
-													</div>
 													@{
+														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true);
 														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true);
 														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
 													}
+													<div class="w-top">
+														<span class="wname">@row.Weapon.Name</span>
+														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, rwMods) A</span>
+													</div>
 													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
 													{
 														<div class="w-meta">
@@ -315,7 +317,7 @@ else
 															}
 															@foreach (var g in rGrants)
 															{
-																<span class="wkw granted" title="Granted by your detachment">@g</span>
+																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
 															@if (rChosen is not null)
 															{
@@ -325,11 +327,11 @@ else
 													}
 													<div class="statgrid weapongrid">
 														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
-														<div class="st"><span class="lab">A</span><span class="val">@Dash(row.Weapon.Attacks)</span></div>
-														<div class="st"><span class="lab">BS</span><span class="val">@Dash(row.Weapon.Skill)</span></div>
-														<div class="st"><span class="lab">S</span><span class="val">@Dash(row.Weapon.Strength)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>
 														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st"><span class="lab">D</span><span class="val">@Dash(row.Weapon.Damage)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Damage, rwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Damage)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, rwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -344,13 +346,14 @@ else
 											@foreach (var row in melee)
 											{
 												<li class="weapon" @key="row.Weapon">
-													<div class="w-top">
-														<span class="wname">@row.Weapon.Name</span>
-														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
-													</div>
 													@{
+														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false);
 														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false);
 													}
+													<div class="w-top">
+														<span class="wname">@row.Weapon.Name</span>
+														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, mwMods) A</span>
+													</div>
 													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
 													{
 														<div class="w-meta">
@@ -364,17 +367,17 @@ else
 															}
 															@foreach (var g in mGrants)
 															{
-																<span class="wkw granted" title="Granted by your detachment">@g</span>
+																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
 														</div>
 													}
 													<div class="statgrid weapongrid">
 														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
-														<div class="st"><span class="lab">A</span><span class="val">@Dash(row.Weapon.Attacks)</span></div>
-														<div class="st"><span class="lab">WS</span><span class="val">@Dash(row.Weapon.Skill)</span></div>
-														<div class="st"><span class="lab">S</span><span class="val">@Dash(row.Weapon.Strength)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Attacks, mwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Attacks)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, mwMods, StatTarget.Attacks)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Skill, mwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Skill)"><span class="lab">WS</span><span class="val">@StatCell(row.Weapon.Skill, mwMods, StatTarget.Skill)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Strength, mwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Strength)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, mwMods, StatTarget.Strength)</span></div>
 														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st"><span class="lab">D</span><span class="val">@Dash(row.Weapon.Damage)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Damage, mwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Damage)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, mwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -387,16 +390,40 @@ else
 									<ul class="abilities">
 										@foreach (var a in unit.CombinedAbilities)
 										{
-											<li @key="a">
-												<span class="a-name">
-													@a.Ability.Name
-													@if (unit.Parts.Count > 1)
+											var applied = unit.AppliedSummaryFor(a.Ability.Name);
+											var open = IsAbilityOpen(unit, a);
+											<li class="ability @(applied is not null ? "applied" : "") @(open ? "open" : "")" @key="a">
+												@if (applied is not null)
+												{
+													<div class="a-row">
+														<span class="a-name">
+															@a.Ability.Name
+															@if (unit.Parts.Count > 1)
+															{
+																<span class="a-src">@a.Source</span>
+															}
+														</span>
+														<span class="a-applied" title="Applied to this unit's stats or weapons">Applied: @applied</span>
+													</div>
+												}
+												else
+												{
+													<button type="button" class="a-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
+														<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
+														<span class="a-name">
+															@a.Ability.Name
+															@if (unit.Parts.Count > 1)
+															{
+																<span class="a-src">@a.Source</span>
+															}
+														</span>
+													</button>
+													@if (open)
 													{
-														<span class="a-src">@a.Source</span>
+														<p class="a-text">@Clean(a.Ability.Text)</p>
 													}
-											</span>
-											<span class="a-text">@Clean(a.Ability.Text)</span>
-										</li>
+												}
+											</li>
 									}
 								</ul>
 							}
@@ -534,6 +561,8 @@ else
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
 	// Cards collapsed by the user, keyed by group id.
 	private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
+	// Abilities expanded by the user (collapsed by default), keyed by unit id + ability name.
+	private readonly HashSet<string> _openAbilities = new(StringComparer.Ordinal);
 	// Per-unit selected detachment weapon-ability for the current Shooting phase (e.g. "Anti-INFANTRY 3+").
 	private readonly Dictionary<string, string> _shootingChoice = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
@@ -693,6 +722,7 @@ else
 		_turn = BattleTurn.Player;
 		_track.Clear();
 		_collapsed.Clear();
+		_openAbilities.Clear();
 		_shootingChoice.Clear();
 		if (_battle is null)
 			return;
@@ -721,8 +751,30 @@ else
 
 	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
 
-	private string TotalAttacks(BattlePart part, WeaponProfile weapon) =>
-		WeaponMath.TotalAttacks(PartModelsAlive(part), weapon.Attacks);
+	private string TotalAttacks(BattlePart part, WeaponProfile weapon, IReadOnlyList<StatModifier> weaponMods) =>
+		WeaponMath.TotalAttacks(PartModelsAlive(part), BuffedRaw(weapon.Attacks, weaponMods, StatTarget.Attacks));
+
+	// ---- Applied stat buffs (leader conferrals + detachment buffs) shown directly on the stat cells ----
+	private static string BuffedRaw(string? raw, IReadOnlyList<StatModifier> mods, StatTarget target)
+	{
+		if (string.IsNullOrWhiteSpace(raw))
+			return raw ?? "";
+		var applicable = mods.Where(m => m.Target == target).ToList();
+		return applicable.Count == 0 ? raw : StatMath.ApplyAll(raw, applicable);
+	}
+
+	private static string StatCell(string? raw, IReadOnlyList<StatModifier> mods, StatTarget target) =>
+		Dash(BuffedRaw(raw, mods, target));
+
+	private static bool StatBuffed(string? raw, IReadOnlyList<StatModifier> mods, StatTarget target) =>
+		!string.IsNullOrWhiteSpace(raw)
+		&& !string.Equals(raw, BuffedRaw(raw, mods, target), StringComparison.Ordinal);
+
+	private static string StatTitle(IReadOnlyList<StatModifier> mods, StatTarget target)
+	{
+		var applicable = mods.Where(m => m.Target == target).ToList();
+		return applicable.Count == 0 ? "" : "Buffed " + string.Join(", ", applicable.Select(m => m.Describe()));
+	}
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
 
@@ -733,6 +785,17 @@ else
 	{
 		if (!_collapsed.Remove(unit.Id))
 			_collapsed.Add(unit.Id);
+	}
+
+	// ---- Abilities collapse (each ability's text is hidden until clicked) ----
+	private bool IsAbilityOpen(BattleUnit unit, BattleAbility ability) =>
+		_openAbilities.Contains(unit.Id + "\u0001" + ability.Ability.Name);
+
+	private void ToggleAbility(BattleUnit unit, BattleAbility ability)
+	{
+		var key = unit.Id + "\u0001" + ability.Ability.Name;
+		if (!_openAbilities.Remove(key))
+			_openAbilities.Add(key);
 	}
 
 	private void CollapseAll()

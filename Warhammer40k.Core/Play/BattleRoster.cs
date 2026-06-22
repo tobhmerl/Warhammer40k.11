@@ -26,7 +26,24 @@ public sealed class BattleRoster
     public static BattleRoster Build(Roster roster, CatalogueData catalogue)
     {
         ArgumentNullException.ThrowIfNull(roster);
+        var detachments = roster.EffectiveDetachmentIds
+            .Select(DetachmentCatalogue.FindById)
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList();
+        return Build(roster, catalogue, detachments);
+    }
+
+    /// <summary>
+    /// Builds a battle roster against an explicit set of <paramref name="detachments"/> (already resolved by
+    /// the caller, or supplied by a test). The two-argument overload resolves them from
+    /// <see cref="DetachmentCatalogue"/>.
+    /// </summary>
+    public static BattleRoster Build(Roster roster, CatalogueData catalogue, IReadOnlyList<Detachment> detachments)
+    {
+        ArgumentNullException.ThrowIfNull(roster);
         ArgumentNullException.ThrowIfNull(catalogue);
+        ArgumentNullException.ThrowIfNull(detachments);
 
         // First pass: a part for every roster unit that resolves to a datasheet, keyed by roster-unit id.
         var parts = new Dictionary<string, BattlePart>(StringComparer.Ordinal);
@@ -71,12 +88,6 @@ public sealed class BattleRoster
             units.Add(new BattleUnit(members));
         }
 
-        var detachments = roster.EffectiveDetachmentIds
-            .Select(DetachmentCatalogue.FindById)
-            .Where(d => d is not null)
-            .Select(d => d!)
-            .ToList();
-
         return new BattleRoster(units, detachments);
     }
 
@@ -92,9 +103,11 @@ public sealed class BattleRoster
     }
 
     /// <summary>
-    /// Passive weapon abilities a detachment grants to this part's ranged (or melee) weapons — e.g. CRYPTEK
-    /// models gain [ASSAULT] on their ranged weapons. Targets the model by keyword, so an attached Leader's
-    /// grant never spills onto its bodyguard.
+    /// Passive weapon abilities granted to this part's ranged (or melee) weapons, from two sources: a
+    /// <b>detachment</b> grant matched by keyword (e.g. CRYPTEK models gain [ASSAULT]), and an attached
+    /// <b>Leader's</b> conferral (e.g. a Skorpekh Lord gives the unit it leads [LETHAL HITS] on melee weapons).
+    /// Detachment grants target the model by keyword so they never spill onto a bodyguard; a Leader's conferral
+    /// applies to every model in the unit it leads.
     /// </summary>
     public IReadOnlyList<string> GrantedWeaponAbilities(BattleUnit unit, BattlePart part, bool ranged)
     {
@@ -119,7 +132,89 @@ public sealed class BattleRoster
                 }
             }
         }
+
+        // Leader-conferred weapon abilities apply to every model in the led unit (incl. the Leader itself).
+        foreach (var leader in unit.Parts.Where(p => p.IsLeader))
+        {
+            foreach (var conferral in leader.Datasheet.LeaderConferrals)
+            {
+                if (!ClassMatches(conferral.WeaponClass, ranged))
+                    continue;
+                foreach (var ability in conferral.WeaponAbilities)
+                {
+                    if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                        result.Add(ability);
+                }
+            }
+        }
+
         return result;
+    }
+
+    /// <summary>
+    /// Numeric buffs to apply to this part's weapon characteristics (Hit/A/S/D) of the given class, summed and
+    /// applied by <see cref="StatMath"/> in the UI. Sourced from attached Leaders' conferrals and from
+    /// detachment <see cref="DetachmentStatBuff"/>s.
+    /// </summary>
+    public IReadOnlyList<StatModifier> WeaponStatModifiers(BattleUnit unit, BattlePart part, bool ranged)
+    {
+        var result = new List<StatModifier>();
+
+        foreach (var leader in unit.Parts.Where(p => p.IsLeader))
+            foreach (var conferral in leader.Datasheet.LeaderConferrals)
+                foreach (var mod in conferral.StatModifiers)
+                    if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
+                        result.Add(mod);
+
+        foreach (var detachment in Detachments)
+            foreach (var buff in detachment.StatBuffs)
+                if (buff.Modifier.IsWeaponStat && ClassMatches(buff.Modifier.WeaponClass, ranged) && BuffApplies(unit, part, buff))
+                    result.Add(buff.Modifier);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Numeric buffs to apply to this part's unit statline (M/T/Sv/W/Ld/OC). Sourced from attached Leaders'
+    /// conferrals and from detachment <see cref="DetachmentStatBuff"/>s.
+    /// </summary>
+    public IReadOnlyList<StatModifier> UnitStatModifiers(BattleUnit unit, BattlePart part)
+    {
+        var result = new List<StatModifier>();
+
+        foreach (var leader in unit.Parts.Where(p => p.IsLeader))
+            foreach (var conferral in leader.Datasheet.LeaderConferrals)
+                foreach (var mod in conferral.StatModifiers)
+                    if (!mod.IsWeaponStat)
+                        result.Add(mod);
+
+        foreach (var detachment in Detachments)
+            foreach (var buff in detachment.StatBuffs)
+                if (!buff.Modifier.IsWeaponStat && BuffApplies(unit, part, buff))
+                    result.Add(buff.Modifier);
+
+        return result;
+    }
+
+    /// <summary>Unit-wide abilities granted to this group by attached Leaders (e.g. "Feel No Pain 5+").</summary>
+    public IReadOnlyList<string> ConferredUnitAbilities(BattleUnit unit)
+    {
+        var result = new List<string>();
+        foreach (var leader in unit.Parts.Where(p => p.IsLeader))
+            foreach (var conferral in leader.Datasheet.LeaderConferrals)
+                foreach (var ability in conferral.UnitAbilities)
+                    if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                        result.Add(ability);
+        return result;
+    }
+
+    private static bool BuffApplies(BattleUnit unit, BattlePart part, DetachmentStatBuff buff)
+    {
+        if (buff.RequiresAttachedLeader && !unit.Parts.Any(p => p.IsLeader))
+            return false;
+        return buff.Scope == GrantScope.Unit
+            ? unit.Parts.Any(p => MatchesAny(p, buff.Keywords))
+            : MatchesAny(part, buff.Keywords);
     }
 
     /// <summary>The selectable weapon-ability choices a unit qualifies for (e.g. it contains a CRYPTEK model).</summary>
@@ -149,6 +244,11 @@ public sealed class BattleRoster
         weaponClass == DetachmentWeaponClass.Any
         || (ranged && weaponClass == DetachmentWeaponClass.Ranged)
         || (!ranged && weaponClass == DetachmentWeaponClass.Melee);
+
+    private static bool ClassMatches(WeaponClass weaponClass, bool ranged) =>
+        weaponClass == WeaponClass.Any
+        || (ranged && weaponClass == WeaponClass.Ranged)
+        || (!ranged && weaponClass == WeaponClass.Melee);
 }
 
 /// <summary>
@@ -229,6 +329,21 @@ public sealed class BattleUnit
                         result.Add(new BattleAbility(ability, part.Datasheet.Name));
             return result;
         }
+    }
+
+    /// <summary>
+    /// When an ability is from an attached Leader and confers an effect on the led unit (e.g. "United In
+    /// Destruction" → [LETHAL HITS]), returns a short summary for the "Applied: …" note; otherwise null, so
+    /// the ability is shown as ordinary (collapsible) text.
+    /// </summary>
+    public string? AppliedSummaryFor(string abilityName)
+    {
+        foreach (var part in Parts.Where(p => p.IsLeader))
+            foreach (var conferral in part.Datasheet.LeaderConferrals)
+                if (!conferral.IsEmpty
+                    && string.Equals(conferral.SourceAbility, abilityName, StringComparison.OrdinalIgnoreCase))
+                    return conferral.Summary;
+        return null;
     }
 }
 

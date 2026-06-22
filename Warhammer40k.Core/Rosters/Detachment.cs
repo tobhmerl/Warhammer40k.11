@@ -53,6 +53,13 @@ public sealed class Detachment
     /// </summary>
     public List<WeaponAbilityChoice> WeaponChoices { get; set; } = [];
 
+    /// <summary>
+    /// Passive numeric stat buffs applied in Play Mode (e.g. "while a NECRONS CHARACTER leads this unit, add 1
+    /// to the Hit roll" → the unit's weapons show an improved BS/WS). Empty for the built-in detachments until
+    /// their 11th-edition rules are authored — the engine applies them automatically once present.
+    /// </summary>
+    public List<DetachmentStatBuff> StatBuffs { get; set; } = [];
+
     /// <summary>True only for Pantheon of Woe: every Necrons Monster auto-takes its Necrodermal Binding (rule R10).</summary>
     public bool AppliesPantheonBindings { get; set; }
 
@@ -224,4 +231,26 @@ public sealed class WeaponAbilityChoice
 
     /// <summary>The selectable abilities, in catalogue spelling.</summary>
     public List<string> Options { get; set; } = [];
+}
+
+/// <summary>
+/// A passive detachment numeric buff applied in Play Mode: applies <see cref="Modifier"/> to models matching
+/// one of <see cref="Keywords"/> (or every model when empty). <see cref="Scope"/> decides whether only the
+/// matching model benefits or every model in a unit that contains a match. Set
+/// <see cref="RequiresAttachedLeader"/> for buffs that only apply while a Leader is attached to the unit
+/// (e.g. "while a NECRONS CHARACTER model is leading this unit, add 1 to the Hit roll").
+/// </summary>
+public sealed class DetachmentStatBuff
+{
+    /// <summary>Trigger keywords (any one matches); empty = applies to every unit.</summary>
+    public List<string> Keywords { get; set; } = [];
+
+    /// <summary>Model-scoped (only the matching model) or unit-scoped (every model in a matching unit).</summary>
+    public GrantScope Scope { get; set; } = GrantScope.Unit;
+
+    /// <summary>When true, applies only to a unit that currently has a Leader attached.</summary>
+    public bool RequiresAttachedLeader { get; set; }
+
+    /// <summary>The characteristic change to apply (target, delta, and weapon class for weapon stats).</summary>
+    public StatModifier Modifier { get; set; } = new();
 }
