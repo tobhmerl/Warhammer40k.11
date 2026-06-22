@@ -54,62 +54,8 @@ else
 			</div>
 		</div>
 
-		@* Floating control HUD: sticks to the top, hides while scrolling up, reappears while scrolling down. *@
+		@* Floating control HUD: sticks to the bottom, hides while scrolling up, reappears while scrolling down. *@
 		<div class="hud">
-			<div class="hud-meta">
-				<div class="tracker">
-					<span class="t-label">Round</span>
-					<div class="stepper">
-						<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous round">−</button>
-						<span class="t-value">@_round</span>
-						<button type="button" @onclick="() => StepRound(1)" aria-label="Next round">+</button>
-					</div>
-				</div>
-				<div class="tracker">
-					<span class="t-label">CP</span>
-					<div class="stepper">
-						<button type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
-						<span class="t-value">@_cp</span>
-						<button type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
-					</div>
-				</div>
-				<div class="vp" aria-label="Victory points">
-					<div class="vp-grid">
-						<span class="vp-corner">VP</span>
-						<span class="vp-h">You</span>
-						<span class="vp-h">Opp</span>
-
-						<span class="vp-rl">Primary</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(0, -1)" aria-label="Your primary minus">−</button>
-							<span class="vp-n">@_vpYouPrimary</span>
-							<button type="button" @onclick="() => StepVp(0, 1)" aria-label="Your primary plus">+</button>
-						</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(1, -1)" aria-label="Opponent primary minus">−</button>
-							<span class="vp-n">@_vpOppPrimary</span>
-							<button type="button" @onclick="() => StepVp(1, 1)" aria-label="Opponent primary plus">+</button>
-						</span>
-
-						<span class="vp-rl">Second.</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(2, -1)" aria-label="Your secondary minus">−</button>
-							<span class="vp-n">@_vpYouSecondary</span>
-							<button type="button" @onclick="() => StepVp(2, 1)" aria-label="Your secondary plus">+</button>
-						</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(3, -1)" aria-label="Opponent secondary minus">−</button>
-							<span class="vp-n">@_vpOppSecondary</span>
-							<button type="button" @onclick="() => StepVp(3, 1)" aria-label="Opponent secondary plus">+</button>
-						</span>
-
-						<span class="vp-rl total">Total</span>
-						<span class="vp-total">@(_vpYouPrimary + _vpYouSecondary)</span>
-						<span class="vp-total">@(_vpOppPrimary + _vpOppSecondary)</span>
-					</div>
-				</div>
-			</div>
-
 			<div class="turn-toggle" role="group" aria-label="Whose turn it is">
 				<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
 						aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)">
@@ -447,10 +393,63 @@ else
 				}
 			</ul>
 		}
-	</div>
-}
+			<section class="page-meta" aria-label="Round, command points and victory points">
+				<div class="tracker">
+					<span class="t-label">Round</span>
+					<div class="stepper">
+						<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous round">−</button>
+						<span class="t-value">@_round</span>
+						<button type="button" @onclick="() => StepRound(1)" aria-label="Next round">+</button>
+					</div>
+				</div>
+				<div class="tracker">
+					<span class="t-label">CP</span>
+					<div class="stepper">
+						<button type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
+						<span class="t-value">@_cp</span>
+						<button type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
+					</div>
+				</div>
+				<div class="vp" aria-label="Victory points">
+					<div class="vp-grid">
+						<span class="vp-corner">VP</span>
+						<span class="vp-h">You</span>
+						<span class="vp-h">Opp</span>
 
-<Sheet Open="_detail is not null" Eyebrow="Datasheet" Title="@_detail?.Name" OnCloseRequested="CloseDetail">
+						<span class="vp-rl">Primary</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(0, -1)" aria-label="Your primary minus">−</button>
+							<span class="vp-n">@_vpYouPrimary</span>
+							<button type="button" @onclick="() => StepVp(0, 1)" aria-label="Your primary plus">+</button>
+						</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(1, -1)" aria-label="Opponent primary minus">−</button>
+							<span class="vp-n">@_vpOppPrimary</span>
+							<button type="button" @onclick="() => StepVp(1, 1)" aria-label="Opponent primary plus">+</button>
+						</span>
+
+						<span class="vp-rl">Second.</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(2, -1)" aria-label="Your secondary minus">−</button>
+							<span class="vp-n">@_vpYouSecondary</span>
+							<button type="button" @onclick="() => StepVp(2, 1)" aria-label="Your secondary plus">+</button>
+						</span>
+						<span class="vp-cell">
+							<button type="button" @onclick="() => StepVp(3, -1)" aria-label="Opponent secondary minus">−</button>
+							<span class="vp-n">@_vpOppSecondary</span>
+							<button type="button" @onclick="() => StepVp(3, 1)" aria-label="Opponent secondary plus">+</button>
+						</span>
+
+						<span class="vp-rl total">Total</span>
+						<span class="vp-total">@(_vpYouPrimary + _vpYouSecondary)</span>
+						<span class="vp-total">@(_vpOppPrimary + _vpOppSecondary)</span>
+					</div>
+				</div>
+			</section>
+		</div>
+	}
+
+	<Sheet Open="_detail is not null" Eyebrow="Datasheet" Title="@_detail?.Name" OnCloseRequested="CloseDetail">
 	@if (_detail is { } d)
 	{
 		<DatasheetDetail Datasheet="d.Primary.Datasheet" Catalogue="_catalogue" />

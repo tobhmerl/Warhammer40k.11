@@ -44,6 +44,9 @@
 	}
 	else
 	{
+		<div class="list-actions">
+			<button class="btn primary" type="button" @onclick="OpenWizard">New roster</button>
+		</div>
 		<ul class="list">
 			@foreach (var roster in _rosters)
 			{
@@ -70,10 +73,6 @@
 				</li>
 			}
 		</ul>
-
-		<button class="fab" type="button" aria-label="New roster" @onclick="OpenWizard">
-			<span aria-hidden="true">+</span>
-		</button>
 	}
 
 	@if (_error is not null)
