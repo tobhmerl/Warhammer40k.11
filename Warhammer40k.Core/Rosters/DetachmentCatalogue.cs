@@ -76,6 +76,33 @@ public static class DetachmentCatalogue
                 Abilities = ["Assault"],
             },
         ];
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "dominance-protocols", Name = "Dominance Protocols", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Command],
+                When = "Command phase.",
+                Target = "One friendly IMMORTALS unit.",
+                Effect = "Your unit has +1 OC until the end of the turn.",
+            },
+            new Stratagem
+            {
+                Id = "will-of-the-conqueror", Name = "Will of the Conqueror", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                When = "End of your Movement phase.",
+                Target = "One friendly IMMORTALS/NECRON WARRIORS unit.",
+                Effect = "Select one objective your unit is controlling. That objective is secured.",
+            },
+            new Stratagem
+            {
+                Id = "nanosaturation", Name = "Nanosaturation", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                When = "Your opponent's Shooting phase, when an enemy unit that targeted a friendly IMMORTALS/NECRON WARRIORS unit has shot.",
+                Target = "That IMMORTALS/NECRON WARRIORS unit.",
+                Effect = "Your unit shoots using snap shooting, but while doing so your unit can only target that enemy unit.",
+            },
+        ];
         return d;
     }
 

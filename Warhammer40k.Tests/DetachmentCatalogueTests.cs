@@ -88,4 +88,24 @@ public class DetachmentCatalogueTests
         Assert.True(syphon.AppliesInTurn(BattleTurn.Opponent));
         Assert.False(syphon.AppliesInTurn(BattleTurn.Player));
     }
+
+    [Fact]
+    public void Hand_of_the_Dynasty_has_three_stratagems_filtered_by_phase_and_turn()
+    {
+        var hotd = DetachmentCatalogue.FindById("hand-of-the-dynasty")!;
+        Assert.Equal(3, hotd.Stratagems.Count);
+        Assert.All(hotd.Stratagems, s => Assert.Equal(1, s.CpCost));
+
+        // "Will of the Conqueror": your Movement phase only.
+        var will = hotd.Stratagems.Single(s => s.Name == "Will of the Conqueror");
+        Assert.True(will.AppliesInPhase(BattlePhase.Movement));
+        Assert.True(will.AppliesInTurn(BattleTurn.Player));
+        Assert.False(will.AppliesInTurn(BattleTurn.Opponent));
+
+        // "Nanosaturation": opponent's Shooting phase only.
+        var nano = hotd.Stratagems.Single(s => s.Name == "Nanosaturation");
+        Assert.True(nano.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(nano.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(nano.AppliesInTurn(BattleTurn.Player));
+    }
 }
