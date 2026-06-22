@@ -90,6 +90,59 @@ else
 			}
 		</nav>
 
+		@if (ArmyRules.Count > 0)
+		{
+			<section class="army-rules" aria-label="Army rules">
+				<button type="button" class="ar-head" @onclick="ToggleArmyRules" aria-expanded="@_armyRulesOpen">
+					<span class="chev" aria-hidden="true">@(_armyRulesOpen ? "▾" : "▸")</span>
+					<span class="ar-title">Army rules</span>
+					<span class="ar-count">@ArmyRules.Count</span>
+				</button>
+				@if (_armyRulesOpen)
+				{
+					<ul class="ar-list">
+						@foreach (var rule in ArmyRules)
+						{
+							<li class="ar @(RuleIsNow(rule) ? "now" : "")" @key="rule.Name">
+								<div class="ar-name-row">
+									<span class="ar-name">@rule.Name</span>
+									@if (RuleIsNow(rule))
+									{
+										<span class="ar-now">@BattlePhases.Label(_phase) phase</span>
+									}
+								</div>
+								<p class="ar-text">@rule.Text</p>
+								<div class="ar-extras">
+									@if (rule.HasExample)
+									{
+										<button type="button" class="ar-toggle" @onclick="() => ToggleExample(rule)"
+												aria-expanded="@IsExampleOpen(rule)">
+											@(IsExampleOpen(rule) ? "Hide example" : "Show example")
+										</button>
+									}
+									@if (rule.HasLore)
+									{
+										<button type="button" class="ar-toggle" @onclick="() => ToggleLore(rule)"
+												aria-expanded="@IsLoreOpen(rule)">
+											@(IsLoreOpen(rule) ? "Hide lore" : "Lore")
+										</button>
+									}
+								</div>
+								@if (rule.HasExample && IsExampleOpen(rule))
+								{
+									<p class="ar-example"><span class="ar-label">Example</span> @rule.Example</p>
+								}
+								@if (rule.HasLore && IsLoreOpen(rule))
+								{
+									<p class="ar-lore">@rule.Lore</p>
+								}
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		}
+
 		@{
 			var strats = UsableStratagems;
 		}
@@ -422,6 +475,35 @@ else
 	private void SelectPhase(BattlePhase phase) => _phase = phase;
 
 	private void SetTurn(BattleTurn turn) => _turn = turn;
+
+	// ---- Army rules (faction-wide, e.g. Reanimation Protocols) ----
+	private IReadOnlyList<ArmyRule> ArmyRules =>
+		_roster is null ? [] : ArmyRuleCatalogue.ForFaction(_roster.Faction);
+
+	private bool _armyRulesOpen = true;
+	private readonly HashSet<string> _ruleExampleOpen = new(StringComparer.Ordinal);
+	private readonly HashSet<string> _ruleLoreOpen = new(StringComparer.Ordinal);
+
+	private void ToggleArmyRules() => _armyRulesOpen = !_armyRulesOpen;
+
+	private bool IsExampleOpen(ArmyRule rule) => _ruleExampleOpen.Contains(rule.Name);
+
+	private void ToggleExample(ArmyRule rule)
+	{
+		if (!_ruleExampleOpen.Remove(rule.Name))
+			_ruleExampleOpen.Add(rule.Name);
+	}
+
+	private bool IsLoreOpen(ArmyRule rule) => _ruleLoreOpen.Contains(rule.Name);
+
+	private void ToggleLore(ArmyRule rule)
+	{
+		if (!_ruleLoreOpen.Remove(rule.Name))
+			_ruleLoreOpen.Add(rule.Name);
+	}
+
+	// True when a phase-specific rule keys off the current phase (drives the "now" emphasis).
+	private bool RuleIsNow(ArmyRule rule) => !rule.AppliesInAnyPhase && rule.AppliesInPhase(_phase);
 
 	// Core Stratagems usable "in the actual second": filtered by the current phase + whose turn it is.
 	private IReadOnlyList<CoreStratagem> UsableStratagems => CoreStratagemCatalogue.Usable(_phase, _turn);

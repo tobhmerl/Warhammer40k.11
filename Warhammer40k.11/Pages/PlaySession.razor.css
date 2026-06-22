@@ -855,3 +855,153 @@ table.weapons th.acell {
     color: var(--text);
     white-space: pre-line;
 }
+
+/* ---- Army rules card ---- */
+.army-rules {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-inset);
+    overflow: hidden;
+}
+
+.ar-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    border: none;
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.06), transparent);
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.ar-title {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+}
+
+.ar-count {
+    margin-left: auto;
+    flex: none;
+    min-width: 1.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ar {
+    padding: 0.7rem 0.8rem;
+    border-top: 1px solid var(--border);
+}
+
+.ar:first-child {
+    border-top: none;
+}
+
+.ar.now {
+    border-left: 3px solid var(--accent);
+    background: rgba(var(--accent-rgb), 0.05);
+}
+
+.ar-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.ar-name {
+    font-weight: 700;
+    font-size: 0.98rem;
+    color: var(--text);
+}
+
+.ar-now {
+    flex: none;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border-strong);
+    color: var(--accent-strong);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ar-text {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.85rem;
+    white-space: pre-line;
+}
+
+.ar-extras {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ar-toggle {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.ar-toggle:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.ar-example,
+.ar-lore {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    font-style: italic;
+    white-space: pre-line;
+}
+
+.ar-label {
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.66rem;
+    color: var(--text-faint);
+    margin-right: 0.3rem;
+}
