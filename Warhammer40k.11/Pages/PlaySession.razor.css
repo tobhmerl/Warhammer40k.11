@@ -1,7 +1,9 @@
 .play {
     max-width: 46rem;
-    margin: 0 auto 4rem;
+    margin: 0 auto;
     padding-top: 0.5rem;
+    /* clear the fixed bottom control HUD */
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
 
 .back {
@@ -32,15 +34,18 @@
     gap: 0.4rem;
 }
 
-/* ---- Floating control HUD: sticky, auto-hides while scrolling up ---- */
+/* ---- Floating control HUD: fixed to the bottom, auto-hides while scrolling up ---- */
 .hud {
-    position: sticky;
-    top: calc(0.4rem + env(safe-area-inset-top));
+    position: fixed;
+    bottom: calc(0.4rem + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
     z-index: 6;
+    width: min(46rem, calc(100% - 1.2rem));
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 1rem;
     padding: 0.6rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -51,9 +56,9 @@
     transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
 }
 
-/* The JS scroll watcher sets data-scroll on <html>: hide the HUD while scrolling up. */
+/* The JS scroll watcher sets data-scroll on <html>: hide the HUD (slide down) while scrolling up. */
 html[data-scroll="up"] .hud {
-    transform: translateY(calc(-100% - 1.5rem));
+    transform: translateY(calc(100% + 1.5rem));
     opacity: 0;
     pointer-events: none;
 }
