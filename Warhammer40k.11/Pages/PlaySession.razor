@@ -46,6 +46,10 @@ else
 					@(AllCollapsed ? "Expand all" : "Collapse all")
 				</button>
 				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP and models">Reset</button>
+				@if (ArmyRules.Count > 0)
+				{
+					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Show the army rule reference">Army rule</button>
+				}
 			</div>
 			<div class="trackers">
 				<div class="tracker">
@@ -90,57 +94,19 @@ else
 			}
 		</nav>
 
-		@if (ArmyRules.Count > 0)
+		@if (MyCommandPhase && (ReanimateCount > 0 || BattleShockCount > 0))
 		{
-			<section class="army-rules" aria-label="Army rules">
-				<button type="button" class="ar-head" @onclick="ToggleArmyRules" aria-expanded="@_armyRulesOpen">
-					<span class="chev" aria-hidden="true">@(_armyRulesOpen ? "▾" : "▸")</span>
-					<span class="ar-title">Army rules</span>
-					<span class="ar-count">@ArmyRules.Count</span>
-				</button>
-				@if (_armyRulesOpen)
+			<div class="command-cue" role="status">
+				<span class="cue-title">Your Command phase</span>
+				@if (ReanimateCount > 0)
 				{
-					<ul class="ar-list">
-						@foreach (var rule in ArmyRules)
-						{
-							<li class="ar @(RuleIsNow(rule) ? "now" : "")" @key="rule.Name">
-								<div class="ar-name-row">
-									<span class="ar-name">@rule.Name</span>
-									@if (RuleIsNow(rule))
-									{
-										<span class="ar-now">@BattlePhases.Label(_phase) phase</span>
-									}
-								</div>
-								<p class="ar-text">@rule.Text</p>
-								<div class="ar-extras">
-									@if (rule.HasExample)
-									{
-										<button type="button" class="ar-toggle" @onclick="() => ToggleExample(rule)"
-												aria-expanded="@IsExampleOpen(rule)">
-											@(IsExampleOpen(rule) ? "Hide example" : "Show example")
-										</button>
-									}
-									@if (rule.HasLore)
-									{
-										<button type="button" class="ar-toggle" @onclick="() => ToggleLore(rule)"
-												aria-expanded="@IsLoreOpen(rule)">
-											@(IsLoreOpen(rule) ? "Hide lore" : "Lore")
-										</button>
-									}
-								</div>
-								@if (rule.HasExample && IsExampleOpen(rule))
-								{
-									<p class="ar-example"><span class="ar-label">Example</span> @rule.Example</p>
-								}
-								@if (rule.HasLore && IsLoreOpen(rule))
-								{
-									<p class="ar-lore">@rule.Lore</p>
-								}
-							</li>
-						}
-					</ul>
+					<span class="cue reanimate">@ReanimateCount to reanimate</span>
 				}
-			</section>
+				@if (BattleShockCount > 0)
+				{
+					<span class="cue shock">@BattleShockCount Battle-shock test@(BattleShockCount == 1 ? "" : "s")</span>
+				}
+			</div>
 		}
 
 		@{
@@ -217,7 +183,9 @@ else
 				{
 					var dead = IsDead(unit);
 					var collapsed = IsCollapsed(unit);
-					<li class="unit @(dead ? "dead" : "")" @key="unit.Id">
+					var reanimate = MyCommandPhase && NeedsReanimation(unit);
+					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
+					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
 									aria-expanded="@(!collapsed)" aria-label="@($"Toggle {unit.Name}")">
@@ -237,6 +205,14 @@ else
 										{
 											<span class="chip fnp">FNP @fnp</span>
 										}
+										@if (reanimate)
+										{
+											<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
+										}
+										@if (battleShock)
+										{
+											<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
+										}
 									</span>
 								</span>
 							</button>
@@ -249,41 +225,30 @@ else
 						@if (!collapsed)
 						{
 							<div class="u-body">
-								@* Per-member statlines (M/T/SV/W/LD/OC) with an inline model counter at the end of each line. *@
-								<div class="table-wrap">
-									<table class="stats grid">
-										<colgroup>
-											<col class="col-name" /><col class="col-count" />
-											<col /><col /><col /><col /><col /><col />
-										</colgroup>
-										<thead>
-											<tr>
-												<th class="lcell">Model</th>
-												<th class="ccell">Models</th>
-												<th>M</th><th>T</th><th>SV</th><th>W</th><th>LD</th><th>OC</th>
-											</tr>
-										</thead>
-										<tbody>
-											@foreach (var part in unit.Parts)
-											{
-												var p = part.Profile;
-												<tr class="@(PartDown(part) ? "down" : "")" @key="part.Unit.Id">
-													<td class="lcell">
-														<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
-													</td>
-													<td class="ccell">
-														<span class="counter">
-															<button type="button" @onclick="() => StepModels(part, -1)" aria-label="Remove a model">−</button>
-															<span class="c-value">@PartModels(part)<span class="c-max">/@part.ModelCount</span></span>
-															<button type="button" @onclick="() => StepModels(part, 1)" aria-label="Add a model">+</button>
-														</span>
-													</td>
-													<td>@Dash(p?.Move)</td><td>@Dash(p?.Toughness)</td><td>@Dash(p?.Save)</td>
-													<td>@Dash(p?.Wounds)</td><td>@Dash(p?.Leadership)</td><td>@Dash(p?.ObjectiveControl)</td>
-												</tr>
-											}
-										</tbody>
-									</table>
+								@* Per-member statline (M/T/SV/W/LD/OC) as wrapping chips — fits any width, never side-scrolls. *@
+								<div class="statlines">
+									@foreach (var part in unit.Parts)
+									{
+										var p = part.Profile;
+										<div class="statline @(PartDown(part) ? "down" : "")" @key="part.Unit.Id">
+											<div class="sl-top">
+												<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
+												<span class="counter">
+													<button type="button" @onclick="() => StepModels(part, -1)" aria-label="Remove a model">−</button>
+													<span class="c-value">@PartModels(part)<span class="c-max">/@part.ModelCount</span></span>
+													<button type="button" @onclick="() => StepModels(part, 1)" aria-label="Add a model">+</button>
+												</span>
+											</div>
+											<div class="statgrid">
+												<div class="st"><span class="lab">M</span><span class="val">@Dash(p?.Move)</span></div>
+												<div class="st"><span class="lab">T</span><span class="val">@Dash(p?.Toughness)</span></div>
+												<div class="st"><span class="lab">SV</span><span class="val">@Dash(p?.Save)</span></div>
+												<div class="st"><span class="lab">W</span><span class="val">@Dash(p?.Wounds)</span></div>
+												<div class="st"><span class="lab">LD</span><span class="val">@Dash(p?.Leadership)</span></div>
+												<div class="st"><span class="lab">OC</span><span class="val">@Dash(p?.ObjectiveControl)</span></div>
+											</div>
+										</div>
+									}
 								</div>
 
 								@{
@@ -292,25 +257,19 @@ else
 								}
 								@if (ranged.Count > 0)
 								{
-									<div class="table-wrap @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
-										<table class="weapons grid">
-											<colgroup>
-												<col class="col-name" /><col class="col-count" />
-												<col /><col /><col /><col /><col /><col />
-											</colgroup>
-											<thead>
-												<tr>
-													<th class="lcell">Ranged</th>
-													<th class="acell">Total A</th>
-													<th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th>
-												</tr>
-											</thead>
-											<tbody>
-												@foreach (var row in ranged)
-												{
-													<tr @key="row.Weapon">
-														<td class="lcell">
-															<span class="wname">@row.Weapon.Name</span>
+									<div class="weapon-block @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
+										<div class="wb-head"><span class="wb-title">Ranged</span></div>
+										<ul class="weapon-list">
+											@foreach (var row in ranged)
+											{
+												<li class="weapon" @key="row.Weapon">
+													<div class="w-top">
+														<span class="wname">@row.Weapon.Name</span>
+														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
+													</div>
+													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0)
+													{
+														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="wsrc">@row.Part.Datasheet.Name</span>
@@ -319,37 +278,36 @@ else
 															{
 																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
 															}
-														</td>
-														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
-														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
-														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
-													</tr>
-												}
-											</tbody>
-										</table>
+														</div>
+													}
+													<div class="statgrid weapongrid">
+														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
+														<div class="st"><span class="lab">A</span><span class="val">@Dash(row.Weapon.Attacks)</span></div>
+														<div class="st"><span class="lab">BS</span><span class="val">@Dash(row.Weapon.Skill)</span></div>
+														<div class="st"><span class="lab">S</span><span class="val">@Dash(row.Weapon.Strength)</span></div>
+														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st"><span class="lab">D</span><span class="val">@Dash(row.Weapon.Damage)</span></div>
+													</div>
+												</li>
+											}
+										</ul>
 									</div>
 								}
 								@if (melee.Count > 0)
 								{
-									<div class="table-wrap @(_phase == BattlePhase.Fight ? "phase-on" : "")">
-										<table class="weapons grid">
-											<colgroup>
-												<col class="col-name" /><col class="col-count" />
-												<col /><col /><col /><col /><col /><col />
-											</colgroup>
-											<thead>
-												<tr>
-													<th class="lcell">Melee</th>
-													<th class="acell">Total A</th>
-													<th>Rng</th><th>A</th><th>WS</th><th>S</th><th>AP</th><th>D</th>
-												</tr>
-											</thead>
-											<tbody>
-												@foreach (var row in melee)
-												{
-													<tr @key="row.Weapon">
-														<td class="lcell">
-															<span class="wname">@row.Weapon.Name</span>
+									<div class="weapon-block @(_phase == BattlePhase.Fight ? "phase-on" : "")">
+										<div class="wb-head"><span class="wb-title">Melee</span></div>
+										<ul class="weapon-list">
+											@foreach (var row in melee)
+											{
+												<li class="weapon" @key="row.Weapon">
+													<div class="w-top">
+														<span class="wname">@row.Weapon.Name</span>
+														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
+													</div>
+													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0)
+													{
+														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="wsrc">@row.Part.Datasheet.Name</span>
@@ -358,14 +316,19 @@ else
 															{
 																<span class="wkw">@string.Join(", ", row.Weapon.Keywords)</span>
 															}
-														</td>
-														<td class="acell">@TotalAttacks(row.Part, row.Weapon)</td>
-														<td>@Dash(row.Weapon.Range)</td><td>@Dash(row.Weapon.Attacks)</td><td>@Dash(row.Weapon.Skill)</td>
-														<td>@Dash(row.Weapon.Strength)</td><td>@Dash(row.Weapon.ArmourPenetration)</td><td>@Dash(row.Weapon.Damage)</td>
-													</tr>
-												}
-											</tbody>
-										</table>
+														</div>
+													}
+													<div class="statgrid weapongrid">
+														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
+														<div class="st"><span class="lab">A</span><span class="val">@Dash(row.Weapon.Attacks)</span></div>
+														<div class="st"><span class="lab">WS</span><span class="val">@Dash(row.Weapon.Skill)</span></div>
+														<div class="st"><span class="lab">S</span><span class="val">@Dash(row.Weapon.Strength)</span></div>
+														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st"><span class="lab">D</span><span class="val">@Dash(row.Weapon.Damage)</span></div>
+													</div>
+												</li>
+											}
+										</ul>
 									</div>
 								}
 
@@ -412,6 +375,28 @@ else
 			</div>
 		}
 	}
+</Sheet>
+
+<Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army rules" OnCloseRequested="CloseRules">
+	<ul class="ar-list">
+		@foreach (var rule in ArmyRules)
+		{
+			<li class="ar" @key="rule.Name">
+				<div class="ar-name-row">
+					<span class="ar-name">@rule.Name</span>
+				</div>
+				<p class="ar-text">@rule.Text</p>
+				@if (rule.HasExample)
+				{
+					<p class="ar-example"><span class="ar-label">Example</span> @rule.Example</p>
+				}
+				@if (rule.HasLore)
+				{
+					<p class="ar-lore">@rule.Lore</p>
+				}
+			</li>
+		}
+	</ul>
 </Sheet>
 
 @code {
@@ -476,34 +461,28 @@ else
 
 	private void SetTurn(BattleTurn turn) => _turn = turn;
 
-	// ---- Army rules (faction-wide, e.g. Reanimation Protocols) ----
+	// ---- Army rules (faction-wide, e.g. Reanimation Protocols) — shown on demand via a Sheet ----
 	private IReadOnlyList<ArmyRule> ArmyRules =>
 		_roster is null ? [] : ArmyRuleCatalogue.ForFaction(_roster.Faction);
 
-	private bool _armyRulesOpen = true;
-	private readonly HashSet<string> _ruleExampleOpen = new(StringComparer.Ordinal);
-	private readonly HashSet<string> _ruleLoreOpen = new(StringComparer.Ordinal);
+	private bool _rulesOpen;
 
-	private void ToggleArmyRules() => _armyRulesOpen = !_armyRulesOpen;
+	private void OpenRules() => _rulesOpen = true;
 
-	private bool IsExampleOpen(ArmyRule rule) => _ruleExampleOpen.Contains(rule.Name);
+	private void CloseRules() => _rulesOpen = false;
 
-	private void ToggleExample(ArmyRule rule)
-	{
-		if (!_ruleExampleOpen.Remove(rule.Name))
-			_ruleExampleOpen.Add(rule.Name);
-	}
+	// ---- Command-phase cues (your turn): which units must act this Command phase ----
+	private bool MyCommandPhase => _phase == BattlePhase.Command && _turn == BattleTurn.Player;
 
-	private bool IsLoreOpen(ArmyRule rule) => _ruleLoreOpen.Contains(rule.Name);
+	// A unit that has lost models (but isn't destroyed) should run Reanimation Protocols.
+	private bool NeedsReanimation(BattleUnit unit) => BattleStatus.HasLosses(unit.ModelCount, GroupModels(unit));
 
-	private void ToggleLore(ArmyRule rule)
-	{
-		if (!_ruleLoreOpen.Remove(rule.Name))
-			_ruleLoreOpen.Add(rule.Name);
-	}
+	// A unit Below Half-strength must take a Battle-shock test.
+	private bool NeedsBattleShock(BattleUnit unit) => BattleStatus.BelowHalfStrength(unit.ModelCount, GroupModels(unit));
 
-	// True when a phase-specific rule keys off the current phase (drives the "now" emphasis).
-	private bool RuleIsNow(ArmyRule rule) => !rule.AppliesInAnyPhase && rule.AppliesInPhase(_phase);
+	private int ReanimateCount => _battle is null ? 0 : _battle.Units.Count(NeedsReanimation);
+
+	private int BattleShockCount => _battle is null ? 0 : _battle.Units.Count(NeedsBattleShock);
 
 	// Core Stratagems usable "in the actual second": filtered by the current phase + whose turn it is.
 	private IReadOnlyList<CoreStratagem> UsableStratagems => CoreStratagemCatalogue.Usable(_phase, _turn);

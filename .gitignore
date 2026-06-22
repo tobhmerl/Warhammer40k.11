@@ -14,3 +14,6 @@ swa-cli.output/
 ## Publish output
 publish/
 *.publishsettings
+
+# Local reference material (do not commit copyrighted PDFs)
+Warhammer40k.11/wwwroot/*.pdf

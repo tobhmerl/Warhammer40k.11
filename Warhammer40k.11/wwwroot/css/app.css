@@ -91,6 +91,7 @@ html {
     /* iOS: never allow sideways scrolling; clip (not hidden) keeps sticky working */
     overflow-x: clip;
     -webkit-tap-highlight-color: transparent;
+    background-color: var(--bg);
 }
 
 body {
@@ -102,7 +103,7 @@ body {
     font-size: 17px;
     line-height: 1.5;
     color: var(--text);
-    background-color: var(--bg);
+    background-color: transparent;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }

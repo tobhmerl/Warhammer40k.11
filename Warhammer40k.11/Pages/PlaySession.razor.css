@@ -178,6 +178,12 @@
     filter: grayscale(0.4);
 }
 
+/* A unit that must act in your Command phase (reanimate / battle-shock) is highlighted. */
+.unit.attention {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-line), var(--glow-sm);
+}
+
 .u-head {
     display: flex;
     align-items: flex-start;
@@ -262,6 +268,64 @@
     color: #ffd9b0;
 }
 
+/* Command-phase cue chips. */
+.chip.reanimate {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+    box-shadow: var(--glow-sm);
+}
+
+.chip.shock {
+    color: #ffd9d6;
+    background: var(--danger-soft);
+    border-color: var(--danger);
+}
+
+/* ---- Command-phase cue banner ---- */
+.command-cue {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    box-shadow: var(--glow-sm);
+}
+
+.cue-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+}
+
+.cue {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.cue.reanimate {
+    color: var(--accent-strong);
+    border-color: var(--border-strong);
+}
+
+.cue.shock {
+    color: #ffb3ae;
+    border-color: var(--danger);
+    background: var(--danger-soft);
+}
+
 /* ---- Group model summary (in the header) ---- */
 .u-models {
     flex: none;
@@ -288,13 +352,6 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-faint);
-}
-
-/* ---- Inline per-part model counter (stat-strip trailing cell) ---- */
-.ccell {
-    white-space: nowrap;
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
 }
 
 .counter {
@@ -335,16 +392,6 @@
     font-weight: 600;
 }
 
-/* A wiped-out part is greyed within the stat strip. */
-table.stats tr.down td {
-    opacity: 0.45;
-}
-
-table.stats tr.down .c-value {
-    color: var(--danger);
-    opacity: 1;
-}
-
 /* ---- Unit body / parts ---- */
 .u-body {
     padding: 0.85rem 0.9rem;
@@ -353,146 +400,165 @@ table.stats tr.down .c-value {
     gap: 0.9rem;
 }
 
-.table-wrap {
-    overflow-x: auto;
+.statlines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.statline {
+    padding: 0.55rem 0.6rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+    background: var(--surface-2);
+}
+
+.statline.down {
+    opacity: 0.55;
+}
+
+.sl-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.sname {
+    min-width: 0;
+    color: #eafff5;
+    font-weight: 600;
+}
+
+.statline.down .c-value {
+    color: var(--danger);
+}
+
+/* Stat chips: six equal columns that shrink to fit - values wrap, so a card never side-scrolls. */
+.statgrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.3rem;
+}
+
+.st {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-width: 0;
+    padding: 0.3rem 0.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.st .lab {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.st .val {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--text);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+/* ---- Weapon blocks (ranged / melee): name + Total A, then a wrapping stat-chip grid ---- */
+.weapon-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
     transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
 /* The weapon section for the currently selected phase gets a subtle phosphor edge. */
-.table-wrap.phase-on {
+.weapon-block.phase-on {
     border-color: var(--accent-line);
     box-shadow: var(--glow-sm);
 }
 
-/* ---- Stat strip (per-member M/T/SV/W/LD/OC) ---- */
-table.stats {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.86rem;
-    min-width: 22rem;
-}
-
-table.stats th {
-    padding: 0.45rem 0.5rem;
-    text-align: center;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
+.wb-head {
+    padding: 0.35rem 0.6rem;
     background: var(--surface-2);
     border-bottom: 1px solid var(--border);
 }
 
-table.stats td {
-    padding: 0.45rem 0.5rem;
-    text-align: center;
-    color: var(--text);
-    border-bottom: 1px solid var(--border);
-}
-
-table.stats tr:last-child td {
-    border-bottom: none;
-}
-
-.sname {
-    color: #eafff5;
-    font-weight: 600;
-}
-
-.scount {
-    margin-left: 0.35rem;
-    color: var(--accent-strong);
+.wb-title {
+    font-size: 0.68rem;
     font-weight: 700;
-    font-size: 0.8rem;
-}
-
-table.weapons {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.86rem;
-    min-width: 22rem;
-}
-
-table.weapons th {
-    padding: 0.45rem 0.5rem;
-    text-align: center;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent);
-    background: var(--surface-2);
+}
+
+.weapon-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.weapon {
+    padding: 0.5rem 0.6rem;
     border-bottom: 1px solid var(--border);
 }
 
-table.weapons td {
-    padding: 0.45rem 0.5rem;
-    text-align: center;
-    color: var(--text);
-    border-bottom: 1px solid var(--border);
-}
-
-table.weapons tr:last-child td {
+.weapon:last-child {
     border-bottom: none;
 }
 
-/* Shared fixed grid so the stats table and both weapon tables line up column-for-column:
-   name | counter | 6 equal data columns. M/T/SV/W/LD/OC align under Range/A/BS/S/AP/D. */
-table.grid {
-    table-layout: fixed;
-    min-width: 30rem;
-}
-
-table.grid col.col-name {
-    width: 11rem;
-}
-
-table.grid col.col-count {
-    width: 6.5rem;
-}
-
-table.grid col:not(.col-name):not(.col-count) {
-    width: auto;
-}
-
-.lcell {
-    text-align: left !important;
+.w-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
 }
 
 .wname {
-    display: block;
+    min-width: 0;
     color: #eafff5;
     font-weight: 600;
 }
 
-.wkw {
-    display: block;
-    margin-top: 0.1rem;
-    color: var(--text-faint);
-    font-size: 0.73rem;
+/* Total attacks for the live model count, emphasised. */
+.w-total {
+    flex: none;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+    white-space: nowrap;
+}
+
+.w-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.5rem;
+    margin: -0.2rem 0 0.45rem;
 }
 
 .wsrc {
-    display: block;
-    margin-top: 0.1rem;
     color: var(--accent);
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.04em;
 }
 
-/* Total-attacks cell: the live models × A figure, emphasised. */
-.acell {
-    color: var(--accent-strong) !important;
-    font-family: var(--font-display);
-    font-weight: 700;
+.wkw {
+    color: var(--text-faint);
+    font-size: 0.72rem;
 }
 
-table.weapons th.acell {
-    color: var(--accent) !important;
-    font-family: inherit;
-}
 
 /* ---- Card footer (full datasheet link) ---- */
 .u-foot {
