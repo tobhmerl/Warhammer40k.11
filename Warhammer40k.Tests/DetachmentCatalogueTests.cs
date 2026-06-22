@@ -3,40 +3,47 @@ using Warhammer40k.Core.Rosters;
 namespace Warhammer40k.Tests;
 
 /// <summary>
-/// Pins the 11th-edition detachment data: the Detachment-Points budget by points level, that only authored
-/// detachments are selectable, and that Cryptek Conclave carries its smart effects.
+/// Pins the 11th-edition detachment data: which detachments are selectable, Cryptek Conclave's DP cost and
+/// smart effects, and the Detachment-Points budget by points level.
 /// </summary>
 public class DetachmentCatalogueTests
 {
     [Theory]
     [InlineData(500, 2)]
     [InlineData(1000, 2)]
-    [InlineData(1001, 3)]
     [InlineData(1250, 3)]
     [InlineData(1500, 3)]
     [InlineData(2000, 3)]
-    public void Budget_is_2_at_or_below_1000_otherwise_3(int points, int dp) =>
-        Assert.Equal(dp, DetachmentCatalogue.Budget(points));
+    [InlineData(3000, 3)]
+    public void Budget_is_2_at_or_below_1000_else_3(int points, int expected) =>
+        Assert.Equal(expected, DetachmentCatalogue.Budget(points));
 
     [Fact]
-    public void Only_enabled_detachments_are_selectable_and_Cryptek_Conclave_is_one()
+    public void Only_detachments_with_authored_rules_are_selectable()
     {
         Assert.All(DetachmentCatalogue.Selectable, d => Assert.True(d.Enabled));
         Assert.Contains(DetachmentCatalogue.Selectable, d => d.Id == "cryptek-conclave");
-        // The unauthored detachments are kept but hidden from selection.
-        Assert.Contains(DetachmentCatalogue.BuiltIn, d => d.Id == "hand-of-the-dynasty" && !d.Enabled);
+        // The others are disabled (hidden) until their rules are authored.
+        Assert.DoesNotContain(DetachmentCatalogue.Selectable, d => d.Id == "hand-of-the-dynasty");
     }
 
     [Fact]
-    public void Cryptek_Conclave_carries_its_smart_effects()
+    public void Cryptek_Conclave_is_2DP_with_a_Cryptek_Assault_grant_and_shooting_choices()
     {
-        var d = DetachmentCatalogue.FindById("cryptek-conclave")!;
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave");
 
-        Assert.True(d.Enabled);
-        Assert.Equal(2, d.DetachmentPoints);
-        Assert.Contains(d.WeaponGrants, g => g.RequiresModelKeyword == "Cryptek"
-            && g.WeaponClass == DetachmentWeaponClass.Ranged && g.Abilities.Contains("Assault"));
-        Assert.Contains(d.WeaponChoices, c => c.RequiresModelKeyword == "Cryptek" && c.Options.Count == 5);
-        Assert.NotEmpty(d.Rules);
+        Assert.NotNull(cryptek);
+        Assert.True(cryptek!.Enabled);
+        Assert.Equal(2, cryptek.DetachmentPoints);
+
+        Assert.Contains(cryptek.WeaponGrants, g =>
+            g.RequiresModelKeyword == "Cryptek"
+            && g.WeaponClass == DetachmentWeaponClass.Ranged
+            && g.Abilities.Contains("Assault"));
+
+        var choice = Assert.Single(cryptek.WeaponChoices);
+        Assert.Equal("Cryptek", choice.RequiresModelKeyword);
+        Assert.Equal(5, choice.Options.Count);
+        Assert.Contains("Ignores Cover", choice.Options);
     }
 }

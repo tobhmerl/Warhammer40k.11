@@ -47,7 +47,8 @@ public sealed class EnhancementRule : IRosterRule
             var enhancement = context.FindEnhancement(unit.AssignedEnhancementId!);
             if (enhancement is null)
             {
-                yield return ValidationMessage.Error(Id, "That Enhancement is not part of your selected detachment(s).", unit.Id);
+                var names = string.Join(", ", context.SelectedDetachments.Select(d => d.Name));
+                yield return ValidationMessage.Error(Id, $"That Enhancement is not part of your detachment(s): {names}.", unit.Id);
             }
             else if (!enhancement.IsAvailableTo(sheet))
             {

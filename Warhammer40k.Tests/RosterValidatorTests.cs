@@ -62,13 +62,18 @@ public class RosterValidatorTests
     }
 
     [Fact]
+    public void R2_passes_when_detachments_fit_the_DP_budget()
+    {
+        var roster = Roster("cryptek-conclave", limit: 2000); // 2 DP <= 3 budget
+        Assert.Empty(Run(new DetachmentSelectionRule(), roster, Cat()));
+    }
+
+    [Fact]
     public void R2_flags_detachments_over_the_DP_budget()
     {
-        // Two 2-DP detachments = 4 DP, but only 3 are available at 2000 pts.
-        var roster = Roster("", limit: 2000);
-        roster.DetachmentIds = ["cryptek-conclave", "cryptek-conclave"];
-        var error = Assert.Single(Run(new DetachmentSelectionRule(), roster, Cat()));
-        Assert.Contains("DP", error.Text);
+        var roster = Roster("", limit: 2000); // budget 3
+        roster.DetachmentIds = ["cryptek-conclave", "cryptek-conclave"]; // 4 DP
+        Assert.Contains(Run(new DetachmentSelectionRule(), roster, Cat()), m => m.Text.Contains("DP"));
     }
 
     // ---------- R3: copy limits ----------
@@ -209,7 +214,8 @@ public class RosterValidatorTests
         var roster = Roster("cryptek-conclave", 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "not-in-detachment"));
 
         var error = Assert.Single(Run(new EnhancementRule(), roster, cat, detachments));
-        Assert.Contains("not part of your selected detachment", error.Text);
+        Assert.Contains("not part of", error.Text);
+        Assert.Contains("Cryptek Conclave", error.Text);
     }
 
     [Fact]

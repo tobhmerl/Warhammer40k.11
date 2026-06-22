@@ -47,9 +47,9 @@ else
 					@(AllCollapsed ? "Expand all" : "Collapse all")
 				</button>
 				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP, VP and models">Reset</button>
-				@if (ArmyRules.Count > 0)
+				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
-					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Show the army rule reference">Army rule</button>
+					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
 				}
 			</div>
 		</div>
@@ -309,21 +309,19 @@ else
 								@{
 									var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
 									var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
+									var shootChoices = _battle.WeaponChoicesFor(unit);
 								}
-								@if (_phase == BattlePhase.Shooting && unit.WeaponChoices.Count > 0)
+								@if (_phase == BattlePhase.Shooting && shootChoices.Count > 0)
 								{
-									@foreach (var choice in unit.WeaponChoices)
-									{
-										<div class="shoot-choice">
-											<span class="sc-label">@choice.Name</span>
-											<div class="sc-options">
-												@foreach (var opt in choice.Options)
-												{
-													<button type="button" class="sc-opt @(IsShootingChoice(unit, opt) ? "on" : "")" @onclick="() => ToggleShootingChoice(unit, opt)">@opt</button>
-												}
-											</div>
+									<div class="shoot-choice">
+										<span class="sc-label">@shootChoices[0].Name</span>
+										<div class="sc-opts">
+											@foreach (var opt in shootChoices.SelectMany(c => c.Options).Distinct())
+											{
+												<button type="button" class="sc-opt @(IsChoiceSelected(unit, opt) ? "on" : "")" @onclick="() => ToggleChoice(unit, opt)">@opt</button>
+											}
 										</div>
-									}
+									</div>
 								}
 								@if (ranged.Count > 0)
 								{
@@ -333,23 +331,32 @@ else
 											@foreach (var row in ranged)
 											{
 												<li class="weapon" @key="row.Weapon">
-													@{
-														var rkw = WeaponKeywords(unit, row.Part, row.Weapon, isRanged: true);
-													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
 													</div>
-													@if (unit.Parts.Count > 1 || rkw.Count > 0)
+													@{
+														var rGrants = _battle.GrantedWeaponAbilities(row.Part, ranged: true);
+														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
+													}
+													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="wsrc">@row.Part.Datasheet.Name</span>
 															}
-															@if (rkw.Count > 0)
+															@foreach (var kw in row.Weapon.Keywords)
 															{
-																<span class="wkw">@string.Join(", ", rkw)</span>
+																<span class="wkw">@kw</span>
+															}
+															@foreach (var g in rGrants)
+															{
+																<span class="wkw granted" title="Granted by your detachment">@g</span>
+															}
+															@if (rChosen is not null)
+															{
+																<span class="wkw chosen" title="Selected this Shooting phase">@rChosen</span>
 															}
 														</div>
 													}
@@ -374,23 +381,27 @@ else
 											@foreach (var row in melee)
 											{
 												<li class="weapon" @key="row.Weapon">
-													@{
-														var mkw = WeaponKeywords(unit, row.Part, row.Weapon, isRanged: false);
-													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon) A</span>
 													</div>
-													@if (unit.Parts.Count > 1 || mkw.Count > 0)
+													@{
+														var mGrants = _battle.GrantedWeaponAbilities(row.Part, ranged: false);
+													}
+													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="wsrc">@row.Part.Datasheet.Name</span>
 															}
-															@if (mkw.Count > 0)
+															@foreach (var kw in row.Weapon.Keywords)
 															{
-																<span class="wkw">@string.Join(", ", mkw)</span>
+																<span class="wkw">@kw</span>
+															}
+															@foreach (var g in mGrants)
+															{
+																<span class="wkw granted" title="Granted by your detachment">@g</span>
 															}
 														</div>
 													}
@@ -453,26 +464,47 @@ else
 	}
 </Sheet>
 
-<Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army rules" OnCloseRequested="CloseRules">
-	<ul class="ar-list">
-		@foreach (var rule in ArmyRules)
-		{
-			<li class="ar" @key="rule.Name">
-				<div class="ar-name-row">
-					<span class="ar-name">@rule.Name</span>
-				</div>
-				<p class="ar-text">@rule.Text</p>
-				@if (rule.HasExample)
+<Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army &amp; detachment rules" OnCloseRequested="CloseRules">
+	@if (ArmyRules.Count > 0)
+	{
+		<ul class="ar-list">
+			@foreach (var rule in ArmyRules)
+			{
+				<li class="ar" @key="rule.Name">
+					<div class="ar-name-row">
+						<span class="ar-name">@rule.Name</span>
+					</div>
+					<p class="ar-text">@rule.Text</p>
+					@if (rule.HasExample)
+					{
+						<p class="ar-example"><span class="ar-label">Example</span> @rule.Example</p>
+					}
+					@if (rule.HasLore)
+					{
+						<p class="ar-lore">@rule.Lore</p>
+					}
+				</li>
+			}
+		</ul>
+	}
+	@if (_battle is not null && _battle.Detachments.Count > 0)
+	{
+		<ul class="ar-list">
+			@foreach (var det in _battle.Detachments)
+			{
+				@foreach (var rule in det.Rules)
 				{
-					<p class="ar-example"><span class="ar-label">Example</span> @rule.Example</p>
+					<li class="ar" @key="(det.Id + rule.Name)">
+						<div class="ar-name-row">
+							<span class="ar-name">@rule.Name</span>
+							<span class="ar-now">@det.Name · @det.DetachmentPoints DP</span>
+						</div>
+						<p class="ar-text">@rule.Text</p>
+					</li>
 				}
-				@if (rule.HasLore)
-				{
-					<p class="ar-lore">@rule.Lore</p>
-				}
-			</li>
-		}
-	</ul>
+			}
+		</ul>
+	}
 </Sheet>
 
 @code {
@@ -481,7 +513,6 @@ else
 	private CatalogueData _catalogue = new();
 	private Roster? _roster;
 	private BattleRoster? _battle;
-	private IReadOnlyList<Detachment> _detachments = [];
 
 	private string? _loadedId;
 	private bool _loading = true;
@@ -504,7 +535,7 @@ else
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
 	// Cards collapsed by the user, keyed by group id.
 	private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
-	// The per-unit Shooting-phase weapon ability picked from a detachment (keyed by group id; until end of phase).
+	// Per-unit selected detachment weapon-ability for the current Shooting phase (e.g. "Anti-INFANTRY 3+").
 	private readonly Dictionary<string, string> _shootingChoice = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
 
@@ -542,12 +573,7 @@ else
 			else
 			{
 				_roster = roster;
-				_detachments = roster.EffectiveDetachmentIds
-					.Select(DetachmentCatalogue.FindById)
-					.Where(d => d is not null)
-					.Select(d => d!)
-					.ToList();
-				_battle = BattleRoster.Build(roster, _catalogue, _detachments);
+				_battle = BattleRoster.Build(roster, _catalogue);
 				ResetTrackers();
 			}
 		}
@@ -557,6 +583,7 @@ else
 
 	private void SelectPhase(BattlePhase phase)
 	{
+		// Detachment shooting picks last "until the end of the phase", so clear them when the phase changes.
 		if (phase != _phase)
 			_shootingChoice.Clear();
 		_phase = phase;
@@ -623,6 +650,21 @@ else
 
 	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
 
+	// ---- Detachment shooting choice (e.g. Cryptek "Technosorcerous Augmentations") ----
+	private string? SelectedChoice(BattleUnit unit) =>
+		_shootingChoice.TryGetValue(unit.Id, out var s) ? s : null;
+
+	private bool IsChoiceSelected(BattleUnit unit, string option) =>
+		string.Equals(SelectedChoice(unit), option, StringComparison.Ordinal);
+
+	private void ToggleChoice(BattleUnit unit, string option)
+	{
+		if (IsChoiceSelected(unit, option))
+			_shootingChoice.Remove(unit.Id);
+		else
+			_shootingChoice[unit.Id] = option;
+	}
+
 	private void ResetTrackers()
 	{
 		_round = 1;
@@ -632,6 +674,7 @@ else
 		_turn = BattleTurn.Player;
 		_track.Clear();
 		_collapsed.Clear();
+		_shootingChoice.Clear();
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
@@ -661,31 +704,6 @@ else
 
 	private string TotalAttacks(BattlePart part, WeaponProfile weapon) =>
 		WeaponMath.TotalAttacks(PartModelsAlive(part), weapon.Attacks);
-
-	// ---- Detachment effects (Play Mode) ----
-	// A weapon's keywords + passive granted abilities, plus the unit's selected Shooting-phase ability (ranged only).
-	private IReadOnlyList<string> WeaponKeywords(BattleUnit unit, BattlePart part, WeaponProfile weapon, bool isRanged)
-	{
-		var keywords = part.EffectiveKeywords(weapon);
-		if (isRanged && _phase == BattlePhase.Shooting
-			&& _shootingChoice.TryGetValue(unit.Id, out var ability) && !string.IsNullOrEmpty(ability)
-			&& !keywords.Contains(ability, StringComparer.OrdinalIgnoreCase))
-		{
-			return new List<string>(keywords) { ability };
-		}
-		return keywords;
-	}
-
-	private bool IsShootingChoice(BattleUnit unit, string ability) =>
-		_shootingChoice.TryGetValue(unit.Id, out var a) && string.Equals(a, ability, StringComparison.Ordinal);
-
-	private void ToggleShootingChoice(BattleUnit unit, string ability)
-	{
-		if (IsShootingChoice(unit, ability))
-			_shootingChoice.Remove(unit.Id);
-		else
-			_shootingChoice[unit.Id] = ability;
-	}
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
 

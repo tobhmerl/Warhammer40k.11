@@ -47,16 +47,11 @@ else
 				</button>
 			</div>
 			<div class="stats-row">
-				@if (_detachment is not null)
-				{
-					<button class="detach detach-btn" type="button" @onclick="OpenDetachInfo" title="Detachment rules">
-						@_detachment.Name <span class="info-dot" aria-hidden="true">ⓘ</span>
-					</button>
-				}
-				else
-				{
-					<span class="detach">No detachment</span>
-				}
+				<button class="detach detach-btn" type="button" @onclick="OpenDetachInfo" title="Choose detachments">
+					@(_detachments.Count == 0 ? "No detachment" : string.Join(", ", _detachments.Select(d => d.Name)))
+					<span class="dp-badge @(DpSpent > DpBudget ? "over" : "")">@DpSpent/@DpBudget DP</span>
+					<span class="info-dot" aria-hidden="true">ⓘ</span>
+				</button>
 				<span class="spacer"></span>
 				<span class="enh">Enhancements @EnhancementCount/3</span>
 				<span class="points @(Over ? "over" : "")"><strong>@_validation.TotalPoints</strong> / @_roster.PointsLimit</span>
@@ -260,9 +255,9 @@ else
 			{
 				<div class="cfg-block">
 					<span class="cfg-label">Enhancement</span>
-					@if (_detachment is null || _detachment.Enhancements.Count == 0)
+					@if (_detachments.All(d => d.Enhancements.Count == 0))
 					{
-						<p class="cfg-note">No enhancements available for this detachment yet.</p>
+						<p class="cfg-note">No enhancements available from your detachment(s) yet.</p>
 					}
 					else if (EligibleEnhancements(sheet, u).Any())
 					{
@@ -276,7 +271,7 @@ else
 					}
 					else
 					{
-						<p class="cfg-note">No @_detachment.Name enhancements are eligible for this character.</p>
+						<p class="cfg-note">No eligible enhancements for this character.</p>
 					}
 				</div>
 			}
@@ -315,63 +310,36 @@ else
 	</div>
 </Sheet>
 
-<Sheet Open="_detachInfoOpen" Eyebrow="Detachment" Title="@(_detachment?.Name)" OnCloseRequested="CloseDetachInfo">
-	@if (_detachment is { } det)
-	{
-		<div class="detach-info">
-			<section class="di-block">
-				<h3 class="di-title">Enhancements</h3>
-				@if (det.Enhancements.Count == 0)
+<Sheet Open="_detachInfoOpen" Eyebrow="Detachments" Title="@($"Detachments · {DpSpent}/{DpBudget} DP")" OnCloseRequested="CloseDetachInfo">
+	<div class="detach-picker">
+		<p class="cfg-note">Spend up to <strong>@DpBudget</strong> Detachment Points at @(_roster?.PointsLimit) pts — pick one or more.</p>
+		@if (DpSpent > DpBudget)
+		{
+			<p class="dp-warn">Over budget by @(DpSpent - DpBudget) DP.</p>
+		}
+		@foreach (var d in DetachmentCatalogue.Selectable)
+		{
+			var selected = IsDetachmentSelected(d);
+			<div class="dp-item @(selected ? "on" : "")">
+				<button type="button" class="dp-toggle" @onclick="() => ToggleDetachment(d)" aria-pressed="@selected">
+					<span class="dp-check" aria-hidden="true">@(selected ? "✓" : "")</span>
+					<span class="dp-name">@d.Name</span>
+					<span class="dp-cost">@d.DetachmentPoints DP</span>
+				</button>
+				@foreach (var rule in d.Rules)
 				{
-					<p class="cfg-note">No enhancements defined yet (pending 11th-edition points).</p>
+					<div class="dp-rule">
+						<span class="dp-rule-name">@rule.Name</span>
+						<p class="dp-rule-text">@rule.Text</p>
+					</div>
 				}
-				else
+				@if (d.Enhancements.Count > 0)
 				{
-					<ul class="di-list">
-						@foreach (var enh in det.Enhancements)
-						{
-							<li @key="enh.Id">
-								<span class="di-name">@enh.Name <span class="di-pts">+@enh.Points</span></span>
-								@if (!enh.Eligibility.IsUnconstrained)
-								{
-									<span class="di-elig">@EligibilityText(enh)</span>
-								}
-							</li>
-						}
-					</ul>
+					<p class="dp-enh">Enhancements: @string.Join(", ", d.Enhancements.Select(e => $"{e.Name} (+{e.Points})"))</p>
 				}
-			</section>
-
-			<section class="di-block">
-				<h3 class="di-title">Stratagems</h3>
-				@if (det.Stratagems.Count == 0)
-				{
-					<p class="cfg-note">No stratagems defined yet (pending §11).</p>
-				}
-				else
-				{
-					<ul class="di-list">
-						@foreach (var strat in det.Stratagems)
-						{
-							<li @key="strat.Id">
-								<span class="di-name">
-									@strat.Name <span class="di-cp">@strat.CpCost CP</span>
-									@if (!string.IsNullOrWhiteSpace(strat.Type))
-									{
-										<span class="di-type">@strat.Type</span>
-									}
-								</span>
-								@if (!string.IsNullOrWhiteSpace(strat.Text))
-								{
-									<span class="di-text">@strat.Text</span>
-								}
-							</li>
-						}
-					</ul>
-				}
-			</section>
-		</div>
-	}
+			</div>
+		}
+	</div>
 </Sheet>
 
 @code {
@@ -387,7 +355,8 @@ else
 	private readonly RosterValidator _validator = new();
 	private CatalogueData _catalogue = new();
 	private Roster? _roster;
-	private Detachment? _detachment;
+	private Detachment? _detachment;            // primary (first) selected detachment, for back-compat
+	private List<Detachment> _detachments = []; // all selected detachments (11th edition)
 	private ValidationResult _validation = new(Array.Empty<ValidationMessage>(), 0);
 
 	private string? _loadedId;
@@ -436,7 +405,7 @@ else
 			else
 			{
 				_roster = roster;
-				_detachment = DetachmentCatalogue.FindById(roster.DetachmentId);
+				ResolveDetachments();
 				_panelOpen = false;
 				Recompute();
 				_dirty = false;
@@ -450,7 +419,8 @@ else
 	{
 		if (_roster is null)
 			return;
-		PantheonBindingApplier.Apply(_roster, _catalogue, _detachment);
+		var pantheon = _detachments.FirstOrDefault(d => d.AppliesPantheonBindings) ?? _detachment;
+		PantheonBindingApplier.Apply(_roster, _catalogue, pantheon);
 		_validation = _validator.Validate(_roster, _catalogue);
 	}
 
@@ -458,6 +428,42 @@ else
 	{
 		Recompute();
 		_dirty = true;
+	}
+
+	// ---- Detachments (11th edition: one or more within the Detachment-Points budget) ----
+	private void ResolveDetachments()
+	{
+		_detachments = (_roster?.EffectiveDetachmentIds ?? [])
+			.Select(DetachmentCatalogue.FindById)
+			.Where(d => d is not null)
+			.Select(d => d!)
+			.ToList();
+		_detachment = _detachments.FirstOrDefault();
+	}
+
+	private int DpBudget => _roster is null ? 0 : DetachmentCatalogue.Budget(_roster.PointsLimit);
+
+	private int DpSpent => _detachments.Sum(d => d.DetachmentPoints);
+
+	private bool IsDetachmentSelected(Detachment d) =>
+		_roster is not null && _roster.EffectiveDetachmentIds.Contains(d.Id, StringComparer.OrdinalIgnoreCase);
+
+	private void ToggleDetachment(Detachment d)
+	{
+		if (_roster is null)
+			return;
+
+		var ids = _roster.DetachmentIds;
+		// Migrate a legacy single id into the list the first time the selection is edited.
+		if (ids.Count == 0 && !string.IsNullOrEmpty(_roster.DetachmentId))
+			ids.Add(_roster.DetachmentId);
+
+		if (ids.RemoveAll(id => string.Equals(id, d.Id, StringComparison.OrdinalIgnoreCase)) == 0)
+			ids.Add(d.Id);
+
+		_roster.DetachmentId = ids.FirstOrDefault() ?? "";
+		ResolveDetachments();
+		MarkChanged();
 	}
 
 	private void OnNameInput(ChangeEventArgs e)
@@ -584,16 +590,13 @@ else
 		MarkChanged();
 	}
 
-	private IEnumerable<Enhancement> EligibleEnhancements(Datasheet sheet, RosterUnit unit)
-	{
-		if (_detachment is null)
-			return Array.Empty<Enhancement>();
-
-		// Offer only enhancements this character is eligible for (R6), but keep any current pick visible.
-		return _detachment.Enhancements
+	private IEnumerable<Enhancement> EligibleEnhancements(Datasheet sheet, RosterUnit unit) =>
+		// Across every selected detachment: offer enhancements this character is eligible for (R6),
+		// but keep any current pick visible even if it became ineligible.
+		_detachments
+			.SelectMany(d => d.Enhancements)
 			.Where(e => e.IsAvailableTo(sheet)
 				|| string.Equals(e.Id, unit.AssignedEnhancementId, StringComparison.OrdinalIgnoreCase));
-	}
 
 	private static bool IsWargearSelected(RosterUnit unit, string groupId, string optionId)
 	{
@@ -656,7 +659,9 @@ else
 	{
 		if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
 			return null;
-		return _detachment?.FindEnhancement(unit.AssignedEnhancementId)?.Name ?? unit.AssignedEnhancementId;
+		return _detachments
+			.Select(d => d.FindEnhancement(unit.AssignedEnhancementId))
+			.FirstOrDefault(e => e is not null)?.Name ?? unit.AssignedEnhancementId;
 	}
 
 	private IEnumerable<string> WargearNames(RosterUnit unit)
@@ -736,7 +741,8 @@ else
 
 		var sb = new System.Text.StringBuilder();
 		sb.AppendLine(_roster.Name);
-		sb.AppendLine($"{_detachment?.Name ?? "No detachment"} · {_validation.TotalPoints}/{_roster.PointsLimit} pts · {(_validation.IsReady ? "Ready" : $"{ErrorCount} issue(s)")}");
+		var detNames = _detachments.Count == 0 ? "No detachment" : string.Join(", ", _detachments.Select(d => d.Name));
+		sb.AppendLine($"{detNames} · {_validation.TotalPoints}/{_roster.PointsLimit} pts · {(_validation.IsReady ? "Ready" : $"{ErrorCount} issue(s)")}");
 
 		foreach (var group in UnitGroups())
 		{

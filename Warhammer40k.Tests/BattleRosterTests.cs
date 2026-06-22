@@ -249,60 +249,77 @@ public class BattleRosterTests
         Assert.Equal(trackMax, part.TrackMax);
     }
 
-    // ---- Detachment smart effects (Cryptek Conclave) ----
+    // ---------- Cryptek Conclave detachment: smart weapon effects ----------
 
     [Fact]
-    public void Cryptek_Conclave_grants_Assault_to_Cryptek_ranged_weapons_only()
+    public void Cryptek_Conclave_grants_Assault_to_Cryptek_models_ranged_weapons_only()
     {
-        var crypGun = new WeaponProfile { Name = "Gauss", Type = "ranged", Keywords = ["Rapid Fire 1"] };
-        var crypBlade = new WeaponProfile { Name = "Stave", Type = "melee" };
-        var chrono = Sheet("chronomancer", "Chronomancer", weapons: [crypGun, crypBlade]);
-        chrono.Keywords = ["Cryptek", "Chronomancer"];
-        var flayer = new WeaponProfile { Name = "Gauss flayer", Type = "ranged" };
-        var warriors = Sheet("warriors", "Necron Warriors", weapons: [flayer]);
-        warriors.Keywords = ["Infantry"];
+        var cryptek = Sheet("plasmancer", "Plasmancer", wounds: "4",
+            weapons:
+            [
+                new WeaponProfile { Name = "Gauntlet", Type = "Ranged" },
+                new WeaponProfile { Name = "Stave", Type = "Melee" },
+            ]);
+        cryptek.Keywords = ["Cryptek"];
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged" }]);
 
         var roster = new Roster
         {
             DetachmentId = "cryptek-conclave",
-            Units = [Unit("u1", "chronomancer"), Unit("u2", "warriors", models: 10)],
+            Units = [Unit("u1", "plasmancer"), Unit("u2", "necron-warriors", models: 10)],
         };
-        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
 
-        var battle = BattleRoster.Build(roster, Catalogue(chrono, warriors), [cryptek]);
-        var crypPart = battle.Units.Single(u => u.Primary.Datasheet.Id == "chronomancer").Primary;
-        var warPart = battle.Units.Single(u => u.Primary.Datasheet.Id == "warriors").Primary;
+        var battle = BattleRoster.Build(roster, Catalogue(cryptek, warriors));
+        var crypUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "plasmancer");
+        var warUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "necron-warriors");
 
-        Assert.Contains("Assault", crypPart.EffectiveKeywords(crypGun));      // granted
-        Assert.Contains("Rapid Fire 1", crypPart.EffectiveKeywords(crypGun)); // native kept
-        Assert.DoesNotContain("Assault", crypPart.EffectiveKeywords(crypBlade)); // melee not granted
-        Assert.DoesNotContain("Assault", warPart.EffectiveKeywords(flayer));     // non-Cryptek not granted
+        // Cryptek's ranged weapons gain [ASSAULT]; its melee weapons do not.
+        Assert.Contains("Assault", battle.GrantedWeaponAbilities(crypUnit.Primary, ranged: true), StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(battle.GrantedWeaponAbilities(crypUnit.Primary, ranged: false));
+        // A non-Cryptek model gets nothing (model-targeted, not unit-targeted).
+        Assert.Empty(battle.GrantedWeaponAbilities(warUnit.Primary, ranged: true));
     }
 
     [Fact]
-    public void Cryptek_Conclave_offers_the_Shooting_choice_only_to_units_with_a_Cryptek()
+    public void Cryptek_Conclave_offers_shooting_choices_only_to_units_with_a_Cryptek()
     {
-        var chrono = Sheet("chronomancer", "Chronomancer");
-        chrono.Keywords = ["Cryptek"];
-        var warriors = Sheet("warriors", "Necron Warriors");
-        warriors.Keywords = ["Infantry"];
-        var overlord = Sheet("overlord", "Overlord");
-        overlord.Keywords = ["Character"];
+        var cryptek = Sheet("plasmancer", "Plasmancer", wounds: "4");
+        cryptek.Keywords = ["Cryptek"];
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
 
         var roster = new Roster
         {
             DetachmentId = "cryptek-conclave",
             Units =
             [
-                Unit("u1", "chronomancer", attachedTo: "u2"),
-                Unit("u2", "warriors", models: 10),
-                Unit("u3", "overlord"),
+                Unit("led", "necron-warriors", models: 10),
+                Unit("plas", "plasmancer", attachedTo: "led"), // attached Cryptek → the unit qualifies
+                Unit("lone", "necron-warriors", models: 10),   // no Cryptek
             ],
         };
-        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
-        var battle = BattleRoster.Build(roster, Catalogue(chrono, warriors, overlord), [cryptek]);
 
-        Assert.NotEmpty(battle.Units.Single(u => u.Id == "u2").WeaponChoices); // warriors + cryptek
-        Assert.Empty(battle.Units.Single(u => u.Id == "u3").WeaponChoices);    // overlord alone
+        var battle = BattleRoster.Build(roster, Catalogue(cryptek, warriors));
+        var ledUnit = battle.Units.Single(u => u.Parts.Count == 2);
+        var loneUnit = battle.Units.Single(u => u.Parts.Count == 1);
+
+        Assert.NotEmpty(battle.WeaponChoicesFor(ledUnit));
+        Assert.Empty(battle.WeaponChoicesFor(loneUnit));
+        Assert.Contains("Anti-INFANTRY 3+", battle.WeaponChoicesFor(ledUnit)[0].Options);
+    }
+
+    [Fact]
+    public void No_detachment_grants_nothing()
+    {
+        var cryptek = Sheet("plasmancer", "Plasmancer", wounds: "4",
+            weapons: [new WeaponProfile { Name = "Gauntlet", Type = "Ranged" }]);
+        cryptek.Keywords = ["Cryptek"];
+        var roster = new Roster { Units = [Unit("u1", "plasmancer")] };
+
+        var battle = BattleRoster.Build(roster, Catalogue(cryptek));
+        var unit = Assert.Single(battle.Units);
+
+        Assert.Empty(battle.GrantedWeaponAbilities(unit.Primary, ranged: true));
+        Assert.Empty(battle.WeaponChoicesFor(unit));
     }
 }

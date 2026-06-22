@@ -100,6 +100,122 @@
     font-size: 0.8rem;
 }
 
+.dp-badge {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.dp-badge.over {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: var(--danger-soft);
+}
+
+/* ---- Detachment picker (DP-budgeted multi-select) ---- */
+.detach-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dp-warn {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.dp-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.dp-item.on {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-line);
+}
+
+.dp-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dp-check {
+    flex: none;
+    width: 1.2rem;
+    height: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    color: #04130d;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.dp-item.on .dp-check {
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+}
+
+.dp-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.dp-cost {
+    flex: none;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.dp-rule {
+    padding: 0 0.7rem 0.5rem;
+}
+
+.dp-rule-name {
+    display: block;
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-bottom: 0.1rem;
+}
+
+.dp-rule-text {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: pre-line;
+}
+
+.dp-enh {
+    margin: 0;
+    padding: 0 0.7rem 0.55rem;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+}
+
 /* ---- Detachment info sheet ---- */
 .detach-info {
     display: flex;

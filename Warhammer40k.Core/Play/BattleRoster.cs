@@ -10,24 +10,23 @@ namespace Warhammer40k.Core.Play;
 /// </summary>
 public sealed class BattleRoster
 {
-    private BattleRoster(IReadOnlyList<BattleUnit> units) => Units = units;
+    private BattleRoster(IReadOnlyList<BattleUnit> units, IReadOnlyList<Detachment> detachments)
+    {
+        Units = units;
+        Detachments = detachments;
+    }
 
     /// <summary>The combat groups, in roster order (a group is a unit plus any Leaders attached to it).</summary>
     public IReadOnlyList<BattleUnit> Units { get; }
 
-    /// <summary>Builds a battle roster, skipping units whose datasheet is missing from the catalogue.</summary>
-    public static BattleRoster Build(Roster roster, CatalogueData catalogue) =>
-        Build(roster, catalogue, []);
+    /// <summary>The detachments selected for this roster — drive the smart weapon-ability effects in Play Mode.</summary>
+    public IReadOnlyList<Detachment> Detachments { get; }
 
-    /// <summary>
-    /// Builds a battle roster and applies the selected detachments' Play-Mode effects: passive weapon-ability
-    /// grants per model and the per-unit selectable weapon abilities.
-    /// </summary>
-    public static BattleRoster Build(Roster roster, CatalogueData catalogue, IReadOnlyList<Detachment> detachments)
+    /// <summary>Builds a battle roster, skipping units whose datasheet is missing from the catalogue.</summary>
+    public static BattleRoster Build(Roster roster, CatalogueData catalogue)
     {
         ArgumentNullException.ThrowIfNull(roster);
         ArgumentNullException.ThrowIfNull(catalogue);
-        ArgumentNullException.ThrowIfNull(detachments);
 
         // First pass: a part for every roster unit that resolves to a datasheet, keyed by roster-unit id.
         var parts = new Dictionary<string, BattlePart>(StringComparer.Ordinal);
@@ -37,7 +36,7 @@ public sealed class BattleRoster
             var sheet = catalogue.FindById(unit.DatasheetId);
             if (sheet is null)
                 continue;
-            parts[unit.Id] = new BattlePart(unit, sheet, isLeader: false, detachments);
+            parts[unit.Id] = new BattlePart(unit, sheet, isLeader: false);
             order.Add(unit.Id);
         }
 
@@ -69,10 +68,16 @@ public sealed class BattleRoster
             var members = new List<BattlePart> { primary };
             if (attachedToHost.TryGetValue(id, out var leaders))
                 members.AddRange(leaders);
-            units.Add(new BattleUnit(members, detachments));
+            units.Add(new BattleUnit(members));
         }
 
-        return new BattleRoster(units);
+        var detachments = roster.EffectiveDetachmentIds
+            .Select(DetachmentCatalogue.FindById)
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList();
+
+        return new BattleRoster(units, detachments);
     }
 
     /// <summary>
@@ -85,6 +90,54 @@ public sealed class BattleRoster
             return null;
         return int.TryParse(wounds.Trim(), out var value) && value > 0 ? value : null;
     }
+
+    /// <summary>
+    /// Passive weapon abilities a detachment grants to this part's ranged (or melee) weapons — e.g. CRYPTEK
+    /// models gain [ASSAULT] on their ranged weapons. Targets the model by keyword, so an attached Leader's
+    /// grant never spills onto its bodyguard.
+    /// </summary>
+    public IReadOnlyList<string> GrantedWeaponAbilities(BattlePart part, bool ranged)
+    {
+        var result = new List<string>();
+        foreach (var detachment in Detachments)
+        {
+            foreach (var grant in detachment.WeaponGrants)
+            {
+                if (!ClassMatches(grant.WeaponClass, ranged) || !ModelHasKeyword(part, grant.RequiresModelKeyword))
+                    continue;
+                foreach (var ability in grant.Abilities)
+                {
+                    if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                        result.Add(ability);
+                }
+            }
+        }
+        return result;
+    }
+
+    /// <summary>The selectable weapon-ability choices a unit qualifies for (e.g. it contains a CRYPTEK model).</summary>
+    public IReadOnlyList<WeaponAbilityChoice> WeaponChoicesFor(BattleUnit unit)
+    {
+        var result = new List<WeaponAbilityChoice>();
+        foreach (var detachment in Detachments)
+        {
+            foreach (var choice in detachment.WeaponChoices)
+            {
+                if (unit.Parts.Any(p => ModelHasKeyword(p, choice.RequiresModelKeyword)))
+                    result.Add(choice);
+            }
+        }
+        return result;
+    }
+
+    private static bool ModelHasKeyword(BattlePart part, string keyword) =>
+        string.IsNullOrEmpty(keyword)
+        || part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase);
+
+    private static bool ClassMatches(DetachmentWeaponClass weaponClass, bool ranged) =>
+        weaponClass == DetachmentWeaponClass.Any
+        || (ranged && weaponClass == DetachmentWeaponClass.Ranged)
+        || (!ranged && weaponClass == DetachmentWeaponClass.Melee);
 }
 
 /// <summary>
@@ -93,31 +146,10 @@ public sealed class BattleRoster
 /// </summary>
 public sealed class BattleUnit
 {
-    internal BattleUnit(IReadOnlyList<BattlePart> parts, IReadOnlyList<Detachment> detachments)
+    internal BattleUnit(IReadOnlyList<BattlePart> parts)
     {
         Parts = parts;
         Primary = parts[0];
-        WeaponChoices = ResolveWeaponChoices(detachments);
-    }
-
-    /// <summary>
-    /// Selectable detachment weapon abilities offered to this unit because it contains a qualifying model
-    /// (e.g. the Cryptek Conclave's Shooting-phase pick). Empty when no selected detachment offers one.
-    /// </summary>
-    public IReadOnlyList<WeaponAbilityChoice> WeaponChoices { get; }
-
-    private List<WeaponAbilityChoice> ResolveWeaponChoices(IReadOnlyList<Detachment> detachments)
-    {
-        var result = new List<WeaponAbilityChoice>();
-        foreach (var det in detachments)
-            foreach (var choice in det.WeaponChoices)
-            {
-                var qualifies = string.IsNullOrEmpty(choice.RequiresModelKeyword)
-                    || Parts.Any(p => p.Datasheet.Keywords.Contains(choice.RequiresModelKeyword, StringComparer.OrdinalIgnoreCase));
-                if (qualifies)
-                    result.Add(choice);
-            }
-        return result;
     }
 
     /// <summary>Stable id for tracker state — the primary (bodyguard) roster-unit id.</summary>
@@ -195,7 +227,7 @@ public sealed record BattleAbility(Ability Ability, string Source);
 /// <summary>One datasheet's contribution to a <see cref="BattleUnit"/> (the unit itself, or an attached Leader).</summary>
 public sealed class BattlePart
 {
-    internal BattlePart(RosterUnit unit, Datasheet datasheet, bool isLeader, IReadOnlyList<Detachment> detachments)
+    internal BattlePart(RosterUnit unit, Datasheet datasheet, bool isLeader)
     {
         Unit = unit;
         Datasheet = datasheet;
@@ -204,9 +236,6 @@ public sealed class BattlePart
         Weapons = WargearResolver.SelectedWeapons(datasheet, unit);
         RangedWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
         MeleeWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
-        // Passive detachment grants for THIS model (by keyword): e.g. CRYPTEK models' ranged weapons gain Assault.
-        GrantedRangedAbilities = ResolveGrants(detachments, DetachmentWeaponClass.Ranged);
-        GrantedMeleeAbilities = ResolveGrants(detachments, DetachmentWeaponClass.Melee);
     }
 
     /// <summary>The underlying roster unit (size, warlord flag, wargear, …).</summary>
@@ -250,49 +279,6 @@ public sealed class BattlePart
 
     /// <summary>Melee weapons in play (used in the Fight phase).</summary>
     public IReadOnlyList<WeaponProfile> MeleeWeapons { get; }
-
-    /// <summary>Detachment-granted ranged weapon abilities for this model (e.g. "Assault" for CRYPTEK).</summary>
-    public IReadOnlyList<string> GrantedRangedAbilities { get; }
-
-    /// <summary>Detachment-granted melee weapon abilities for this model.</summary>
-    public IReadOnlyList<string> GrantedMeleeAbilities { get; }
-
-    /// <summary>
-    /// A weapon's keywords combined with any passive detachment-granted abilities for this model — so a granted
-    /// ability shows on the weapon's stat chips just like a native keyword (Rapid Fire, Lethal Hits, …).
-    /// </summary>
-    public IReadOnlyList<string> EffectiveKeywords(WeaponProfile weapon)
-    {
-        var granted = PhaseClassifier.PhaseForWeapon(weapon) == BattlePhase.Shooting
-            ? GrantedRangedAbilities
-            : GrantedMeleeAbilities;
-        if (granted.Count == 0)
-            return weapon.Keywords;
-
-        var result = new List<string>(weapon.Keywords);
-        foreach (var ability in granted)
-            if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
-                result.Add(ability);
-        return result;
-    }
-
-    private List<string> ResolveGrants(IReadOnlyList<Detachment> detachments, DetachmentWeaponClass weaponClass)
-    {
-        var result = new List<string>();
-        foreach (var det in detachments)
-            foreach (var grant in det.WeaponGrants)
-            {
-                if (grant.WeaponClass != weaponClass && grant.WeaponClass != DetachmentWeaponClass.Any)
-                    continue;
-                if (!string.IsNullOrEmpty(grant.RequiresModelKeyword)
-                    && !Datasheet.Keywords.Contains(grant.RequiresModelKeyword, StringComparer.OrdinalIgnoreCase))
-                    continue;
-                foreach (var ability in grant.Abilities)
-                    if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
-                        result.Add(ability);
-            }
-        return result;
-    }
 
     /// <summary>
     /// Abilities relevant to a phase. Passive/always-on abilities are surfaced under

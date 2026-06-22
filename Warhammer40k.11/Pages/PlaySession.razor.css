@@ -689,11 +689,31 @@ html[data-scroll="up"] .hud {
 }
 
 .wkw {
-    color: var(--text-faint);
-    font-size: 0.72rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-/* ---- Detachment Shooting-phase weapon-ability selector (e.g. Cryptek Conclave) ---- */
+/* A weapon ability granted by your detachment (e.g. CRYPTEK models' [ASSAULT]). */
+.wkw.granted {
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+    border-color: var(--border-strong);
+}
+
+/* The ability selected for this unit during the current Shooting phase. */
+.wkw.chosen {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+}
+
+/* ---- Detachment Shooting-phase ability selector ---- */
 .shoot-choice {
     display: flex;
     flex-direction: column;
@@ -702,18 +722,17 @@ html[data-scroll="up"] .hud {
     border: 1px solid var(--accent-line);
     border-radius: var(--radius-sm);
     background: var(--accent-soft);
-    box-shadow: var(--glow-sm);
 }
 
 .sc-label {
-    font-size: 0.66rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--accent-strong);
 }
 
-.sc-options {
+.sc-opts {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
@@ -729,18 +748,18 @@ html[data-scroll="up"] .hud {
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
-    transition: color 0.15s var(--ease), background 0.15s var(--ease), border-color 0.15s var(--ease);
+    transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
 .sc-opt:hover {
-    color: var(--text);
     border-color: var(--accent);
+    color: var(--text);
 }
 
 .sc-opt.on {
-    color: #04130d;
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
     border-color: transparent;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    color: #04130d;
     box-shadow: var(--glow-sm);
 }
 
