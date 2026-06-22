@@ -85,6 +85,12 @@
                 window.addEventListener('scroll', function () {
                     if (!ticking) { window.requestAnimationFrame(apply); ticking = true; }
                 }, { passive: true });
+            },
+            scrollTop: function () {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            scrollBottom: function () {
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
             }
         };
     </script>

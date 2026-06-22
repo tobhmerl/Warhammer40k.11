@@ -46,11 +46,24 @@ else
 				<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
 					@(AllCollapsed ? "Expand all" : "Collapse all")
 				</button>
-				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset round, CP, VP and models">Reset</button>
+				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset CP, VP and models">Reset</button>
 				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
 					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
 				}
+			</div>
+		</div>
+
+		<div class="play-rail">
+			<div class="cp-float" aria-label="Command points">
+				<span class="cp-label">CP</span>
+				<button class="cp-btn" type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
+				<span class="cp-num">@_cp</span>
+				<button class="cp-btn" type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
+			</div>
+			<div class="scroll-nav" aria-label="Scroll">
+				<button class="scroll-btn" type="button" @onclick="ScrollTop" aria-label="Scroll to top" title="Top">↑</button>
+				<button class="scroll-btn" type="button" @onclick="ScrollBottom" aria-label="Scroll to bottom" title="Bottom">↓</button>
 			</div>
 		</div>
 
@@ -397,23 +410,7 @@ else
 				}
 			</ul>
 		}
-			<section class="page-meta" aria-label="Round, command points and victory points">
-				<div class="tracker">
-					<span class="t-label">Round</span>
-					<div class="stepper">
-						<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous round">−</button>
-						<span class="t-value">@_round</span>
-						<button type="button" @onclick="() => StepRound(1)" aria-label="Next round">+</button>
-					</div>
-				</div>
-				<div class="tracker">
-					<span class="t-label">CP</span>
-					<div class="stepper">
-						<button type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
-						<span class="t-value">@_cp</span>
-						<button type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
-					</div>
-				</div>
+			<section class="page-meta" aria-label="Victory points">
 				<div class="vp" aria-label="Victory points">
 					<div class="vp-grid">
 						<span class="vp-corner">VP</span>
@@ -524,7 +521,6 @@ else
 
 	private BattlePhase _phase = BattlePhase.Command;
 	private BattleTurn _turn = BattleTurn.Player;
-	private int _round = 1;
 	private int _cp;
 	// Victory points: primary + secondary for each side (in-memory trackers).
 	private int _vpYouPrimary;
@@ -654,9 +650,11 @@ else
 
 	private void UseStratagem(StratView stratagem) => StepCp(-stratagem.Cost);
 
-	private void StepRound(int delta) => _round = Math.Max(1, _round + delta);
-
 	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
+
+	private async Task ScrollTop() => await JS.InvokeVoidAsync("tombworld.scrollTop");
+
+	private async Task ScrollBottom() => await JS.InvokeVoidAsync("tombworld.scrollBottom");
 
 	// Victory points: 0 = your primary, 1 = opponent primary, 2 = your secondary, 3 = opponent secondary.
 	private void StepVp(int which, int delta)
@@ -689,7 +687,6 @@ else
 
 	private void ResetTrackers()
 	{
-		_round = 1;
 		_cp = 0;
 		_vpYouPrimary = _vpYouSecondary = _vpOppPrimary = _vpOppSecondary = 0;
 		_phase = BattlePhase.Command;
