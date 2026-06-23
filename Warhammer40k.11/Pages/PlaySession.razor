@@ -202,27 +202,36 @@ else
 								<span class="u-titles">
 									<span class="u-name">@unit.Name</span>
 									<span class="u-chips">
-										@if (unit.IsWarlord)
-										{
-											<span class="chip warlord">Warlord</span>
-										}
-										@if (unit.InvulnerableSave is { } inv)
-										{
-											<span class="chip inv">@inv inv</span>
-										}
-										@if (unit.FeelNoPain is { } fnp)
-										{
-											<span class="chip fnp">FNP @fnp</span>
-										}
-										@if (reanimate)
-										{
-											<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
-										}
-										@if (battleShock)
-										{
-											<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
-										}
-									</span>
+											@if (unit.IsWarlord)
+											{
+												<span class="chip warlord">Warlord</span>
+											}
+											@{ var usableNow = unit.ActiveAbilityCount(_phase); }
+											@if (usableNow > 0)
+											{
+												<span class="chip usable" title="@($"{usableNow} abilit{(usableNow == 1 ? "y" : "ies")} usable in the {BattlePhases.Label(_phase)} phase — expand to see")">@usableNow usable</span>
+											}
+											@foreach (var inv in unit.InvulnerableSaves)
+											{
+												<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
+													@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
+												</span>
+											}
+											@foreach (var fnp in unit.FeelNoPains)
+											{
+												<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
+													FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
+												</span>
+											}
+											@if (reanimate)
+											{
+												<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
+											}
+											@if (battleShock)
+											{
+												<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
+											}
+										</span>
 								</span>
 							</button>
 							@if (unit.Parts.Count == 1 && unit.Primary.TracksWounds)
@@ -331,12 +340,12 @@ else
 														</div>
 													}
 													<div class="statgrid weapongrid">
-														<div class="st @(StatBuffed(row.Weapon.Range, rwMods, StatTarget.Range) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Range)"><span class="lab">Rng</span><span class="val">@StatCell(row.Weapon.Range, rwMods, StatTarget.Range)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>
-														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Damage, rwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Damage)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, rwMods, StatTarget.Damage)</span></div>
+														<div class="st clickable @(IsStatSelected(KRng) ? "selected" : "") @(StatBuffed(row.Weapon.Range, rwMods, StatTarget.Range) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Range)" @onclick="() => ToggleStat(KRng)"><span class="lab">Rng</span><span class="val">@StatCell(row.Weapon.Range, rwMods, StatTarget.Range)</span></div>
+														<div class="st clickable @(IsStatSelected(KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)" @onclick="() => ToggleStat(KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
+														<div class="st clickable @(IsStatSelected(KBs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)" @onclick="() => ToggleStat(KBs)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
+														<div class="st clickable @(IsStatSelected(KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)" @onclick="() => ToggleStat(KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>
+														<div class="st clickable @(IsStatSelected(KAp) ? "selected" : "")" @onclick="() => ToggleStat(KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st clickable @(IsStatSelected(KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, rwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Damage)" @onclick="() => ToggleStat(KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, rwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -377,12 +386,12 @@ else
 														</div>
 													}
 													<div class="statgrid weapongrid">
-														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Attacks, mwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Attacks)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, mwMods, StatTarget.Attacks)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Skill, mwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Skill)"><span class="lab">WS</span><span class="val">@StatCell(row.Weapon.Skill, mwMods, StatTarget.Skill)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Strength, mwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Strength)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, mwMods, StatTarget.Strength)</span></div>
-														<div class="st"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st @(StatBuffed(row.Weapon.Damage, mwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Damage)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, mwMods, StatTarget.Damage)</span></div>
+														<div class="st clickable @(IsStatSelected(KRng) ? "selected" : "")" @onclick="() => ToggleStat(KRng)"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
+														<div class="st clickable @(IsStatSelected(KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, mwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Attacks)" @onclick="() => ToggleStat(KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, mwMods, StatTarget.Attacks)</span></div>
+														<div class="st clickable @(IsStatSelected(KWs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, mwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Skill)" @onclick="() => ToggleStat(KWs)"><span class="lab">WS</span><span class="val">@StatCell(row.Weapon.Skill, mwMods, StatTarget.Skill)</span></div>
+														<div class="st clickable @(IsStatSelected(KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, mwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Strength)" @onclick="() => ToggleStat(KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, mwMods, StatTarget.Strength)</span></div>
+														<div class="st clickable @(IsStatSelected(KAp) ? "selected" : "")" @onclick="() => ToggleStat(KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st clickable @(IsStatSelected(KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, mwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Damage)" @onclick="() => ToggleStat(KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, mwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -590,7 +599,7 @@ else
 	private int _vpOppPrimary;
 	private int _vpOppSecondary;
 	// Whether the Stratagems panel is expanded (collapsible like the unit cards).
-	private bool _stratsOpen = true;
+	private bool _stratsOpen = false;
 	// Per-part current tracked value (models for multi-model units, wounds for single multi-wound models),
 	// keyed by roster-unit id (in-memory, like the round/CP trackers).
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
@@ -601,6 +610,17 @@ else
 	// Per-unit selected detachment weapon-ability for the current Shooting phase (e.g. "Anti-INFANTRY 3+").
 	private readonly Dictionary<string, string> _shootingChoice = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
+
+	// Single-select highlight on a weapon stat column ("Rng", "A", "BS"…) so you can mark which step of an
+	// attack you're resolving. Global across cards; click the same cell again to clear it.
+	private const string KRng = "Rng";
+	private const string KA = "A";
+	private const string KBs = "BS";
+	private const string KWs = "WS";
+	private const string KS = "S";
+	private const string KAp = "AP";
+	private const string KD = "D";
+	private string? _selectedStat;
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -734,6 +754,11 @@ else
 
 	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
 
+	// ---- Weapon stat selection (track which attack step you're on) ----
+	private bool IsStatSelected(string key) => string.Equals(_selectedStat, key, StringComparison.Ordinal);
+
+	private void ToggleStat(string key) => _selectedStat = IsStatSelected(key) ? null : key;
+
 	// ---- Detachment shooting choice (e.g. Cryptek "Technosorcerous Augmentations") ----
 	private string? SelectedChoice(BattleUnit unit) =>
 		_shootingChoice.TryGetValue(unit.Id, out var s) ? s : null;
@@ -762,8 +787,11 @@ else
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
+		{
+			_collapsed.Add(unit.Id); // collapsed is the default; expand the cards you're working with
 			foreach (var part in unit.Parts)
 				_track[part.Unit.Id] = part.TrackMax;
+		}
 	}
 
 	// ---- Per-part tracking: models for multi-model units, wounds for single multi-wound models ----

@@ -216,6 +216,46 @@
     border-radius: 1px;
 }
 
+/* Signed-in indicator at the bottom of every page. */
+.foot-auth {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+}
+
+.foot-auth::before {
+    content: "·";
+    margin-right: 0.15rem;
+    color: var(--text-faint);
+}
+
+.foot-auth .foot-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--text-faint);
+}
+
+.foot-auth.in .foot-dot {
+    background: var(--accent-strong);
+    box-shadow: var(--glow-sm);
+}
+
+.foot-auth.in strong {
+    color: var(--text-dim);
+}
+
+.foot-auth a {
+    color: var(--text-dim);
+    text-decoration: none;
+}
+
+.foot-auth a:hover {
+    color: var(--accent-strong);
+}
+
 /* ---- Scrim behind the open menu ---- */
 .nav-scrim {
     position: fixed;

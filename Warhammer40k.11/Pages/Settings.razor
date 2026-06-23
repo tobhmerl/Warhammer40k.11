@@ -22,13 +22,32 @@
 	}
 	else if (!_authenticated)
 	{
-		<div class="card pad signin">
-			<p class="status">Sign in to manage your settings.</p>
+		<section class="card pad signin">
+			<h2 class="sec-h">Account</h2>
+			<p class="status">Not signed in.</p>
 			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
-		</div>
+			<p class="muted">
+				You'll sign in with whichever account is active on GitHub. To pick a different one,
+				sign out of <a href="https://github.com/logout" target="_blank" rel="noopener">GitHub</a>
+				first or use a private window. Browsing the catalogue doesn't need an account &mdash; sign in to
+				save rosters and settings.
+			</p>
+		</section>
 	}
 	else
 	{
+		<section class="card pad">
+			<h2 class="sec-h">Account</h2>
+			<p class="status ok">
+				Signed in as <strong>@_user?.UserName</strong>
+				@if (!string.IsNullOrWhiteSpace(_user?.IdentityProvider))
+				{
+					<span class="muted">via @_user!.IdentityProvider</span>
+				}
+			</p>
+			<a class="btn ghost" href="/.auth/logout">Sign out</a>
+		</section>
+
 		<section class="card pad">
 			<h2 class="sec-h">Default points limit</h2>
 			<p class="muted">Pre-selected when you forge a new roster.</p>
@@ -119,6 +138,7 @@
 	private UserSettings _settings = UserSettings.Default;
 	private bool _loading = true;
 	private bool _authenticated;
+	private UserInfo? _user;
 	private bool _saving;
 	private bool _savedFlash;
 	private string? _error;
@@ -132,8 +152,8 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		var user = await Api.GetCurrentUserAsync();
-		_authenticated = user.IsAuthenticated;
+		_user = await Api.GetCurrentUserAsync();
+		_authenticated = _user.IsAuthenticated;
 		if (_authenticated)
 		{
 			await SettingsState.InitializeAsync();

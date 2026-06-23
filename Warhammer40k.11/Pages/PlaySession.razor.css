@@ -520,6 +520,34 @@ html[data-scroll="up"] .hud {
     color: #ffd9b0;
 }
 
+/* "N usable" on a (collapsed) card header — which units have phase-usable abilities right now. */
+.chip.usable {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+    box-shadow: var(--glow-sm);
+}
+
+/* Inv / FNP scope: the small "unit" or model-name suffix, and a solid (unit-wide) vs dashed (single model) edge. */
+.chip .scope {
+    margin-left: 0.32rem;
+    padding-left: 0.32rem;
+    border-left: 1px solid currentColor;
+    opacity: 0.7;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.chip.scope-unit {
+    border-style: solid;
+}
+
+.chip.scope-model {
+    border-style: dashed;
+}
+
 /* Command-phase cue chips. */
 .chip.reanimate {
     color: #04130d;
@@ -750,6 +778,27 @@ html[data-scroll="up"] .hud {
 .st.buffed .lab,
 .st.buffed .val {
     color: var(--accent-strong);
+}
+
+/* Clickable weapon stat cells: pick one to track which step of an attack you're resolving. */
+.st.clickable {
+    cursor: pointer;
+    transition: border-color 0.12s var(--ease), background 0.12s var(--ease);
+}
+
+.st.clickable:hover {
+    border-color: var(--border-strong);
+}
+
+/* The selected stat column is highlighted green (the buffed accent wins if the cell is also buffed). */
+.st.selected {
+    border-color: var(--accent-strong);
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+}
+
+.st.selected .lab,
+.st.selected .val {
+    color: #04130d;
 }
 
 /* ---- Weapon blocks (ranged / melee): name + Total A, then a wrapping stat-chip grid ---- */

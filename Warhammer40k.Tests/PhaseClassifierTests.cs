@@ -10,6 +10,28 @@ namespace Warhammer40k.Tests;
 /// </summary>
 public class PhaseClassifierTests
 {
+    [Theory]
+    [InlineData("This model has a 4+ invulnerable save.", "4+", SaveScope.Model)]
+    [InlineData("Models in this unit have a 5+ invulnerable save.", "5+", SaveScope.Unit)]
+    [InlineData("While this model is leading a unit, models in that unit have a 4+ invulnerable save.", "4+", SaveScope.Unit)]
+    public void Scopes_invulnerable_save(string text, string value, SaveScope scope)
+    {
+        var parsed = PhaseClassifier.InvulnerableSaveScoped(new Ability { Name = "Inv", Text = text });
+        Assert.NotNull(parsed);
+        Assert.Equal(value, parsed!.Value.Value);
+        Assert.Equal(scope, parsed.Value.Scope);
+    }
+
+    [Theory]
+    [InlineData("Models in this unit have the Feel No Pain 5+ ability.", "5+", SaveScope.Unit)]
+    [InlineData("This model has the Feel No Pain 6+ ability.", "6+", SaveScope.Model)]
+    public void Scopes_feel_no_pain(string text, string value, SaveScope scope)
+    {
+        var parsed = PhaseClassifier.FeelNoPainScoped(new Ability { Name = "FNP", Text = text });
+        Assert.NotNull(parsed);
+        Assert.Equal(value, parsed!.Value.Value);
+        Assert.Equal(scope, parsed.Value.Scope);
+    }
     private static Ability Ab(string name, string text) => new() { Name = name, Text = text };
 
     [Fact]

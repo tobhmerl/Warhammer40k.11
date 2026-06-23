@@ -181,13 +181,13 @@ public class BattleRosterTests
     {
         var overlord = Sheet("overlord", "Overlord", abilities:
         [
-            new Ability { Name = "Leader", Text = "Can be attached." },
+            new Ability { Name = "Leader", Text = "This model can be attached to ..." },
             new Ability { Name = "My Will Be Done", Text = "Buff." },
+            new Ability { Name = "Reanimation Protocols", Text = "Duplicate name should be deduped." },
         ]);
         var warriors = Sheet("necron-warriors", "Necron Warriors", abilities:
         [
             new Ability { Name = "Reanimation Protocols", Text = "Heal." },
-            new Ability { Name = "Leader", Text = "Duplicate name should be deduped." },
         ]);
         var roster = new Roster
         {
@@ -202,8 +202,9 @@ public class BattleRosterTests
         var abilities = group.CombinedAbilities;
         var names = abilities.Select(a => a.Ability.Name).ToList();
 
-        // Primary (warriors) first, then leader (overlord); "Leader" appears once (deduped).
-        Assert.Equal(new[] { "Reanimation Protocols", "Leader", "My Will Be Done" }, names);
+        // Primary (warriors) first; the Leader ability is dropped in Play; "Reanimation Protocols" is deduped.
+        Assert.Equal(new[] { "Reanimation Protocols", "My Will Be Done" }, names);
+        Assert.DoesNotContain("Leader", names);
         Assert.Equal("Necron Warriors", abilities[0].Source);
         Assert.Equal("Overlord", abilities.Single(a => a.Ability.Name == "My Will Be Done").Source);
     }
@@ -683,6 +684,97 @@ public class BattleRosterTests
         Assert.Equal("30\"", StatMath.ApplyAll("24\"", battle.WeaponStatModifiers(group, bodyguard, ranged: true)));
         // It never touches melee weapons.
         Assert.Empty(battle.WeaponStatModifiers(group, bodyguard, ranged: false));
+    }
+
+    // ---------- Invulnerable / Feel No Pain scope + hidden abilities ----------
+
+    [Fact]
+    public void Leader_own_invuln_is_tagged_to_the_model_not_the_whole_unit()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
+            [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+        var roster = new Roster { Units = [Unit("u1", "overlord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
+        var inv = Assert.Single(group.InvulnerableSaves);
+
+        Assert.Equal("4+", inv.Value);
+        Assert.False(inv.UnitWide);
+        Assert.Equal("Overlord", inv.ModelName);
+    }
+
+    [Fact]
+    public void Leader_conferred_invuln_is_tagged_unit_wide()
+    {
+        var orikan = Sheet("orikan", "Orikan", wounds: "5", abilities:
+            [new Ability { Name = "Master Chronomancer", Text = "While this model is leading a unit, models in that unit have a 4+ invulnerable save." }]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+        var roster = new Roster { Units = [Unit("u1", "orikan", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(orikan, warriors)).Units);
+        var inv = Assert.Single(group.InvulnerableSaves);
+
+        Assert.Equal("4+", inv.Value);
+        Assert.True(inv.UnitWide);
+        Assert.Null(inv.ModelName);
+    }
+
+    [Fact]
+    public void Leader_conferred_feel_no_pain_is_tagged_unit_wide()
+    {
+        var techno = Sheet("technomancer", "Technomancer", wounds: "4", abilities:
+            [new Ability { Name = "Rites of Reanimation", Text = "While this model is leading a unit, models in that unit have the Feel No Pain 5+ ability." }]);
+        var wraiths = Sheet("canoptek-wraiths", "Canoptek Wraiths", wounds: "3");
+        var roster = new Roster { Units = [Unit("u1", "technomancer", attachedTo: "u2"), Unit("u2", "canoptek-wraiths", models: 3)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(techno, wraiths)).Units);
+        var fnp = Assert.Single(group.FeelNoPains);
+
+        Assert.Equal("5+", fnp.Value);
+        Assert.True(fnp.UnitWide);
+    }
+
+    [Fact]
+    public void Play_card_hides_leader_and_invulnerable_save_abilities()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
+        [
+            new Ability { Name = "Leader", Text = "This model can be attached to the following units: ..." },
+            new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." },
+            new Ability { Name = "My Will Be Done", Text = "At the start of your Command phase, do a thing." },
+        ]);
+        var roster = new Roster { Units = [Unit("u1", "overlord")] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord)).Units);
+        var names = group.CombinedAbilities.Select(a => a.Ability.Name).ToList();
+
+        Assert.Equal(new[] { "My Will Be Done" }, names);
+    }
+
+    [Fact]
+    public void Applied_abilities_sort_after_text_abilities()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
+            [new Ability { Name = "Grand Strategist", Text = "At the start of your Command phase, you gain 1CP." }]);
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "weave", Name = "Sempiternal Weave", Points = 15,
+            StatModifiers = [new StatModifier { Target = StatTarget.Wounds, Delta = 1 }],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units = [Bearer("u1", "overlord", "weave")],
+        };
+
+        var abilities = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units).CombinedAbilities;
+
+        // The plain text ability comes first; the applied stat enhancement is last.
+        Assert.Equal("Grand Strategist", abilities[0].Ability.Name);
+        Assert.Null(abilities[0].AppliedSummary);
+        Assert.Equal("Sempiternal Weave", abilities[^1].Ability.Name);
+        Assert.NotNull(abilities[^1].AppliedSummary);
     }
 
     [Fact]

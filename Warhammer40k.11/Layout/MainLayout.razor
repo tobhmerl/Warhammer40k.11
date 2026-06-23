@@ -1,13 +1,14 @@
 ﻿@inherits LayoutComponentBase
 @implements IDisposable
+@using Warhammer40k.Core
 @inject SettingsState Settings
 @inject NavigationManager Navigation
+@inject IApiClient Api
 
 <div class="shell @(_immersive ? "shell--immersive" : null)">
     @if (!_immersive)
     {
         <nav class="appbar" aria-label="Primary">
-            <NavLink class="navlink" href="/" Match="NavLinkMatch.All">Home</NavLink>
             <NavLink class="navlink" href="catalogue">Catalogue</NavLink>
             <NavLink class="navlink" href="rosters">Rosters</NavLink>
             <NavLink class="navlink" href="play">Play</NavLink>
@@ -22,11 +23,24 @@
     <footer class="foot">
         <span class="foot-mark" aria-hidden="true"></span>
         <span>TombWorld &middot; Warhammer&nbsp;40k army forge</span>
+        <span class="foot-auth @(_user is { IsAuthenticated: true } ? "in" : "out")">
+            @if (_user is { IsAuthenticated: true } signedIn)
+            {
+                <span class="foot-dot" aria-hidden="true"></span>
+                <span>Signed in as <strong>@signedIn.UserName</strong></span>
+            }
+            else
+            {
+                <span class="foot-dot" aria-hidden="true"></span>
+                <a href="settings">Not signed in &middot; sign in</a>
+            }
+        </span>
     </footer>
 </div>
 
 @code {
     private bool _immersive;
+    private UserInfo? _user;
 
     protected override void OnInitialized()
     {
@@ -37,7 +51,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
+        {
             await Settings.InitializeAsync();
+            _user = await Api.GetCurrentUserAsync();
+            StateHasChanged();
+        }
     }
 
     // The active play session (/play/{id}) is an immersive screen: hide the app bar.

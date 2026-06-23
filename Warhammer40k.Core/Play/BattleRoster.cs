@@ -326,13 +326,55 @@ public sealed class BattleUnit
     /// <summary>Total models across the group.</summary>
     public int ModelCount => Parts.Sum(p => p.ModelCount);
 
-    /// <summary>The group's invulnerable save (first found across parts), or null when none.</summary>
-    public string? InvulnerableSave =>
-        Parts.Select(p => PhaseClassifier.InvulnerableSave(p.Datasheet.Abilities)).FirstOrDefault(s => s is not null);
+    /// <summary>
+    /// The group's invulnerable saves, each tagged unit-wide or model-only — so the card can distinguish a
+    /// save the whole unit shares (incl. one a Leader confers, e.g. Master Chronomancer) from a single
+    /// model's own save (e.g. a Character's). Best (lowest) unit-wide value first.
+    /// </summary>
+    public IReadOnlyList<SaveBadge> InvulnerableSaves => CollectSaves(PhaseClassifier.InvulnerableSaveScoped);
 
-    /// <summary>The group's Feel No Pain value (first found across parts), or null when none.</summary>
-    public string? FeelNoPain =>
-        Parts.Select(p => PhaseClassifier.FeelNoPain(p.Datasheet.Abilities)).FirstOrDefault(s => s is not null);
+    /// <summary>The group's Feel No Pain saves, each tagged unit-wide (incl. a Leader's conferral) or model-only.</summary>
+    public IReadOnlyList<SaveBadge> FeelNoPains => CollectSaves(PhaseClassifier.FeelNoPainScoped);
+
+    /// <summary>The group's headline invulnerable save value (first badge), or null when none.</summary>
+    public string? InvulnerableSave => InvulnerableSaves.Count > 0 ? InvulnerableSaves[0].Value : null;
+
+    /// <summary>The group's headline Feel No Pain value (first badge), or null when none.</summary>
+    public string? FeelNoPain => FeelNoPains.Count > 0 ? FeelNoPains[0].Value : null;
+
+    // Builds the save badges across the group: one unit-wide badge (the best/lowest value found on a unit-wide
+    // ability or conferred by an attached Leader onto the led unit), plus a model-only badge for each part that
+    // carries its own single-model save of a different value.
+    private IReadOnlyList<SaveBadge> CollectSaves(Func<Ability, (string Value, SaveScope Scope)?> parse)
+    {
+        string? unitValue = null;
+        var models = new List<SaveBadge>();
+        foreach (var part in Parts)
+        {
+            foreach (var ability in part.Datasheet.Abilities)
+            {
+                if (parse(ability) is not { } save)
+                    continue;
+                if (save.Scope == SaveScope.Unit)
+                {
+                    if (unitValue is null || string.CompareOrdinal(save.Value, unitValue) < 0)
+                        unitValue = save.Value;
+                }
+                else
+                {
+                    models.Add(new SaveBadge(save.Value, UnitWide: false, ModelName: part.Datasheet.Name));
+                }
+            }
+        }
+
+        var result = new List<SaveBadge>();
+        if (unitValue is not null)
+            result.Add(new SaveBadge(unitValue, UnitWide: true, ModelName: null));
+        foreach (var badge in models)
+            if (badge.Value != unitValue && !result.Any(r => r.Value == badge.Value && r.ModelName == badge.ModelName))
+                result.Add(badge);
+        return result;
+    }
 
     /// <summary>Total trackable wound pool (sum of parts with a fixed Wounds value), or null when none are fixed.</summary>
     public int? MaxWounds
@@ -371,7 +413,7 @@ public sealed class BattleUnit
             foreach (var part in Parts)
             {
                 foreach (var ability in part.Datasheet.Abilities)
-                    if (seen.Add(ability.Name))
+                    if (!HiddenInPlay(ability) && seen.Add(ability.Name))
                         result.Add(new BattleAbility(ability, part.Datasheet.Name)
                         {
                             AppliedSummary = ConferredSummaryFor(part, ability.Name),
@@ -389,7 +431,9 @@ public sealed class BattleUnit
                     });
                 }
             }
-            return result;
+            // Plain text abilities first, then abilities applied straight to the card ("Applied: …") — stable
+            // so each group keeps its in-roster order.
+            return result.OrderBy(a => a.AppliedSummary is null ? 0 : 1).ToList();
         }
     }
 
@@ -407,6 +451,12 @@ public sealed class BattleUnit
                 return conferral.Summary;
         return null;
     }
+
+    // Abilities not worth showing in Play Mode: the Leader ability (an attach list that only matters in setup)
+    // and the Invulnerable Save (already surfaced as a chip beside the unit name, with its unit/model scope).
+    private static bool HiddenInPlay(Ability ability) =>
+        string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase)
+        || PhaseClassifier.InvulnerableSaveScoped(ability) is not null;
 
     /// <summary>
     /// True when an ability is a <i>text</i> ability whose rules text is relevant to <paramref name="phase"/>,
@@ -450,6 +500,13 @@ public sealed record BattleAbility(Ability Ability, string Source)
     /// </summary>
     public string? AppliedSummary { get; init; }
 }
+
+/// <summary>
+/// An invulnerable / Feel No Pain save shown on a battle card. <see cref="UnitWide"/> means every model in
+/// the unit has it (incl. a save conferred by an attached Leader); otherwise it is a single model's save and
+/// <see cref="ModelName"/> names that model.
+/// </summary>
+public sealed record SaveBadge(string Value, bool UnitWide, string? ModelName);
 
 /// <summary>One datasheet's contribution to a <see cref="BattleUnit"/> (the unit itself, or an attached Leader).</summary>
 public sealed class BattlePart

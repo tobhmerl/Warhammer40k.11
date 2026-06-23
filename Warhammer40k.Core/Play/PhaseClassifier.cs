@@ -71,6 +71,33 @@ public static class PhaseClassifier
         return null;
     }
 
+    /// <summary>
+    /// Parses a single ability's invulnerable save with its <see cref="SaveScope"/> (whole unit vs a single
+    /// model), or null when the ability grants none. A leader's "while leading a unit, models in that unit
+    /// have a N+ invulnerable save" reads as <see cref="SaveScope.Unit"/>.
+    /// </summary>
+    public static (string Value, SaveScope Scope)? InvulnerableSaveScoped(Ability ability)
+    {
+        var match = InvulnRegex.Match(ability.Text);
+        return match.Success ? (match.Groups[1].Value, ScopeOf(ability.Text)) : null;
+    }
+
+    /// <summary>Parses a single ability's Feel No Pain value with its <see cref="SaveScope"/>, or null when none.</summary>
+    public static (string Value, SaveScope Scope)? FeelNoPainScoped(Ability ability)
+    {
+        var match = FeelNoPainRegex.Match(ability.Name + " " + ability.Text);
+        return match.Success ? (match.Groups[1].Value, ScopeOf(ability.Text)) : null;
+    }
+
+    // A save reads as unit-wide when its text talks about "(models in) this/that unit"; otherwise it's a
+    // single model's save (e.g. a Character's own "this model has a 4+ invulnerable save").
+    private static SaveScope ScopeOf(string text) =>
+        text.Contains("this unit", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("that unit", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("models in", StringComparison.OrdinalIgnoreCase)
+            ? SaveScope.Unit
+            : SaveScope.Model;
+
     /// <summary>Parses the unit's Feel No Pain value (e.g. "5+") from its ability name/text, or null when it has none.</summary>
     public static string? FeelNoPain(IEnumerable<Ability> abilities)
     {
@@ -97,4 +124,14 @@ public static class PhaseClassifier
         }
         return false;
     }
+}
+
+/// <summary>Whether a parsed save (invulnerable / Feel No Pain) applies to a whole unit or a single model.</summary>
+public enum SaveScope
+{
+    /// <summary>Applies to every model in the unit (incl. a leader's conferral on the led unit).</summary>
+    Unit = 0,
+
+    /// <summary>Applies to a single model only (e.g. a Character's own invulnerable save).</summary>
+    Model = 1,
 }

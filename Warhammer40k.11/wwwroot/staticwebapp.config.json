@@ -2,6 +2,7 @@
   "routes": [
     { "route": "/.auth/login/aad", "statusCode": 404 },
     { "route": "/api/whoami", "allowedRoles": [ "anonymous", "authenticated" ] },
+    { "route": "/api/catalogue", "methods": [ "GET" ], "allowedRoles": [ "anonymous", "authenticated" ] },
     { "route": "/api/*", "allowedRoles": [ "authenticated" ] }
   ],
   "navigationFallback": {

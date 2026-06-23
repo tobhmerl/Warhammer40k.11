@@ -1,3 +1,4 @@
+@page "/"
 @page "/catalogue"
 @using Warhammer40k.Core
 @using Warhammer40k.Core.Catalogue
@@ -11,11 +12,14 @@
 			<p class="eyebrow">Necron datasheets</p>
 			<h1>Catalogue</h1>
 		</div>
-		@if (!_loading && _authenticated && _catalogue.Datasheets.Count > 0)
+		@if (!_loading && _catalogue.Datasheets.Count > 0)
 		{
 			<div class="head-actions">
 				<span class="count">@_catalogue.Datasheets.Count units</span>
-				<a class="edit-link" href="catalogue/edit">Edit catalogue</a>
+				@if (_authenticated)
+				{
+					<a class="edit-link" href="catalogue/edit">Edit catalogue</a>
+				}
 			</div>
 		}
 	</header>
@@ -24,13 +28,6 @@
 	{
 		<div class="card pad">
 			<p class="status"><span class="pulse" aria-hidden="true"></span> Summoning the catalogue&hellip;</p>
-		</div>
-	}
-	else if (!_authenticated)
-	{
-		<div class="card pad signin">
-			<p class="status">Sign in to browse the Necron catalogue.</p>
-			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
 		</div>
 	}
 	else if (_catalogue.Datasheets.Count == 0)
@@ -138,8 +135,7 @@
 	{
 		var user = await Api.GetCurrentUserAsync();
 		_authenticated = user.IsAuthenticated;
-		if (_authenticated)
-			_catalogue = await Api.GetCatalogueAsync();
+		_catalogue = await Api.GetCatalogueAsync(); // anonymous callers get the default catalogue
 		_loading = false;
 	}
 
