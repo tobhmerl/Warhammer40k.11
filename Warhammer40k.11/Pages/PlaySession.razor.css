@@ -92,7 +92,8 @@ html[data-scroll="up"] .hud {
 /* ---- Floating right-side rail: CP control (top) + scroll arrows ---- */
 .play-rail {
     position: fixed;
-    top: calc(0.5rem + env(safe-area-inset-top));
+    top: auto;
+    bottom: calc(7rem + env(safe-area-inset-bottom));
     right: calc(0.5rem + env(safe-area-inset-right));
     z-index: 7;
     display: flex;

@@ -225,12 +225,6 @@
     letter-spacing: 0.02em;
 }
 
-.foot-auth::before {
-    content: "·";
-    margin-right: 0.15rem;
-    color: var(--text-faint);
-}
-
 .foot-auth .foot-dot {
     width: 0.45rem;
     height: 0.45rem;

@@ -21,8 +21,6 @@
     </main>
 
     <footer class="foot">
-        <span class="foot-mark" aria-hidden="true"></span>
-        <span>TombWorld &middot; Warhammer&nbsp;40k army forge</span>
         <span class="foot-auth @(_user is { IsAuthenticated: true } ? "in" : "out")">
             @if (_user is { IsAuthenticated: true } signedIn)
             {
