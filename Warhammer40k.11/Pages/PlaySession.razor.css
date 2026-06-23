@@ -412,11 +412,12 @@ html[data-scroll="up"] .hud {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1.25rem;
 }
 
 .unit {
     border: 1px solid var(--border);
+    border-bottom: 4px solid rgba(var(--accent-rgb), 0.5);
     border-radius: var(--radius);
     background:
         linear-gradient(180deg, rgba(var(--accent-rgb), 0.04), transparent 40%),
@@ -725,6 +726,59 @@ html[data-scroll="up"] .hud {
     min-width: 0;
     color: #eafff5;
     font-weight: 600;
+}
+
+/* Clickable member name: focus this model's weapons within an attached unit. */
+.sname-btn {
+    min-width: 0;
+    margin: 0;
+    padding: 0.05rem 0.1rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    color: #eafff5;
+}
+
+.sname-btn::before {
+    content: "\25C9\00a0";
+    color: var(--accent);
+    opacity: 0.55;
+    font-size: 0.7em;
+}
+
+.sname-btn:hover {
+    color: var(--accent-strong);
+}
+
+.sname-btn.on {
+    color: var(--accent-strong);
+}
+
+.sname-btn.on::before {
+    opacity: 1;
+}
+
+/* The focused member's statline + weapons are highlighted; the rest of the group is greyed out. */
+.statline.member-on {
+    border-color: var(--accent-line);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.10), transparent 70%),
+        var(--surface-2);
+}
+
+.weapon.member-on {
+    box-shadow: inset 3px 0 0 var(--accent-strong);
+    background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 40%);
+}
+
+.statline.member-off,
+.weapon.member-off {
+    opacity: 0.38;
+    filter: grayscale(0.55);
 }
 
 .statline.down .c-value {

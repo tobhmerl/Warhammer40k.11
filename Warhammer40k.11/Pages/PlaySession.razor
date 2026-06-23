@@ -258,9 +258,18 @@ else
 									@foreach (var part in unit.Parts)
 									{
 										var p = part.Profile;
-										<div class="statline @(PartDown(part) ? "down" : "")" @key="part.Unit.Id">
+										<div class="statline @(PartDown(part) ? "down" : "") @(IsMemberSelected(unit, part) ? "member-on" : "") @(MemberDimmed(unit, part) ? "member-off" : "")" @key="part.Unit.Id">
 											<div class="sl-top">
-												<span class="sname">@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")</span>
+												@if (unit.Parts.Count > 1)
+												{
+													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="Highlight this model's weapons; tap again to clear">
+														@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")
+													</button>
+												}
+												else
+												{
+													<span class="sname">@part.Datasheet.Name</span>
+												}
 												<span class="counter" title="@(part.TracksWounds ? "Wounds remaining" : "Models remaining")">
 													<button type="button" @onclick="() => StepPart(part, -1)" aria-label="@(part.TracksWounds ? "Lose a wound" : "Remove a model")">−</button>
 													<span class="c-value">@PartCurrent(part)<span class="c-max">/@part.TrackMax</span></span>
@@ -308,7 +317,7 @@ else
 										<ul class="weapon-list">
 											@foreach (var row in ranged)
 											{
-												<li class="weapon" @key="row.Weapon">
+												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true);
 														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true);
@@ -359,7 +368,7 @@ else
 										<ul class="weapon-list">
 											@foreach (var row in melee)
 											{
-												<li class="weapon" @key="row.Weapon">
+												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false);
 														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false);
@@ -622,6 +631,10 @@ else
 	private const string KD = "D";
 	private string? _selectedStat;
 
+	// Per-card focus on a single member's weapons/statline (e.g. the Lychguard within Imotekh + Lychguard),
+	// keyed by unit id -> selected part's roster-unit id. Click the member name again to clear.
+	private readonly Dictionary<string, string> _selectedMember = new(StringComparer.Ordinal);
+
 	protected override async Task OnParametersSetAsync()
 	{
 		if (_loadedId == Id)
@@ -759,6 +772,21 @@ else
 
 	private void ToggleStat(string key) => _selectedStat = IsStatSelected(key) ? null : key;
 
+	// ---- Per-member weapon focus (distinguish models inside an attached unit) ----
+	private bool IsMemberSelected(BattleUnit unit, BattlePart part) =>
+		_selectedMember.TryGetValue(unit.Id, out var id) && string.Equals(id, part.Unit.Id, StringComparison.Ordinal);
+
+	private bool MemberDimmed(BattleUnit unit, BattlePart part) =>
+		_selectedMember.TryGetValue(unit.Id, out var id) && !string.Equals(id, part.Unit.Id, StringComparison.Ordinal);
+
+	private void ToggleMember(BattleUnit unit, BattlePart part)
+	{
+		if (IsMemberSelected(unit, part))
+			_selectedMember.Remove(unit.Id);
+		else
+			_selectedMember[unit.Id] = part.Unit.Id;
+	}
+
 	// ---- Detachment shooting choice (e.g. Cryptek "Technosorcerous Augmentations") ----
 	private string? SelectedChoice(BattleUnit unit) =>
 		_shootingChoice.TryGetValue(unit.Id, out var s) ? s : null;
@@ -784,6 +812,7 @@ else
 		_collapsed.Clear();
 		_openAbilities.Clear();
 		_shootingChoice.Clear();
+		_selectedMember.Clear();
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
