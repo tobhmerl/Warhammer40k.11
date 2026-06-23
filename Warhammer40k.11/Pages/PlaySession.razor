@@ -349,12 +349,12 @@ else
 														</div>
 													}
 													<div class="statgrid weapongrid">
-														<div class="st clickable @(IsStatSelected(KRng) ? "selected" : "") @(StatBuffed(row.Weapon.Range, rwMods, StatTarget.Range) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Range)" @onclick="() => ToggleStat(KRng)"><span class="lab">Rng</span><span class="val">@StatCell(row.Weapon.Range, rwMods, StatTarget.Range)</span></div>
-														<div class="st clickable @(IsStatSelected(KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)" @onclick="() => ToggleStat(KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
-														<div class="st clickable @(IsStatSelected(KBs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)" @onclick="() => ToggleStat(KBs)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
-														<div class="st clickable @(IsStatSelected(KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)" @onclick="() => ToggleStat(KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>
-														<div class="st clickable @(IsStatSelected(KAp) ? "selected" : "")" @onclick="() => ToggleStat(KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st clickable @(IsStatSelected(KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, rwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Damage)" @onclick="() => ToggleStat(KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, rwMods, StatTarget.Damage)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KRng) ? "selected" : "") @(StatBuffed(row.Weapon.Range, rwMods, StatTarget.Range) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Range)" @onclick="() => ToggleCell(row.Weapon, KRng)"><span class="lab">Rng</span><span class="val">@StatCell(row.Weapon.Range, rwMods, StatTarget.Range)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)" @onclick="() => ToggleCell(row.Weapon, KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KBs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)" @onclick="() => ToggleCell(row.Weapon, KBs)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)" @onclick="() => ToggleCell(row.Weapon, KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KAp) ? "selected" : "")" @onclick="() => ToggleCell(row.Weapon, KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, rwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Damage)" @onclick="() => ToggleCell(row.Weapon, KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, rwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -395,12 +395,12 @@ else
 														</div>
 													}
 													<div class="statgrid weapongrid">
-														<div class="st clickable @(IsStatSelected(KRng) ? "selected" : "")" @onclick="() => ToggleStat(KRng)"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
-														<div class="st clickable @(IsStatSelected(KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, mwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Attacks)" @onclick="() => ToggleStat(KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, mwMods, StatTarget.Attacks)</span></div>
-														<div class="st clickable @(IsStatSelected(KWs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, mwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Skill)" @onclick="() => ToggleStat(KWs)"><span class="lab">WS</span><span class="val">@StatCell(row.Weapon.Skill, mwMods, StatTarget.Skill)</span></div>
-														<div class="st clickable @(IsStatSelected(KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, mwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Strength)" @onclick="() => ToggleStat(KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, mwMods, StatTarget.Strength)</span></div>
-														<div class="st clickable @(IsStatSelected(KAp) ? "selected" : "")" @onclick="() => ToggleStat(KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
-														<div class="st clickable @(IsStatSelected(KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, mwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Damage)" @onclick="() => ToggleStat(KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, mwMods, StatTarget.Damage)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KRng) ? "selected" : "")" @onclick="() => ToggleCell(row.Weapon, KRng)"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KA) ? "selected" : "") @(StatBuffed(row.Weapon.Attacks, mwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Attacks)" @onclick="() => ToggleCell(row.Weapon, KA)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, mwMods, StatTarget.Attacks)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KWs) ? "selected" : "") @(StatBuffed(row.Weapon.Skill, mwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Skill)" @onclick="() => ToggleCell(row.Weapon, KWs)"><span class="lab">WS</span><span class="val">@StatCell(row.Weapon.Skill, mwMods, StatTarget.Skill)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KS) ? "selected" : "") @(StatBuffed(row.Weapon.Strength, mwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Strength)" @onclick="() => ToggleCell(row.Weapon, KS)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, mwMods, StatTarget.Strength)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KAp) ? "selected" : "")" @onclick="() => ToggleCell(row.Weapon, KAp)"><span class="lab">AP</span><span class="val">@Dash(row.Weapon.ArmourPenetration)</span></div>
+														<div class="st clickable @(IsCellSelected(row.Weapon, KD) ? "selected" : "") @(StatBuffed(row.Weapon.Damage, mwMods, StatTarget.Damage) ? "buffed" : "")" title="@StatTitle(mwMods, StatTarget.Damage)" @onclick="() => ToggleCell(row.Weapon, KD)"><span class="lab">D</span><span class="val">@StatCell(row.Weapon.Damage, mwMods, StatTarget.Damage)</span></div>
 													</div>
 												</li>
 											}
@@ -620,8 +620,8 @@ else
 	private readonly Dictionary<string, string> _shootingChoice = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
 
-	// Single-select highlight on a weapon stat column ("Rng", "A", "BS"…) so you can mark which step of an
-	// attack you're resolving. Global across cards; click the same cell again to clear it.
+	// Single-cell highlight on a weapon stat ("Rng", "A", "BS"…) so you can mark the exact spot you're on while
+	// resolving an attack. Only the one cell you clicked lights up; click it again to clear.
 	private const string KRng = "Rng";
 	private const string KA = "A";
 	private const string KBs = "BS";
@@ -629,7 +629,7 @@ else
 	private const string KS = "S";
 	private const string KAp = "AP";
 	private const string KD = "D";
-	private string? _selectedStat;
+	private (object Weapon, string Stat)? _selectedCell;
 
 	// Per-card focus on a single member's weapons/statline (e.g. the Lychguard within Imotekh + Lychguard),
 	// keyed by unit id -> selected part's roster-unit id. Click the member name again to clear.
@@ -767,10 +767,12 @@ else
 
 	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
 
-	// ---- Weapon stat selection (track which attack step you're on) ----
-	private bool IsStatSelected(string key) => string.Equals(_selectedStat, key, StringComparison.Ordinal);
+	// ---- Weapon stat selection (mark the exact cell you're on while resolving an attack) ----
+	private bool IsCellSelected(object weapon, string stat) =>
+		_selectedCell is { } c && ReferenceEquals(c.Weapon, weapon) && string.Equals(c.Stat, stat, StringComparison.Ordinal);
 
-	private void ToggleStat(string key) => _selectedStat = IsStatSelected(key) ? null : key;
+	private void ToggleCell(object weapon, string stat) =>
+		_selectedCell = IsCellSelected(weapon, stat) ? null : (weapon, stat);
 
 	// ---- Per-member weapon focus (distinguish models inside an attached unit) ----
 	private bool IsMemberSelected(BattleUnit unit, BattlePart part) =>
@@ -813,6 +815,7 @@ else
 		_openAbilities.Clear();
 		_shootingChoice.Clear();
 		_selectedMember.Clear();
+		_selectedCell = null;
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
