@@ -14,6 +14,10 @@ public sealed class BattleRoster
     {
         Units = units;
         Detachments = detachments;
+        ArmyKeywords = units
+            .SelectMany(u => u.Parts)
+            .SelectMany(p => p.Datasheet.Keywords)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>The combat groups, in roster order (a group is a unit plus any Leaders attached to it).</summary>
@@ -21,6 +25,21 @@ public sealed class BattleRoster
 
     /// <summary>The detachments selected for this roster — drive the smart weapon-ability effects in Play Mode.</summary>
     public IReadOnlyList<Detachment> Detachments { get; }
+
+    /// <summary>
+    /// Every unit keyword fielded anywhere in this army (case-insensitive). Drives the "need to know" filtering
+    /// of stratagems: one whose <see cref="CoreStratagem.RequiredUnitKeywords"/> are all absent here cannot be
+    /// used, so it is hidden in Play Mode (e.g. Smokescreen with no SMOKE unit, Explosives with no GRENADES).
+    /// </summary>
+    public IReadOnlySet<string> ArmyKeywords { get; }
+
+    /// <summary>
+    /// True when the army can field a unit eligible for a stratagem requiring <paramref name="requiredKeywords"/>:
+    /// either the requirement is empty (any unit qualifies) or at least one required keyword is present in the army.
+    /// </summary>
+    public bool ArmyHasAnyKeyword(IReadOnlyList<string> requiredKeywords) =>
+        requiredKeywords is null or { Count: 0 }
+        || requiredKeywords.Any(ArmyKeywords.Contains);
 
     /// <summary>Builds a battle roster, skipping units whose datasheet is missing from the catalogue.</summary>
     public static BattleRoster Build(Roster roster, CatalogueData catalogue)

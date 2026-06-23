@@ -737,11 +737,12 @@ else
 		{
 			var list = new List<StratView>();
 			foreach (var s in CoreStratagemCatalogue.Usable(_phase, _turn))
-				list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
+				if (_battle is null || _battle.ArmyHasAnyKeyword(s.RequiredUnitKeywords))
+					list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
 			if (_battle is not null)
 				foreach (var det in _battle.Detachments)
 					foreach (var s in det.Stratagems)
-						if (s.UsableNow(_phase, _turn))
+						if (s.UsableNow(_phase, _turn) && _battle.ArmyHasAnyKeyword(s.RequiredUnitKeywords))
 							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
 			return list;
 		}

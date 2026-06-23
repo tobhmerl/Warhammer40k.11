@@ -111,6 +111,30 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Cryptek_stratagems_require_the_keyword_they_target()
+    {
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
+
+        // Cryptek-targeting stratagems are hidden unless the army fields a CRYPTEK unit.
+        foreach (var name in new[] { "Microscarab Swarm", "Animus Curse", "Synergistic Empowerment", "Untapped Power" })
+            Assert.Equal(["Cryptek"], cryptek.Stratagems.Single(s => s.Name == name).RequiredUnitKeywords);
+
+        // Army-wide NECRONS stratagems are never gated (the whole army is Necrons).
+        Assert.Empty(cryptek.Stratagems.Single(s => s.Name == "Molecular Targeting").RequiredUnitKeywords);
+        Assert.Empty(cryptek.Stratagems.Single(s => s.Name == "Potentiality Syphon").RequiredUnitKeywords);
+    }
+
+    [Fact]
+    public void Hand_of_the_Dynasty_stratagems_require_the_keyword_they_target()
+    {
+        var hotd = DetachmentCatalogue.FindById("hand-of-the-dynasty")!;
+
+        Assert.Equal(["Immortals"], hotd.Stratagems.Single(s => s.Name == "Dominance Protocols").RequiredUnitKeywords);
+        Assert.Equal(["Immortals", "Necron Warriors"], hotd.Stratagems.Single(s => s.Name == "Will of the Conqueror").RequiredUnitKeywords);
+        Assert.Equal(["Immortals", "Necron Warriors"], hotd.Stratagems.Single(s => s.Name == "Nanosaturation").RequiredUnitKeywords);
+    }
+
+    [Fact]
     public void Cryptek_Conclave_enhancements_carry_text_and_eligibility()
     {
         var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;

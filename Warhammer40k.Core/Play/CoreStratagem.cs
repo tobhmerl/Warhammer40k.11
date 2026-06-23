@@ -51,6 +51,13 @@ public sealed record CoreStratagem
     /// <summary>The phase(s) this stratagem is used in. An empty list means it applies in any phase.</summary>
     public IReadOnlyList<BattlePhase> Phases { get; init; } = [];
 
+    /// <summary>
+    /// Unit keyword(s) a friendly unit must have for this stratagem to be worth showing — the target's keyword
+    /// (e.g. SMOKE, or EXPLOSIVES/GRENADES). Empty = any unit qualifies. "Need to know" filtering hides a
+    /// stratagem when the army fields no unit carrying one of these keywords.
+    /// </summary>
+    public IReadOnlyList<string> RequiredUnitKeywords { get; init; } = [];
+
     /// <summary>Italic flavour text.</summary>
     public string Flavour { get; init; } = "";
 

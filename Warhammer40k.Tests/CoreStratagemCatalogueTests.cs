@@ -103,4 +103,23 @@ public class CoreStratagemCatalogueTests
         var ids = CoreStratagemCatalogue.All.Select(s => s.Id).ToList();
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
     }
+
+    [Theory]
+    [InlineData("15.03", "Character")]            // Epic Challenge — needs a CHARACTER unit.
+    [InlineData("15.05", "Explosives", "Grenades")] // Explosives — needs an EXPLOSIVES/GRENADES unit.
+    [InlineData("15.06", "Monster", "Vehicle")]   // Crushing Impact — needs a MONSTER/VEHICLE unit.
+    [InlineData("15.10", "Smoke")]                // Smokescreen — needs a SMOKE unit.
+    public void Keyword_gated_stratagems_declare_their_required_unit_keywords(string id, params string[] expected)
+    {
+        var stratagem = CoreStratagemCatalogue.All.Single(s => s.Id == id);
+        Assert.Equal(expected, stratagem.RequiredUnitKeywords);
+    }
+
+    [Fact]
+    public void Universal_stratagems_have_no_unit_keyword_requirement()
+    {
+        // Command Re-roll (15.02) and Counteroffensive (15.12) apply to "one friendly unit" — never hidden.
+        Assert.Empty(CoreStratagemCatalogue.All.Single(s => s.Id == "15.02").RequiredUnitKeywords);
+        Assert.Empty(CoreStratagemCatalogue.All.Single(s => s.Id == "15.12").RequiredUnitKeywords);
+    }
 }

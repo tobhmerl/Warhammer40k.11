@@ -103,6 +103,7 @@ public static class DetachmentCatalogue
             {
                 Id = "dominance-protocols", Name = "Dominance Protocols", CpCost = 1,
                 Turn = StratagemTurn.Either, Phases = [BattlePhase.Command],
+                RequiredUnitKeywords = ["Immortals"],
                 When = "Command phase.",
                 Target = "One friendly IMMORTALS unit.",
                 Effect = "Your unit has +1 OC until the end of the turn.",
@@ -111,6 +112,7 @@ public static class DetachmentCatalogue
             {
                 Id = "will-of-the-conqueror", Name = "Will of the Conqueror", CpCost = 1,
                 Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                RequiredUnitKeywords = ["Immortals", "Necron Warriors"],
                 When = "End of your Movement phase.",
                 Target = "One friendly IMMORTALS/NECRON WARRIORS unit.",
                 Effect = "Select one objective your unit is controlling. That objective is secured.",
@@ -119,6 +121,7 @@ public static class DetachmentCatalogue
             {
                 Id = "nanosaturation", Name = "Nanosaturation", CpCost = 1,
                 Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Immortals", "Necron Warriors"],
                 When = "Your opponent's Shooting phase, when an enemy unit that targeted a friendly IMMORTALS/NECRON WARRIORS unit has shot.",
                 Target = "That IMMORTALS/NECRON WARRIORS unit.",
                 Effect = "Your unit shoots using snap shooting, but while doing so your unit can only target that enemy unit.",
@@ -219,6 +222,7 @@ public static class DetachmentCatalogue
             {
                 Id = "microscarab-swarm", Name = "Microscarab Swarm", Type = "Wargear", CpCost = 1,
                 Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Cryptek"],
                 When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
                 Target = "One CRYPTEK INFANTRY unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
                 Effect = "If your unit has the NECRON WARRIORS keyword, until the end of the phase, models in your unit have a 5+ invulnerable save. If your unit has the IMMORTALS keyword, until the end of the phase, models in your unit have a 4+ invulnerable save.",
@@ -227,6 +231,7 @@ public static class DetachmentCatalogue
             {
                 Id = "animus-curse", Name = "Animus Curse", Type = "Wargear", CpCost = 1,
                 Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Cryptek"],
                 When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has shot or fought.",
                 Target = "One CRYPTEK model from your army that was destroyed by one of the attacking unit's attacks. You can use this Stratagem on that model even though it was just destroyed.",
                 Effect = "Until the end of the battle, each time a friendly NECRONS model makes an attack that targets the attacking unit, you can re-roll the Hit roll.",
@@ -235,6 +240,7 @@ public static class DetachmentCatalogue
             {
                 Id = "synergistic-empowerment", Name = "Synergistic Empowerment", Type = "Strategic Ploy", CpCost = 1,
                 Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Cryptek"],
                 When = "Start of your Shooting phase.",
                 Target = "One CRYPTEK unit from your army.",
                 Effect = "Select one friendly NECRONS model (excluding MONSTERS and VEHICLES) within 12\" of a CRYPTEK model in your unit. Until the end of the phase, that friendly NECRONS model has the CRYPTEK keyword.",
@@ -243,6 +249,7 @@ public static class DetachmentCatalogue
             {
                 Id = "untapped-power", Name = "Untapped Power", Type = "Battle Tactic", CpCost = 1,
                 Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Cryptek"],
                 When = "Your Shooting phase.",
                 Target = "One CRYPTEK unit from your army that has not been selected to shoot this phase.",
                 Effect = "Until the end of the phase, each time your unit is selected to shoot, when selecting an ability for the Technosorcerous Augmentations Detachment Rule, you can select one additional ability from those available.",

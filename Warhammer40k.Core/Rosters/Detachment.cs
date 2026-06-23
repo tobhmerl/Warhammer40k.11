@@ -190,6 +190,13 @@ public sealed class Stratagem
     /// <summary>The phase(s) this stratagem is used in. An empty list means it applies in any phase.</summary>
     public List<BattlePhase> Phases { get; set; } = [];
 
+    /// <summary>
+    /// Unit keyword(s) a friendly unit must have for this stratagem to be relevant (the target's keyword, e.g.
+    /// CRYPTEK or IMMORTALS). Empty = any unit qualifies; "need to know" filtering hides it when the army has
+    /// no unit carrying one of these keywords.
+    /// </summary>
+    public List<string> RequiredUnitKeywords { get; set; } = [];
+
     /// <summary>The "WHEN" clause.</summary>
     public string When { get; set; } = string.Empty;
 

@@ -873,4 +873,65 @@ public class BattleRosterTests
 
         Assert.Empty(battle.ExtraShootingOptions(Assert.Single(battle.Units)));
     }
+
+    private static Datasheet KeywordSheet(string id, string name, params string[] keywords) => new()
+    {
+        Id = id,
+        Name = name,
+        StatProfiles = [new StatProfile { Name = name, Wounds = "1" }],
+        Keywords = [.. keywords],
+    };
+
+    [Fact]
+    public void Army_keywords_collect_every_units_keywords_case_insensitively()
+    {
+        var overlord = KeywordSheet("overlord", "Overlord", "Necrons", "Infantry", "Character", "Overlord");
+        var warriors = KeywordSheet("necron-warriors", "Necron Warriors", "Necrons", "Infantry", "Necron Warriors");
+        var roster = new Roster
+        {
+            Units = [Unit("u1", "overlord"), Unit("u2", "necron-warriors", models: 10)],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(overlord, warriors));
+
+        Assert.Contains("character", battle.ArmyKeywords); // case-insensitive set
+        Assert.Contains("Necron Warriors", battle.ArmyKeywords);
+        Assert.DoesNotContain("Smoke", battle.ArmyKeywords);
+    }
+
+    [Fact]
+    public void Army_has_any_keyword_is_true_for_empty_requirements_and_present_keywords()
+    {
+        var overlord = KeywordSheet("overlord", "Overlord", "Necrons", "Character");
+        var battle = BattleRoster.Build(new Roster { Units = [Unit("u1", "overlord")] }, Catalogue(overlord));
+
+        Assert.True(battle.ArmyHasAnyKeyword([]));                       // empty = any unit qualifies
+        Assert.True(battle.ArmyHasAnyKeyword(["character"]));            // present (case-insensitive)
+        Assert.True(battle.ArmyHasAnyKeyword(["Monster", "Character"])); // any one present is enough
+        Assert.False(battle.ArmyHasAnyKeyword(["Smoke"]));              // absent → hidden
+        Assert.False(battle.ArmyHasAnyKeyword(["Explosives", "Grenades"]));
+    }
+
+    [Fact]
+    public void Need_to_know_hides_smokescreen_and_explosives_for_a_typical_necron_army()
+    {
+        // A Necrons army with no SMOKE / GRENADES / EXPLOSIVES unit.
+        var overlord = KeywordSheet("overlord", "Overlord", "Necrons", "Infantry", "Character", "Overlord");
+        var warriors = KeywordSheet("necron-warriors", "Necron Warriors", "Necrons", "Infantry", "Necron Warriors");
+        var battle = BattleRoster.Build(
+            new Roster { Units = [Unit("u1", "overlord"), Unit("u2", "necron-warriors", models: 10)] },
+            Catalogue(overlord, warriors));
+
+        bool Shown(string id)
+        {
+            var s = CoreStratagemCatalogue.All.Single(x => x.Id == id);
+            return battle.ArmyHasAnyKeyword(s.RequiredUnitKeywords);
+        }
+
+        Assert.False(Shown("15.05")); // Explosives — no GRENADES/EXPLOSIVES unit
+        Assert.False(Shown("15.10")); // Smokescreen — no SMOKE unit
+        Assert.False(Shown("15.06")); // Crushing Impact — no MONSTER/VEHICLE unit in this list
+        Assert.True(Shown("15.03"));  // Epic Challenge — Overlord is a CHARACTER
+        Assert.True(Shown("15.02"));  // Command Re-roll — universal
+    }
 }
