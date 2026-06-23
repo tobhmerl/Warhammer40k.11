@@ -82,6 +82,12 @@ public sealed class Enhancement
     public EnhancementEligibility Eligibility { get; set; } = new();
 
     /// <summary>
+    /// Whether this is a classic Character Enhancement or an 11th-edition unit <b>Upgrade</b> (assigned to a
+    /// whole non-Character unit, e.g. NECRON WARRIORS). Drives rule R6's target check and the configurator.
+    /// </summary>
+    public EnhancementScope Scope { get; set; } = EnhancementScope.Character;
+
+    /// <summary>
     /// The rules text shown on the bearer's card in Play Mode (treated as an ability). Empty until authored —
     /// when present and it names a phase ("…in your Command phase…"), Play Mode highlights it in that phase.
     /// </summary>
@@ -103,6 +109,16 @@ public sealed class Enhancement
     /// (<see cref="Catalogue.Datasheet.CanTakeEnhancements"/>) is checked separately by rule R6.
     /// </summary>
     public bool IsAvailableTo(Datasheet datasheet) => Eligibility.IsSatisfiedBy(datasheet);
+}
+
+/// <summary>Whether an <see cref="Enhancement"/> is assigned to a Character, or to a whole unit (an Upgrade).</summary>
+public enum EnhancementScope
+{
+    /// <summary>A classic Enhancement assigned to a Character model (the default).</summary>
+    Character = 0,
+
+    /// <summary>An 11th-edition Upgrade assigned to a whole non-Character unit (e.g. NECRON WARRIORS).</summary>
+    Unit = 1,
 }
 
 /// <summary>

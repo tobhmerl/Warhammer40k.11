@@ -202,10 +202,12 @@ public class RosterValidatorTests
     [Fact]
     public void R6_blocks_enhancement_on_non_eligible_unit()
     {
+        // A C'tan is a Character that cannot take Enhancements: a real Character-scope enhancement is blocked
+        // with the "cannot be given an Enhancement" message (not a membership/eligibility error).
         var cat = Cat(Sheet("ctan", "C'tan Shard", configure: d => { d.IsCharacter = true; d.CanTakeEnhancements = false; }));
-        var roster = Roster(ValidDetachment, 2000, Unit("ctan", configure: u => u.AssignedEnhancementId = "e1"));
+        var roster = Roster("cryptek-conclave", 2000, Unit("ctan", configure: u => u.AssignedEnhancementId = "abacus"));
 
-        var error = Assert.Single(Run(new EnhancementRule(), roster, cat));
+        var error = Assert.Single(Run(new EnhancementRule(), roster, cat, CryptekOnly()));
         Assert.Contains("cannot be given an Enhancement", error.Text);
     }
 
@@ -231,9 +233,9 @@ public class RosterValidatorTests
     [Fact]
     public void R6_stays_permissive_when_detachment_has_no_authored_enhancements()
     {
-        // Hand of the Dynasty has no 10th-MFM points yet, so its Enhancements list is empty (permissive).
+        // Skyshroud Spearhead has no authored enhancements yet, so R6 stays permissive (no membership check).
         var cat = Cat(Sheet("overlord", "Overlord", configure: Character));
-        var roster = Roster(ValidDetachment, 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "placeholder"));
+        var roster = Roster("skyshroud-spearhead", 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "placeholder"));
 
         Assert.Empty(Run(new EnhancementRule(), roster, cat));
     }
@@ -310,6 +312,52 @@ public class RosterValidatorTests
                 {
                     Id = "abacus", Name = "Quantum Abacus", Points = 15,
                     Eligibility = new EnhancementEligibility { RequiredKeywords = ["Cryptek"] },
+                },
+            ],
+        },
+    ];
+
+    [Fact]
+    public void R6_allows_a_unit_upgrade_on_a_matching_unit()
+    {
+        var cat = Cat(Sheet("warriors", "Necron Warriors", models: 10, configure: d => d.Keywords.Add("Necron Warriors")));
+        var roster = Roster("hand-of-the-dynasty", 2000, Unit("warriors", 10, configure: u => u.AssignedEnhancementId = "enlivened-sentinels"));
+
+        Assert.Empty(Run(new EnhancementRule(), roster, cat, UnitUpgradeDetachment()));
+    }
+
+    [Fact]
+    public void R6_blocks_a_unit_upgrade_on_a_character()
+    {
+        var cat = Cat(Sheet("overlord", "Overlord", configure: Character)); // a Character, not a NECRON WARRIORS unit
+        var roster = Roster("hand-of-the-dynasty", 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "enlivened-sentinels"));
+
+        var error = Assert.Single(Run(new EnhancementRule(), roster, cat, UnitUpgradeDetachment()));
+        Assert.Contains("unit Upgrade", error.Text);
+    }
+
+    [Fact]
+    public void R6_blocks_a_unit_upgrade_when_required_keyword_is_missing()
+    {
+        var cat = Cat(Sheet("immortals", "Immortals", models: 5, configure: d => d.Keywords.Add("Immortals")));
+        var roster = Roster("hand-of-the-dynasty", 2000, Unit("immortals", 5, configure: u => u.AssignedEnhancementId = "enlivened-sentinels"));
+
+        var error = Assert.Single(Run(new EnhancementRule(), roster, cat, UnitUpgradeDetachment()));
+        Assert.Contains("not eligible", error.Text);
+    }
+
+    private static List<Detachment> UnitUpgradeDetachment() =>
+    [
+        new()
+        {
+            Id = "hand-of-the-dynasty", Name = "Hand of the Dynasty",
+            Enhancements =
+            [
+                new Enhancement
+                {
+                    Id = "enlivened-sentinels", Name = "Enlivened Sentinels", Points = 20,
+                    Scope = EnhancementScope.Unit,
+                    Eligibility = new EnhancementEligibility { RequiredKeywords = ["Necron Warriors"] },
                 },
             ],
         },

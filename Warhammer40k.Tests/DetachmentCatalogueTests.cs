@@ -108,4 +108,40 @@ public class DetachmentCatalogueTests
         Assert.True(nano.AppliesInTurn(BattleTurn.Opponent));
         Assert.False(nano.AppliesInTurn(BattleTurn.Player));
     }
+
+    [Fact]
+    public void Cryptek_Conclave_enhancements_carry_text_and_eligibility()
+    {
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
+
+        // "CRYPTEK model only" enhancements require the Cryptek keyword.
+        var atomic = cryptek.FindEnhancement("atomic-disintegrators")!;
+        Assert.False(string.IsNullOrWhiteSpace(atomic.Text));
+        Assert.Equal(EnhancementScope.Character, atomic.Scope);
+        Assert.Contains("Cryptek", atomic.Eligibility.RequiredKeywords);
+        Assert.Contains("Cryptek", cryptek.FindEnhancement("gravitic-bolas")!.Eligibility.RequiredKeywords);
+
+        // "NECRONS model only" enhancements are unconstrained (any eligible Character).
+        var gauntlet = cryptek.FindEnhancement("gauntlet-of-compression")!;
+        Assert.False(string.IsNullOrWhiteSpace(gauntlet.Text));
+        Assert.True(gauntlet.Eligibility.IsUnconstrained);
+        Assert.True(cryptek.FindEnhancement("quantum-abacus")!.Eligibility.IsUnconstrained);
+    }
+
+    [Fact]
+    public void Hand_of_the_Dynasty_has_unit_scoped_upgrades()
+    {
+        var hotd = DetachmentCatalogue.FindById("hand-of-the-dynasty")!;
+
+        var sentinels = hotd.FindEnhancement("enlivened-sentinels")!;
+        Assert.Equal(EnhancementScope.Unit, sentinels.Scope);
+        Assert.Equal(20, sentinels.Points);
+        Assert.Contains("Necron Warriors", sentinels.Eligibility.RequiredKeywords);
+        Assert.False(string.IsNullOrWhiteSpace(sentinels.Text));
+
+        var tools = hotd.FindEnhancement("tools-of-dominion")!;
+        Assert.Equal(EnhancementScope.Unit, tools.Scope);
+        Assert.Equal(15, tools.Points);
+        Assert.Contains("Immortals", tools.Eligibility.RequiredKeywords);
+    }
 }

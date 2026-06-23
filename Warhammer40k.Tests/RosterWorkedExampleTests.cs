@@ -7,9 +7,9 @@ namespace Warhammer40k.Tests;
 
 /// <summary>
 /// The §6 worked example, validated end-to-end against the <b>real</b> embedded seed: Hand of the Dynasty @2000
-/// with an Overlord (Warlord + enhancement), two Necron Warriors (one led by the Overlord), and a C'tan Shard
-/// of the Nightbringer. Proves the roster is Ready only when every R-rule passes, and that the Nightbringer
-/// cannot be duplicated (R4) or made Warlord (R5).
+/// with an Overlord (Warlord), two Necron Warriors (one led by the Overlord, one carrying a unit Upgrade), and a
+/// C'tan Shard of the Nightbringer. Proves the roster is Ready only when every R-rule passes, and that the
+/// Nightbringer cannot be duplicated (R4) or made Warlord (R5).
 /// </summary>
 public class RosterWorkedExampleTests
 {
@@ -26,10 +26,10 @@ public class RosterWorkedExampleTests
     {
         var warriorsA = NewUnit("necron-warriors");
         var warriorsB = NewUnit("necron-warriors");
+        warriorsB.AssignedEnhancementId = "enlivened-sentinels"; // Hand of the Dynasty unit Upgrade (+20) on a NECRON WARRIORS unit
 
         var overlord = NewUnit("overlord");
         overlord.IsWarlord = true;
-        overlord.AssignedEnhancementId = "dynastic-heirloom"; // Hand of the Dynasty has no authored points yet → permissive (0 pts)
         overlord.AttachedToRosterUnitId = warriorsA.Id;       // attach the Overlord to a Warriors unit
 
         var nightbringer = NewUnit("ctan-shard-of-the-nightbringer");
@@ -45,8 +45,8 @@ public class RosterWorkedExampleTests
 
         var result = new RosterValidator().Validate(roster, Catalogue);
 
-        // Overlord 85 + Warriors 90 + Warriors 90 + Nightbringer 340 (+ enhancement 0) = 605.
-        Assert.Equal(605, result.TotalPoints);
+        // Overlord 85 + Warriors 90 + Warriors 90 + Nightbringer 340 + Enlivened Sentinels 20 = 625.
+        Assert.Equal(625, result.TotalPoints);
         Assert.True(result.TotalPoints <= roster.PointsLimit);
         Assert.Single(roster.Units, u => u.IsWarlord);                             // exactly one Warlord
         Assert.True(roster.Units.Count(u => !string.IsNullOrEmpty(u.AssignedEnhancementId)) <= 3); // ≤3 enhancements

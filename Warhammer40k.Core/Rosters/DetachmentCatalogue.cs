@@ -54,6 +54,26 @@ public static class DetachmentCatalogue
         d.Enabled = true;
         d.DetachmentPoints = 1;
         d.Tags = ["Dynasty"];
+
+        // 11th-edition Upgrades: assigned to a whole non-Character unit (EnhancementScope.Unit) rather than a
+        // Character. R6 + the configurator gate them by keyword eligibility; their text shows in Play Mode.
+        d.Enhancements =
+        [
+            new Enhancement
+            {
+                Id = "enlivened-sentinels", Name = "Enlivened Sentinels", Points = 20,
+                Scope = EnhancementScope.Unit,
+                Eligibility = new EnhancementEligibility { RequiredKeywords = ["Necron Warriors"] },
+                Text = "NECRON WARRIORS unit only. This unit has Scouts 5\".",
+            },
+            new Enhancement
+            {
+                Id = "tools-of-dominion", Name = "Tools of Dominion", Points = 15,
+                Scope = EnhancementScope.Unit,
+                Eligibility = new EnhancementEligibility { RequiredKeywords = ["Immortals"] },
+                Text = "IMMORTALS unit only. This unit's ranged attacks have [RAPID FIRE 1].",
+            },
+        ];
         d.Rules =
         [
             new DetachmentRule
@@ -116,6 +136,28 @@ public static class DetachmentCatalogue
             ("Quantum Abacus", 15));
         d.Enabled = true;
         d.DetachmentPoints = 2;
+
+        // Enhancement display text (shown on the bearer's card in Play Mode) + per-enhancement eligibility (R6).
+        // "CRYPTEK model only" requires the Cryptek keyword; "NECRONS model only" is unconstrained (R6 still
+        // requires the bearer to be a Character that can take Enhancements).
+        Author(d, "atomic-disintegrators",
+            "CRYPTEK model only. In your Shooting phase, each time the bearer's unit is selected to shoot, when " +
+            "selecting an ability for the Technosorcerous Augmentations Detachment rule, you can also select from " +
+            "the following abilities: [ANTI-MONSTER 5+], [ANTI-VEHICLE 5+].",
+            "Cryptek");
+        Author(d, "gauntlet-of-compression",
+            "NECRONS model only. Add 6\" to the Range characteristic of ranged weapons equipped by models in the " +
+            "bearer's unit.");
+        Author(d, "gravitic-bolas",
+            "CRYPTEK model only. In your Shooting phase, after the bearer has shot, select one enemy unit hit by " +
+            "one or more of those attacks (excluding TITANIC units); until the start of your next turn, that enemy " +
+            "unit is pinned. While a unit is pinned, subtract 2 from that unit's Move characteristic and subtract 2 " +
+            "from Charge rolls made for that unit.",
+            "Cryptek");
+        Author(d, "quantum-abacus",
+            "NECRONS model only. Each time you select the bearer's unit as the target of a Stratagem, roll one D6, " +
+            "adding 1 if it is within range of one or more objectives: on a 4+, you gain 1CP.");
+
         d.Rules =
         [
             new DetachmentRule
@@ -211,6 +253,21 @@ public static class DetachmentCatalogue
             .Select(e => new Enhancement { Id = Slugger.Slug(e.Name), Name = e.Name, Points = e.Points })
             .ToList(),
     };
+
+    /// <summary>
+    /// Sets a built-in enhancement's Play-Mode display <see cref="Enhancement.Text"/> and, when keywords are
+    /// supplied, its R6 eligibility (<see cref="EnhancementEligibility.RequiredKeywords"/>). No-op when the id
+    /// is not found.
+    /// </summary>
+    private static void Author(Detachment d, string enhancementId, string text, params string[] requiredKeywords)
+    {
+        var enhancement = d.FindEnhancement(enhancementId);
+        if (enhancement is null)
+            return;
+        enhancement.Text = text;
+        if (requiredKeywords.Length > 0)
+            enhancement.Eligibility.RequiredKeywords = [.. requiredKeywords];
+    }
 
     private static Detachment MakePantheon(string name)
     {

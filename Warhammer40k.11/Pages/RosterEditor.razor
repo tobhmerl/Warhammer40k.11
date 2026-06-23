@@ -251,10 +251,10 @@ else
 				</div>
 			}
 
-			@if (sheet.CanTakeEnhancements)
+			@if (ShowEnhancementBlock(sheet, u))
 			{
 				<div class="cfg-block">
-					<span class="cfg-label">Enhancement</span>
+					<span class="cfg-label">@(sheet.IsCharacter ? "Enhancement" : "Upgrade")</span>
 					@if (_detachments.All(d => d.Enhancements.Count == 0))
 					{
 						<p class="cfg-note">No enhancements available from your detachment(s) yet.</p>
@@ -591,12 +591,23 @@ else
 	}
 
 	private IEnumerable<Enhancement> EligibleEnhancements(Datasheet sheet, RosterUnit unit) =>
-		// Across every selected detachment: offer enhancements this character is eligible for (R6),
-		// but keep any current pick visible even if it became ineligible.
-		_detachments
-			.SelectMany(d => d.Enhancements)
-			.Where(e => e.IsAvailableTo(sheet)
-				|| string.Equals(e.Id, unit.AssignedEnhancementId, StringComparison.OrdinalIgnoreCase));
+		// Offer Character Enhancements to eligible characters, and unit Upgrades to eligible non-character units
+		// (R6); keep any current pick visible even if it became ineligible.
+		_detachments.SelectMany(d => d.Enhancements).Where(e => IsOfferable(e, sheet, unit));
+
+	private static bool IsOfferable(Enhancement enhancement, Datasheet sheet, RosterUnit unit)
+	{
+		if (string.Equals(enhancement.Id, unit.AssignedEnhancementId, StringComparison.OrdinalIgnoreCase))
+			return true; // keep the current pick visible
+		if (!enhancement.IsAvailableTo(sheet))
+			return false;
+		return enhancement.Scope == EnhancementScope.Unit ? !sheet.IsCharacter : sheet.CanTakeEnhancements;
+	}
+
+	// Show the picker for any Character (so it can read "None"/"no eligible") and for any non-character unit
+	// that qualifies for at least one Upgrade.
+	private bool ShowEnhancementBlock(Datasheet sheet, RosterUnit unit) =>
+		sheet.CanTakeEnhancements || EligibleEnhancements(sheet, unit).Any();
 
 	private static bool IsWargearSelected(RosterUnit unit, string groupId, string optionId)
 	{
