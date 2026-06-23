@@ -459,17 +459,28 @@ public sealed class BattleUnit
         || PhaseClassifier.InvulnerableSaveScoped(ability) is not null;
 
     /// <summary>
-    /// True when an ability is a <i>text</i> ability whose rules text is relevant to <paramref name="phase"/>,
-    /// so Play Mode should highlight it as "usable now". Abilities whose effect is applied straight to the card
+    /// True when an ability is a <i>text</i> ability whose rules text is relevant to <paramref name="phase"/>
+    /// in <paramref name="turn"/>, so Play Mode should highlight it as "usable now". The turn is read from the
+    /// text: "in your … phase" → your turn only, "in your opponent's … phase" → opponent's turn only, an
+    /// unqualified phase → either turn. Abilities whose effect is applied straight to the card
     /// (<see cref="BattleAbility.AppliedSummary"/> — leader conferrals and stat-changing enhancements) are
     /// always-on and are never phase-marked: stat abilities simply change the stats while they apply.
     /// </summary>
-    public static bool IsAbilityActiveInPhase(BattleAbility ability, BattlePhase phase) =>
-        ability.AppliedSummary is null && PhaseClassifier.Classify(ability.Ability).Contains(phase);
+    public static bool IsAbilityActiveInPhase(BattleAbility ability, BattlePhase phase, BattleTurn turn)
+    {
+        if (ability.AppliedSummary is not null)
+            return false;
+        if (!PhaseClassifier.Classify(ability.Ability).Contains(phase))
+            return false;
+        var scope = PhaseClassifier.TurnForPhase(ability.Ability.Name + " " + ability.Ability.Text, phase)
+            ?? StratagemTurn.Either;
+        return scope.Allows(turn);
+    }
 
-    /// <summary>How many of this group's text abilities are usable in <paramref name="phase"/> (drives the phase markers).</summary>
-    public int ActiveAbilityCount(BattlePhase phase) =>
-        CombinedAbilities.Count(a => IsAbilityActiveInPhase(a, phase));
+    /// <summary>How many of this group's text abilities are usable in <paramref name="phase"/> during
+    /// <paramref name="turn"/> (drives the phase markers).</summary>
+    public int ActiveAbilityCount(BattlePhase phase, BattleTurn turn) =>
+        CombinedAbilities.Count(a => IsAbilityActiveInPhase(a, phase, turn));
 
     /// <summary>
     /// When an ability is from an attached Leader and confers an effect on the led unit (e.g. "United In

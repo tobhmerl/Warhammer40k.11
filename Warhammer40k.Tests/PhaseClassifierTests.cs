@@ -32,6 +32,20 @@ public class PhaseClassifierTests
         Assert.Equal(value, parsed!.Value.Value);
         Assert.Equal(scope, parsed.Value.Scope);
     }
+
+    [Theory]
+    [InlineData("In your Command phase, gain 1CP.", BattlePhase.Command, StratagemTurn.Your)]
+    [InlineData("In your opponent's Shooting phase, do a thing.", BattlePhase.Shooting, StratagemTurn.Opponent)]
+    [InlineData("Your Shooting phase or the Fight phase.", BattlePhase.Shooting, StratagemTurn.Your)]
+    [InlineData("Your Shooting phase or the Fight phase.", BattlePhase.Fight, StratagemTurn.Either)]
+    [InlineData("Your opponent's Shooting phase or the Fight phase.", BattlePhase.Shooting, StratagemTurn.Opponent)]
+    [InlineData("Your opponent's Shooting phase or the Fight phase.", BattlePhase.Fight, StratagemTurn.Either)]
+    public void TurnForPhase_reads_the_qualifier_before_the_phase(string text, BattlePhase phase, StratagemTurn expected) =>
+        Assert.Equal(expected, PhaseClassifier.TurnForPhase(text, phase));
+
+    [Fact]
+    public void TurnForPhase_is_null_when_the_phase_is_not_named() =>
+        Assert.Null(PhaseClassifier.TurnForPhase("Each time this unit shoots, re-roll a 1.", BattlePhase.Shooting));
     private static Ability Ab(string name, string text) => new() { Name = name, Text = text };
 
     [Fact]

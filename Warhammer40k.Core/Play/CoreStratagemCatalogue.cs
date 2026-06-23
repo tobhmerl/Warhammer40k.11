@@ -164,5 +164,5 @@ public static class CoreStratagemCatalogue
     /// is preserved so the list reads the same as the cards.
     /// </summary>
     public static IReadOnlyList<CoreStratagem> Usable(BattlePhase phase, BattleTurn turn) =>
-        All.Where(s => s.AppliesInTurn(turn) && s.AppliesInPhase(phase)).ToList();
+        All.Where(s => s.UsableNow(phase, turn)).ToList();
 }

@@ -157,4 +157,28 @@ public class DetachmentCatalogueTests
         Assert.Equal(6, mod.Delta);
         Assert.Equal(WeaponClass.Ranged, mod.WeaponClass);
     }
+
+    [Fact]
+    public void Multi_phase_your_turn_stratagem_keeps_the_fight_phase_in_both_turns()
+    {
+        // "Your Shooting phase or the Fight phase": Shooting is your-turn-only; the Fight phase is either turn.
+        var molecular = DetachmentCatalogue.FindById("cryptek-conclave")!.Stratagems.Single(s => s.Name == "Molecular Targeting");
+
+        Assert.True(molecular.UsableNow(BattlePhase.Shooting, BattleTurn.Player));
+        Assert.False(molecular.UsableNow(BattlePhase.Shooting, BattleTurn.Opponent));
+        Assert.True(molecular.UsableNow(BattlePhase.Fight, BattleTurn.Player));
+        Assert.True(molecular.UsableNow(BattlePhase.Fight, BattleTurn.Opponent));
+    }
+
+    [Fact]
+    public void Multi_phase_opponent_turn_stratagem_keeps_the_fight_phase_in_both_turns()
+    {
+        // "Your opponent's Shooting phase or the Fight phase": Shooting is opponent-only; the Fight phase is either turn.
+        var swarm = DetachmentCatalogue.FindById("cryptek-conclave")!.Stratagems.Single(s => s.Name == "Microscarab Swarm");
+
+        Assert.True(swarm.UsableNow(BattlePhase.Shooting, BattleTurn.Opponent));
+        Assert.False(swarm.UsableNow(BattlePhase.Shooting, BattleTurn.Player));
+        Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Player));
+        Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Opponent));
+    }
 }

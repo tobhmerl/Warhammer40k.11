@@ -59,6 +59,43 @@ public static class PhaseClassifier
     /// <summary>True when an ability matches no phase cue and is therefore always-on / passive.</summary>
     public static bool IsPassive(Ability ability) => Classify(ability).Count == 0;
 
+    /// <summary>
+    /// Reads the turn a "<c>… phase</c>" mention is scoped to from the qualifier right before it: "your
+    /// opponent's <i>X</i> phase" → <see cref="StratagemTurn.Opponent"/>, "your <i>X</i> phase" →
+    /// <see cref="StratagemTurn.Your"/>, an unqualified "the <i>X</i> phase" → <see cref="StratagemTurn.Either"/>
+    /// (it happens in both turns — the Fight phase being the classic case). Returns <c>null</c> when the phase
+    /// is not named in the text (so callers can fall back to an authored value).
+    /// </summary>
+    public static StratagemTurn? TurnForPhase(string text, BattlePhase phase)
+    {
+        var needle = phase switch
+        {
+            BattlePhase.Command => "command phase",
+            BattlePhase.Movement => "movement phase",
+            BattlePhase.Shooting => "shooting phase",
+            BattlePhase.Charge => "charge phase",
+            BattlePhase.Fight => "fight phase",
+            _ => null,
+        };
+        if (needle is null || string.IsNullOrEmpty(text))
+            return null;
+
+        var lower = text.ToLowerInvariant();
+        var idx = lower.IndexOf(needle, StringComparison.Ordinal);
+        if (idx < 0)
+            return null;
+
+        // Look only at the words immediately before the phase name, so "or the Fight phase" stays Either even
+        // when an earlier clause said "your opponent's Shooting phase".
+        var start = Math.Max(0, idx - 24);
+        var prefix = lower.Substring(start, idx - start);
+        if (prefix.Contains("opponent", StringComparison.Ordinal))
+            return StratagemTurn.Opponent;
+        if (prefix.Contains("your", StringComparison.Ordinal))
+            return StratagemTurn.Your;
+        return StratagemTurn.Either;
+    }
+
     /// <summary>Parses the unit's invulnerable save (e.g. "4+") from its abilities, or null when it has none.</summary>
     public static string? InvulnerableSave(IEnumerable<Ability> abilities)
     {

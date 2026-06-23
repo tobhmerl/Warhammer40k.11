@@ -790,10 +790,36 @@ public class BattleRosterTests
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(imotekh)).Units);
         var grand = group.CombinedAbilities.Single(a => a.Ability.Name == "Grand Strategist");
 
-        Assert.True(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command));
-        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Shooting));
-        Assert.Equal(1, group.ActiveAbilityCount(BattlePhase.Command)); // passive invuln save is not counted
-        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Fight));
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command, BattleTurn.Player));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command, BattleTurn.Opponent)); // "your" → not the opponent's turn
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Shooting, BattleTurn.Player));
+        Assert.Equal(1, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Player)); // passive invuln save is not counted
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Opponent)); // Your-gated
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Fight, BattleTurn.Player));
+    }
+
+    [Fact]
+    public void Your_phase_ability_is_active_only_in_your_turn()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Aura", Text = "In your Command phase, do a thing." }]);
+        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "lord")] }, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Aura");
+
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Player));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Opponent));
+    }
+
+    [Fact]
+    public void Opponents_phase_ability_is_active_only_in_the_opponents_turn()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Dread Aura", Text = "In your opponent's Command phase, enemy units take a Battle-shock test." }]);
+        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "lord")] }, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Dread Aura");
+
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Opponent));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Player));
     }
 
     [Fact]
@@ -815,6 +841,6 @@ public class BattleRosterTests
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units);
 
         // It changes stats (always-on), so it is shown via the stat line, not the per-phase "usable now" markers.
-        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command));
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Player));
     }
 }

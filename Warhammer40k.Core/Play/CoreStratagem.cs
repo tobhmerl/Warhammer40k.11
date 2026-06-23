@@ -80,4 +80,34 @@ public sealed record CoreStratagem
         StratagemTurn.Opponent => turn == BattleTurn.Opponent,
         _ => false,
     };
+
+    /// <summary>
+    /// True when this stratagem is usable right now (the given phase + turn). Single-phase (and any-phase)
+    /// stratagems use the authored <see cref="Turn"/>; a stratagem listing two or more phases derives the turn
+    /// per phase from its <see cref="When"/> text (e.g. "your Shooting phase or the Fight phase" → your turn
+    /// for Shooting, either turn for Fight), so the Fight phase — which happens in both turns — isn't wrongly
+    /// locked to one turn.
+    /// </summary>
+    public bool UsableNow(BattlePhase phase, BattleTurn turn)
+    {
+        if (!AppliesInPhase(phase))
+            return false;
+        var scope = Phases.Count >= 2
+            ? PhaseClassifier.TurnForPhase(When, phase) ?? Turn
+            : Turn;
+        return scope.Allows(turn);
+    }
+}
+
+/// <summary>Turn-marker helpers shared by abilities and stratagems.</summary>
+public static class StratagemTurnExtensions
+{
+    /// <summary>True when a stratagem/ability scoped to <paramref name="scope"/> may act during <paramref name="turn"/>.</summary>
+    public static bool Allows(this StratagemTurn scope, BattleTurn turn) => scope switch
+    {
+        StratagemTurn.Either => true,
+        StratagemTurn.Your => turn == BattleTurn.Player,
+        StratagemTurn.Opponent => turn == BattleTurn.Opponent,
+        _ => false,
+    };
 }

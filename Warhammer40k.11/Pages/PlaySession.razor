@@ -206,7 +206,7 @@ else
 											{
 												<span class="chip warlord">Warlord</span>
 											}
-											@{ var usableNow = unit.ActiveAbilityCount(_phase); }
+											@{ var usableNow = unit.ActiveAbilityCount(_phase, _turn); }
 											@if (usableNow > 0)
 											{
 												<span class="chip usable" title="@($"{usableNow} abilit{(usableNow == 1 ? "y" : "ies")} usable in the {BattlePhases.Label(_phase)} phase — expand to see")">@usableNow usable</span>
@@ -415,7 +415,7 @@ else
 										{
 											var applied = a.AppliedSummary;
 											var hasText = !string.IsNullOrWhiteSpace(a.Ability.Text);
-											var activeNow = BattleUnit.IsAbilityActiveInPhase(a, _phase);
+											var activeNow = BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
 											var open = IsAbilityOpen(unit, a);
 											<li class="ability @(applied is not null ? "applied" : "") @(a.IsEnhancement ? "enh" : "") @(activeNow ? "now" : "") @(open ? "open" : "")" @key="a.Ability.Name">
 												@if (applied is not null)
@@ -737,7 +737,7 @@ else
 			if (_battle is not null)
 				foreach (var det in _battle.Detachments)
 					foreach (var s in det.Stratagems)
-						if (s.AppliesInPhase(_phase) && s.AppliesInTurn(_turn))
+						if (s.UsableNow(_phase, _turn))
 							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
 			return list;
 		}
@@ -877,7 +877,7 @@ else
 	// Stat abilities (leader conferrals, detachment buffs, stat-changing enhancements) are excluded: they are
 	// always-on and shown via the live stat cells, not as "usable now" prompts.
 	private int PhaseAbilityCount(BattlePhase phase) =>
-		_battle is null ? 0 : _battle.Units.Where(u => !IsDead(u)).Sum(u => u.ActiveAbilityCount(phase));
+		_battle is null ? 0 : _battle.Units.Where(u => !IsDead(u)).Sum(u => u.ActiveAbilityCount(phase, _turn));
 
 	// ---- Collapse ----
 	private bool IsCollapsed(BattleUnit unit) => _collapsed.Contains(unit.Id);
