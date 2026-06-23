@@ -181,4 +181,13 @@ public class DetachmentCatalogueTests
         Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Player));
         Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Opponent));
     }
+
+    [Fact]
+    public void Atomic_Disintegrators_adds_anti_monster_and_anti_vehicle_shooting_options()
+    {
+        var atomic = DetachmentCatalogue.FindById("cryptek-conclave")!.FindEnhancement("atomic-disintegrators")!;
+
+        Assert.Contains("Anti-MONSTER 5+", atomic.ShootingAbilityOptions);
+        Assert.Contains("Anti-VEHICLE 5+", atomic.ShootingAbilityOptions);
+    }
 }

@@ -340,22 +340,17 @@ html[data-scroll="up"] .hud {
 /* ---- Phase tab bar ---- */
 .phases {
     display: flex;
-    gap: 0.35rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.phases::-webkit-scrollbar {
-    display: none;
+    gap: 0.3rem;
 }
 
 .phase {
-    flex: 1 0 auto;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.1rem;
-    padding: 0.5rem 0.7rem;
+    padding: 0.5rem 0.25rem;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--surface);
@@ -378,9 +373,13 @@ html[data-scroll="up"] .hud {
 }
 
 .ph-name {
-    font-size: 0.82rem;
+    max-width: 100%;
+    font-size: clamp(0.62rem, 2.6vw, 0.82rem);
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Count of text abilities usable in a phase — so you can see at a glance where you have abilities to use. */
@@ -1296,16 +1295,20 @@ html[data-scroll="up"] .hud {
 }
 
 .turn {
-    flex: 1;
-    padding: 0.45rem 0.6rem;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.45rem 0.5rem;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--surface);
     color: var(--text-dim);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: clamp(0.72rem, 2.6vw, 0.82rem);
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: pointer;
     transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }

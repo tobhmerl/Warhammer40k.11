@@ -275,6 +275,22 @@ public sealed class BattleRoster
         return result;
     }
 
+    /// <summary>
+    /// Extra selectable shooting abilities granted by a unit member's setup-assigned Enhancement, on top of the
+    /// detachment's own weapon-ability choice — e.g. Atomic Disintegrators adds [ANTI-MONSTER 5+] /
+    /// [ANTI-VEHICLE 5+] to the bearer's CRYPTEK unit. De-duplicated, in bearer order.
+    /// </summary>
+    public IReadOnlyList<string> ExtraShootingOptions(BattleUnit unit)
+    {
+        var result = new List<string>();
+        foreach (var part in unit.Parts)
+            if (part.Enhancement is { } enh)
+                foreach (var option in enh.ShootingAbilityOptions)
+                    if (!result.Contains(option, StringComparer.OrdinalIgnoreCase))
+                        result.Add(option);
+        return result;
+    }
+
     private static bool ModelHasKeyword(BattlePart part, string keyword) =>
         string.IsNullOrEmpty(keyword)
         || part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase);

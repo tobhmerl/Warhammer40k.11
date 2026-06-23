@@ -106,6 +106,13 @@ public sealed class Enhancement
     /// </summary>
     public bool AffectsWholeUnit { get; set; }
 
+    /// <summary>
+    /// Extra selectable shooting abilities this Enhancement adds to its bearer's unit on top of the
+    /// detachment's own weapon-ability choice — e.g. Atomic Disintegrators adds [ANTI-MONSTER 5+] /
+    /// [ANTI-VEHICLE 5+] to the Technosorcerous Augmentations pick. Surfaced by Play Mode's shooting menu.
+    /// </summary>
+    public List<string> ShootingAbilityOptions { get; set; } = [];
+
     /// <summary>A compact one-line summary of <see cref="StatModifiers"/> for the "Applied: …" note; empty when none.</summary>
     public string EffectSummary => string.Join("; ", StatModifiers.Select(m => m.Describe()));
 

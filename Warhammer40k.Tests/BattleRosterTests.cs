@@ -843,4 +843,34 @@ public class BattleRosterTests
         // It changes stats (always-on), so it is shown via the stat line, not the per-phase "usable now" markers.
         Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Player));
     }
+
+    [Fact]
+    public void Enhancement_adds_extra_shooting_ability_options_for_its_bearer()
+    {
+        var plasmancer = Sheet("plasmancer", "Plasmancer", wounds: "4");
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "atomic-disintegrators", Name = "Atomic Disintegrators",
+            ShootingAbilityOptions = ["Anti-MONSTER 5+", "Anti-VEHICLE 5+"],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units = [Bearer("u1", "plasmancer", "atomic-disintegrators")],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(plasmancer), [detachment]);
+        var unit = Assert.Single(battle.Units);
+
+        Assert.Equal(new[] { "Anti-MONSTER 5+", "Anti-VEHICLE 5+" }, battle.ExtraShootingOptions(unit));
+    }
+
+    [Fact]
+    public void No_enhancement_means_no_extra_shooting_options()
+    {
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+        var battle = BattleRoster.Build(new Roster { Units = [Unit("u1", "necron-warriors", models: 10)] }, Catalogue(warriors));
+
+        Assert.Empty(battle.ExtraShootingOptions(Assert.Single(battle.Units)));
+    }
 }

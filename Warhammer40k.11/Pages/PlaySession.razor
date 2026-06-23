@@ -297,13 +297,17 @@ else
 									var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
 									var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
 									var shootChoices = _battle.WeaponChoicesFor(unit);
+									var shootOptions = shootChoices.SelectMany(c => c.Options)
+										.Concat(_battle.ExtraShootingOptions(unit))
+										.Distinct(StringComparer.OrdinalIgnoreCase)
+										.ToList();
 								}
-								@if (_phase == BattlePhase.Shooting && shootChoices.Count > 0)
+								@if (_phase == BattlePhase.Shooting && shootOptions.Count > 0)
 								{
 									<div class="shoot-choice">
-										<span class="sc-label">@shootChoices[0].Name</span>
+										<span class="sc-label">@(shootChoices.Count > 0 ? shootChoices[0].Name : "Shooting ability")</span>
 										<div class="sc-opts">
-											@foreach (var opt in shootChoices.SelectMany(c => c.Options).Distinct())
+											@foreach (var opt in shootOptions)
 											{
 												<button type="button" class="sc-opt @(IsChoiceSelected(unit, opt) ? "on" : "")" @onclick="() => ToggleChoice(unit, opt)">@opt</button>
 											}

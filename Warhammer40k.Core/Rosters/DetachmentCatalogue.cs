@@ -168,6 +168,10 @@ public static class DetachmentCatalogue
             new StatModifier { Target = StatTarget.Range, Delta = 6, WeaponClass = WeaponClass.Ranged, Label = "+6\" Range" },
         ];
 
+        // Atomic Disintegrators adds two more selectable shooting abilities (Technosorcerous Augmentations) to
+        // the bearer's CRYPTEK unit, on top of the detachment's standard five.
+        d.FindEnhancement("atomic-disintegrators")!.ShootingAbilityOptions = ["Anti-MONSTER 5+", "Anti-VEHICLE 5+"];
+
         d.Rules =
         [
             new DetachmentRule
