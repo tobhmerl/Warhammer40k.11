@@ -382,6 +382,29 @@ html[data-scroll="up"] .hud {
     letter-spacing: 0.04em;
 }
 
+/* Count of text abilities usable in a phase — so you can see at a glance where you have abilities to use. */
+.ph-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.05rem;
+    height: 1.05rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent-strong);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.phase.on .ph-badge {
+    background: rgba(4, 19, 13, 0.22);
+    border-color: rgba(4, 19, 13, 0.3);
+    color: #04130d;
+}
+
 /* ---- Unit cards ---- */
 .unit-list {
     list-style: none;
@@ -1017,6 +1040,48 @@ html[data-scroll="up"] .hud {
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+}
+
+/* Inline ability tags: an Enhancement source marker and a phase "Usable now" marker. */
+.a-tag {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.a-tag.enh {
+    color: #e9d8ff;
+    background: rgba(155, 109, 255, 0.16);
+    border-color: rgba(155, 109, 255, 0.5);
+}
+
+.a-tag.now {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+    box-shadow: var(--glow-sm);
+}
+
+/* An Enhancement entry gets a subtle accent edge so it reads as assigned wargear, not a printed ability. */
+.ability.enh {
+    border-left: 2px solid rgba(155, 109, 255, 0.55);
+}
+
+/* A text ability usable in the current phase is highlighted so you can see there are usable abilities now. */
+.ability.now {
+    border-color: var(--accent-line);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.10), transparent 70%),
+        var(--surface-2);
+    box-shadow: var(--glow-sm);
+}
+
+.ability.now .a-toggle .a-name {
+    color: var(--accent-strong);
 }
 
 /* ---- Leader detail in sheet ---- */

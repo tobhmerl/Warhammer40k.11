@@ -83,8 +83,13 @@ else
 			<nav class="phases" aria-label="Battle phases">
 				@foreach (var phase in BattlePhases.Ordered)
 				{
+					var usable = PhaseAbilityCount(phase);
 					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
 						<span class="ph-name">@BattlePhases.Label(phase)</span>
+						@if (usable > 0)
+						{
+							<span class="ph-badge" title="@($"{usable} usable {(usable == 1 ? "ability" : "abilities")} this phase")">@usable</span>
+						}
 					</button>
 				}
 			</nav>
@@ -390,14 +395,20 @@ else
 									<ul class="abilities">
 										@foreach (var a in unit.CombinedAbilities)
 										{
-											var applied = unit.AppliedSummaryFor(a.Ability.Name);
+											var applied = a.AppliedSummary;
+											var hasText = !string.IsNullOrWhiteSpace(a.Ability.Text);
+											var activeNow = BattleUnit.IsAbilityActiveInPhase(a, _phase);
 											var open = IsAbilityOpen(unit, a);
-											<li class="ability @(applied is not null ? "applied" : "") @(open ? "open" : "")" @key="a">
+											<li class="ability @(applied is not null ? "applied" : "") @(a.IsEnhancement ? "enh" : "") @(activeNow ? "now" : "") @(open ? "open" : "")" @key="a.Ability.Name">
 												@if (applied is not null)
 												{
 													<div class="a-row">
 														<span class="a-name">
 															@a.Ability.Name
+															@if (a.IsEnhancement)
+															{
+																<span class="a-tag enh">Enhancement</span>
+															}
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="a-src">@a.Source</span>
@@ -406,12 +417,20 @@ else
 														<span class="a-applied" title="Applied to this unit's stats or weapons">Applied: @applied</span>
 													</div>
 												}
-												else
+												else if (hasText)
 												{
 													<button type="button" class="a-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
 														<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 														<span class="a-name">
 															@a.Ability.Name
+															@if (a.IsEnhancement)
+															{
+																<span class="a-tag enh">Enhancement</span>
+															}
+															@if (activeNow)
+															{
+																<span class="a-tag now" title="@($"Usable in the {BattlePhases.Label(_phase)} phase")">Usable now</span>
+															}
 															@if (unit.Parts.Count > 1)
 															{
 																<span class="a-src">@a.Source</span>
@@ -422,6 +441,22 @@ else
 													{
 														<p class="a-text">@Clean(a.Ability.Text)</p>
 													}
+												}
+												else
+												{
+													<div class="a-row">
+														<span class="a-name">
+															@a.Ability.Name
+															@if (a.IsEnhancement)
+															{
+																<span class="a-tag enh">Enhancement</span>
+															}
+															@if (unit.Parts.Count > 1)
+															{
+																<span class="a-src">@a.Source</span>
+															}
+														</span>
+													</div>
 												}
 											</li>
 									}
@@ -777,6 +812,12 @@ else
 	}
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
+
+	// Across all living groups, the number of text abilities usable in a phase — drives the phase-tab markers.
+	// Stat abilities (leader conferrals, detachment buffs, stat-changing enhancements) are excluded: they are
+	// always-on and shown via the live stat cells, not as "usable now" prompts.
+	private int PhaseAbilityCount(BattlePhase phase) =>
+		_battle is null ? 0 : _battle.Units.Where(u => !IsDead(u)).Sum(u => u.ActiveAbilityCount(phase));
 
 	// ---- Collapse ----
 	private bool IsCollapsed(BattleUnit unit) => _collapsed.Contains(unit.Id);

@@ -82,6 +82,22 @@ public sealed class Enhancement
     public EnhancementEligibility Eligibility { get; set; } = new();
 
     /// <summary>
+    /// The rules text shown on the bearer's card in Play Mode (treated as an ability). Empty until authored —
+    /// when present and it names a phase ("…in your Command phase…"), Play Mode highlights it in that phase.
+    /// </summary>
+    public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Numeric characteristic buffs this Enhancement confers on its bearer (e.g. <c>+1</c> Wounds). When set,
+    /// Play Mode applies them to the bearer's live stat line and shows the change as an "Applied" note rather
+    /// than prose, mirroring leader conferrals / detachment buffs.
+    /// </summary>
+    public List<StatModifier> StatModifiers { get; set; } = [];
+
+    /// <summary>A compact one-line summary of <see cref="StatModifiers"/> for the "Applied: …" note; empty when none.</summary>
+    public string EffectSummary => string.Join("; ", StatModifiers.Select(m => m.Describe()));
+
+    /// <summary>
     /// True when <paramref name="datasheet"/> satisfies this enhancement's keyword constraints. This is only
     /// the per-enhancement constraint; whether the unit can take Enhancements at all
     /// (<see cref="Catalogue.Datasheet.CanTakeEnhancements"/>) is checked separately by rule R6.

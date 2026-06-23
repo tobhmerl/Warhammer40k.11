@@ -550,4 +550,139 @@ public class BattleRosterTests
         Assert.Contains("Lethal Hits", battle.GrantedWeaponAbilities(group, destroyersPart, ranged: false), StringComparer.OrdinalIgnoreCase);
         Assert.Equal("Lethal Hits on melee weapons", group.AppliedSummaryFor("United In Destruction"));
     }
+
+    // ---------- Setup-assigned Enhancements surface in Play Mode as abilities / stat changes ----------
+
+    private static Detachment EnhancementDetachment(Enhancement enhancement) => new()
+    {
+        Id = "test-detachment",
+        Name = "Test Detachment",
+        Enhancements = [enhancement],
+    };
+
+    private static RosterUnit Bearer(string id, string datasheetId, string enhancementId, int models = 1, string? attachedTo = null)
+    {
+        var unit = Unit(id, datasheetId, models: models, attachedTo: attachedTo);
+        unit.AssignedEnhancementId = enhancementId;
+        return unit;
+    }
+
+    [Fact]
+    public void Assigned_text_enhancement_surfaces_as_an_ability_on_the_bearer()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4");
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "dread-majesty", Name = "Dread Majesty", Points = 30,
+            Text = "In your Command phase, this model's terrifying presence intensifies.",
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units = [Bearer("u1", "overlord", "dread-majesty")],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units);
+
+        Assert.Same(detachment.Enhancements[0], group.Primary.Enhancement);
+        var enh = Assert.Single(group.CombinedAbilities, a => a.IsEnhancement);
+        Assert.Equal("Dread Majesty", enh.Ability.Name);
+        Assert.Equal("Overlord", enh.Source);
+        Assert.Null(enh.AppliedSummary); // text enhancement → shown as prose, not an "Applied" stat note
+    }
+
+    [Fact]
+    public void Stat_enhancement_buffs_the_bearer_statline_and_shows_an_applied_summary()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4");
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "sempiternal-weave", Name = "Sempiternal Weave", Points = 15,
+            StatModifiers = [new StatModifier { Target = StatTarget.Wounds, Delta = 1 }],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units = [Bearer("u1", "overlord", "sempiternal-weave")],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(overlord), [detachment]);
+        var group = Assert.Single(battle.Units);
+
+        Assert.Contains(battle.UnitStatModifiers(group, group.Primary), m => m.Target == StatTarget.Wounds && m.Delta == 1);
+        var enh = Assert.Single(group.CombinedAbilities, a => a.IsEnhancement);
+        Assert.False(string.IsNullOrEmpty(enh.AppliedSummary)); // stat enhancement → "Applied: …"
+    }
+
+    [Fact]
+    public void Weapon_enhancement_buffs_only_the_bearers_matching_weapons()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4",
+            weapons: [new WeaponProfile { Name = "Overlord's blade", Type = "Melee", Attacks = "4" }]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged" }]);
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "honed-edge", Name = "Honed Edge", Points = 10,
+            StatModifiers = [new StatModifier { Target = StatTarget.Attacks, Delta = 1, WeaponClass = WeaponClass.Melee }],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units =
+            [
+                Bearer("ov", "overlord", "honed-edge", attachedTo: "wa"),
+                Unit("wa", "necron-warriors", models: 10),
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(overlord, warriors), [detachment]);
+        var group = Assert.Single(battle.Units);
+        var bearer = group.Parts.Single(p => p.Datasheet.Id == "overlord");
+
+        Assert.Contains(battle.WeaponStatModifiers(group, bearer, ranged: false), m => m.Target == StatTarget.Attacks);
+        Assert.Empty(battle.WeaponStatModifiers(group, bearer, ranged: true));        // melee-only buff
+        Assert.Empty(battle.WeaponStatModifiers(group, group.Primary, ranged: false)); // bodyguard isn't the bearer
+    }
+
+    [Fact]
+    public void Active_ability_count_includes_phase_text_abilities_and_excludes_passives()
+    {
+        var imotekh = Sheet("imotekh", "Imotekh", wounds: "6", abilities:
+        [
+            new Ability { Name = "Grand Strategist", Text = "At the start of your Command phase, you gain 1CP." },
+            new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." },
+        ]);
+        var roster = new Roster { Units = [Unit("u1", "imotekh")] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(imotekh)).Units);
+        var grand = group.CombinedAbilities.Single(a => a.Ability.Name == "Grand Strategist");
+
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Shooting));
+        Assert.Equal(1, group.ActiveAbilityCount(BattlePhase.Command)); // passive invuln save is not counted
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Fight));
+    }
+
+    [Fact]
+    public void Stat_enhancement_is_never_phase_marked_even_when_its_text_names_a_phase()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4");
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "phylactery", Name = "Veil Phylactery", Points = 10,
+            Text = "In your Command phase, this model regains a lost wound.",
+            StatModifiers = [new StatModifier { Target = StatTarget.Wounds, Delta = 1 }],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units = [Bearer("u1", "overlord", "phylactery")],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units);
+
+        // It changes stats (always-on), so it is shown via the stat line, not the per-phase "usable now" markers.
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command));
+    }
 }

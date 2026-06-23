@@ -57,6 +57,19 @@ public sealed class BattleRoster
             order.Add(unit.Id);
         }
 
+        // Resolve each character's setup-assigned Enhancement against the selected detachments, so Play Mode
+        // can surface it on the bearer's card as an ability (live stat change or rules text).
+        foreach (var unit in roster.Units)
+        {
+            if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
+                continue;
+            if (!parts.TryGetValue(unit.Id, out var bearer))
+                continue;
+            bearer.Enhancement = detachments
+                .Select(d => d.FindEnhancement(unit.AssignedEnhancementId))
+                .FirstOrDefault(e => e is not null);
+        }
+
         // Second pass: fold attached Leaders into their bodyguard; a dangling attachment stays standalone.
         var attachedToHost = new Dictionary<string, List<BattlePart>>(StringComparer.Ordinal);
         var absorbed = new HashSet<string>(StringComparer.Ordinal);
@@ -171,6 +184,12 @@ public sealed class BattleRoster
                 if (buff.Modifier.IsWeaponStat && ClassMatches(buff.Modifier.WeaponClass, ranged) && BuffApplies(unit, part, buff))
                     result.Add(buff.Modifier);
 
+        // The bearer's setup-assigned Enhancement buffs its own weapons.
+        if (part.Enhancement is { } enh)
+            foreach (var mod in enh.StatModifiers)
+                if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
+                    result.Add(mod);
+
         return result;
     }
 
@@ -192,6 +211,12 @@ public sealed class BattleRoster
             foreach (var buff in detachment.StatBuffs)
                 if (!buff.Modifier.IsWeaponStat && BuffApplies(unit, part, buff))
                     result.Add(buff.Modifier);
+
+        // The bearer's setup-assigned Enhancement buffs its own statline.
+        if (part.Enhancement is { } enh)
+            foreach (var mod in enh.StatModifiers)
+                if (!mod.IsWeaponStat)
+                    result.Add(mod);
 
         return result;
     }
@@ -315,7 +340,9 @@ public sealed class BattleUnit
 
     /// <summary>
     /// Every ability across the group (primary unit first, then attached Leaders), de-duplicated by name so
-    /// shared rules aren't repeated. Each entry records which member it came from for display.
+    /// shared rules aren't repeated, followed by any setup-assigned Enhancements on the group's characters.
+    /// Each entry records which member it came from, whether it is an Enhancement, and — for leader conferrals
+    /// or stat-changing enhancements — its applied-effect summary.
     /// </summary>
     public IReadOnlyList<BattleAbility> CombinedAbilities
     {
@@ -324,12 +351,57 @@ public sealed class BattleUnit
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var result = new List<BattleAbility>();
             foreach (var part in Parts)
+            {
                 foreach (var ability in part.Datasheet.Abilities)
                     if (seen.Add(ability.Name))
-                        result.Add(new BattleAbility(ability, part.Datasheet.Name));
+                        result.Add(new BattleAbility(ability, part.Datasheet.Name)
+                        {
+                            AppliedSummary = ConferredSummaryFor(part, ability.Name),
+                        });
+
+                // A character's setup-assigned Enhancement is shown on its card as an ability: as a live stat
+                // change ("Applied: …") when it buffs stats, otherwise as its rules text.
+                if (part.Enhancement is { } enh && seen.Add(enh.Name))
+                {
+                    var summary = enh.EffectSummary;
+                    result.Add(new BattleAbility(new Ability { Name = enh.Name, Text = enh.Text }, part.Datasheet.Name)
+                    {
+                        IsEnhancement = true,
+                        AppliedSummary = string.IsNullOrWhiteSpace(summary) ? null : summary,
+                    });
+                }
+            }
             return result;
         }
     }
+
+    /// <summary>
+    /// The "Applied: …" summary for a leader's conferral ability (e.g. "United In Destruction" → [LETHAL HITS]),
+    /// or null when the ability is ordinary (collapsible) text.
+    /// </summary>
+    private static string? ConferredSummaryFor(BattlePart part, string abilityName)
+    {
+        if (!part.IsLeader)
+            return null;
+        foreach (var conferral in part.Datasheet.LeaderConferrals)
+            if (!conferral.IsEmpty
+                && string.Equals(conferral.SourceAbility, abilityName, StringComparison.OrdinalIgnoreCase))
+                return conferral.Summary;
+        return null;
+    }
+
+    /// <summary>
+    /// True when an ability is a <i>text</i> ability whose rules text is relevant to <paramref name="phase"/>,
+    /// so Play Mode should highlight it as "usable now". Abilities whose effect is applied straight to the card
+    /// (<see cref="BattleAbility.AppliedSummary"/> — leader conferrals and stat-changing enhancements) are
+    /// always-on and are never phase-marked: stat abilities simply change the stats while they apply.
+    /// </summary>
+    public static bool IsAbilityActiveInPhase(BattleAbility ability, BattlePhase phase) =>
+        ability.AppliedSummary is null && PhaseClassifier.Classify(ability.Ability).Contains(phase);
+
+    /// <summary>How many of this group's text abilities are usable in <paramref name="phase"/> (drives the phase markers).</summary>
+    public int ActiveAbilityCount(BattlePhase phase) =>
+        CombinedAbilities.Count(a => IsAbilityActiveInPhase(a, phase));
 
     /// <summary>
     /// When an ability is from an attached Leader and confers an effect on the led unit (e.g. "United In
@@ -348,7 +420,18 @@ public sealed class BattleUnit
 }
 
 /// <summary>An ability shown on a battle card, tagged with the member datasheet it belongs to.</summary>
-public sealed record BattleAbility(Ability Ability, string Source);
+public sealed record BattleAbility(Ability Ability, string Source)
+{
+    /// <summary>True when this entry is a setup-assigned Enhancement rather than a printed datasheet ability.</summary>
+    public bool IsEnhancement { get; init; }
+
+    /// <summary>
+    /// Non-null when this ability's effect is applied straight to the card (a leader conferral or an
+    /// enhancement's stat buff): the short "Applied: …" summary to show instead of, or alongside, prose.
+    /// Such "stat" abilities are always-on and are excluded from the per-phase "usable now" markers.
+    /// </summary>
+    public string? AppliedSummary { get; init; }
+}
 
 /// <summary>One datasheet's contribution to a <see cref="BattleUnit"/> (the unit itself, or an attached Leader).</summary>
 public sealed class BattlePart
@@ -372,6 +455,12 @@ public sealed class BattlePart
 
     /// <summary>True when this part is a Leader attached to the group's primary unit.</summary>
     public bool IsLeader { get; internal set; }
+
+    /// <summary>
+    /// The Enhancement assigned to this part's character in setup (resolved from the selected detachment), or
+    /// null. Drives Play Mode's enhancement ability / live stat change on the bearer's card.
+    /// </summary>
+    public Enhancement? Enhancement { get; internal set; }
 
     /// <summary>Models in this part.</summary>
     public int ModelCount => Unit.ModelCount;
