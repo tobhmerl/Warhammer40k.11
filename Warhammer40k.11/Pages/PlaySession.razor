@@ -6,6 +6,7 @@
 @using Warhammer40k._11.Components
 @inject IApiClient Api
 @inject IJSRuntime JS
+@inject SettingsState Settings
 
 <PageTitle>TombWorld — @(_roster?.Name ?? "Play")</PageTitle>
 
@@ -67,8 +68,8 @@ else
 			</div>
 		</div>
 
-		@* Floating control HUD: sticks to the bottom, hides while scrolling up, reappears while scrolling down. *@
-		<div class="hud">
+		@* Control HUD: sticks to the bottom. Floating (default) auto-hides while scrolling up; sticky stays put. *@
+		<div class="hud @(_hudSticky ? "sticky" : null)">
 			<div class="turn-toggle" role="group" aria-label="Whose turn it is">
 				<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
 						aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)">
@@ -639,6 +640,9 @@ else
 	// keyed by unit id -> selected part's roster-unit id. Click the member name again to clear.
 	private readonly Dictionary<string, string> _selectedMember = new(StringComparer.Ordinal);
 
+	// Whether the bottom control HUD is pinned (always visible) instead of floating/auto-hiding. User preference.
+	private bool _hudSticky;
+
 	protected override async Task OnParametersSetAsync()
 	{
 		if (_loadedId == Id)
@@ -662,6 +666,9 @@ else
 		_authenticated = user.IsAuthenticated;
 		if (_authenticated)
 		{
+			await Settings.InitializeAsync();
+			_hudSticky = Settings.PlayHudSticky;
+
 			if (_catalogue.Datasheets.Count == 0)
 				_catalogue = await Api.GetCatalogueAsync();
 

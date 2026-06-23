@@ -18,6 +18,9 @@ public sealed class SettingsState(IApiClient api, IJSRuntime js)
     /// <summary>Default points limit pre-filled in the New-Roster wizard.</summary>
     public int DefaultPointsLimit => Current.DefaultPointsLimit;
 
+    /// <summary>Whether the Play Mode control HUD is pinned (sticky) rather than floating/auto-hiding.</summary>
+    public bool PlayHudSticky => Current.PlayHudSticky;
+
     /// <summary>Raised after settings load or change.</summary>
     public event Action? Changed;
 

@@ -76,6 +76,24 @@
 			</div>
 		</section>
 
+		<section class="card pad">
+			<h2 class="sec-h">Play Mode control bar</h2>
+			<p class="muted">Choose how the turn &amp; phase bar behaves on the battle screen. Try both in a game and keep the one you prefer.</p>
+			<button type="button" role="switch" aria-checked="@_settings.PlayHudSticky"
+					class="switch @(_settings.PlayHudSticky ? "on" : "")"
+					@onclick="() => _settings.PlayHudSticky = !_settings.PlayHudSticky">
+				<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+				<span class="switch-text">
+					<span class="switch-name">@(_settings.PlayHudSticky ? "Sticky — always visible" : "Floating — auto-hides")</span>
+					<span class="switch-desc">
+						@(_settings.PlayHudSticky
+							? "The bar stays pinned to the bottom at all times."
+							: "The bar floats and slides away while you scroll up.")
+					</span>
+				</span>
+			</button>
+		</section>
+
 		<div class="save-row">
 			<button class="btn primary" type="button" disabled="@_saving" @onclick="SaveAsync">
 				@(_saving ? "Saving…" : "Save settings")
@@ -274,5 +292,6 @@
 	{
 		DefaultPointsLimit = s.DefaultPointsLimit,
 		Theme = s.Theme,
+		PlayHudSticky = s.PlayHudSticky,
 	};
 }

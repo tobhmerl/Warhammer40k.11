@@ -15,6 +15,12 @@ public sealed class UserSettings
     /// <summary>The chosen UI theme id (one of <see cref="AppThemes.All"/>); defaults to phosphor green.</summary>
     public string Theme { get; set; } = AppThemes.Default;
 
+    /// <summary>
+    /// Play Mode control HUD (turn toggle + phase bar) behaviour. <c>false</c> (default) = a floating bar that
+    /// auto-hides while scrolling up; <c>true</c> = a sticky bar pinned to the bottom and always visible.
+    /// </summary>
+    public bool PlayHudSticky { get; set; }
+
     /// <summary>A fresh settings object with built-in defaults.</summary>
     public static UserSettings Default => new();
 }

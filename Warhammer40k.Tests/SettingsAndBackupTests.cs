@@ -17,7 +17,7 @@ public class SettingsAndBackupTests
     [Fact]
     public void SettingsEntity_round_trips_values()
     {
-        var settings = new UserSettings { DefaultPointsLimit = 1500, Theme = "arcane" };
+        var settings = new UserSettings { DefaultPointsLimit = 1500, Theme = "arcane", PlayHudSticky = true };
 
         var entity = SettingsEntity.From("github|7", settings);
         var back = entity.ToSettings();
@@ -26,6 +26,14 @@ public class SettingsAndBackupTests
         Assert.Equal("settings", entity.RowKey);
         Assert.Equal(1500, back.DefaultPointsLimit);
         Assert.Equal("arcane", back.Theme);
+        Assert.True(back.PlayHudSticky);
+    }
+
+    [Fact]
+    public void SettingsEntity_defaults_play_hud_to_floating()
+    {
+        Assert.False(UserSettings.Default.PlayHudSticky);
+        Assert.False(SettingsEntity.From("u", UserSettings.Default).ToSettings().PlayHudSticky);
     }
 
     [Fact]

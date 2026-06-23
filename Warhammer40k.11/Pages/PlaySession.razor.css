@@ -65,6 +65,14 @@ html[data-scroll="up"] .hud {
     pointer-events: none;
 }
 
+/* Sticky preference: pin the HUD to the bottom and always show it (override the scroll-up auto-hide). */
+.hud.sticky,
+html[data-scroll="up"] .hud.sticky {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .hud-meta {
     display: flex;
     flex-wrap: wrap;
