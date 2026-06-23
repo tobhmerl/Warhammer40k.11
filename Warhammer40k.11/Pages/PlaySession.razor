@@ -331,7 +331,7 @@ else
 														</div>
 													}
 													<div class="statgrid weapongrid">
-														<div class="st"><span class="lab">Rng</span><span class="val">@Dash(row.Weapon.Range)</span></div>
+														<div class="st @(StatBuffed(row.Weapon.Range, rwMods, StatTarget.Range) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Range)"><span class="lab">Rng</span><span class="val">@StatCell(row.Weapon.Range, rwMods, StatTarget.Range)</span></div>
 														<div class="st @(StatBuffed(row.Weapon.Attacks, rwMods, StatTarget.Attacks) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Attacks)"><span class="lab">A</span><span class="val">@StatCell(row.Weapon.Attacks, rwMods, StatTarget.Attacks)</span></div>
 														<div class="st @(StatBuffed(row.Weapon.Skill, rwMods, StatTarget.Skill) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Skill)"><span class="lab">BS</span><span class="val">@StatCell(row.Weapon.Skill, rwMods, StatTarget.Skill)</span></div>
 														<div class="st @(StatBuffed(row.Weapon.Strength, rwMods, StatTarget.Strength) ? "buffed" : "")" title="@StatTitle(rwMods, StatTarget.Strength)"><span class="lab">S</span><span class="val">@StatCell(row.Weapon.Strength, rwMods, StatTarget.Strength)</span></div>

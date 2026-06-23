@@ -184,11 +184,11 @@ public sealed class BattleRoster
                 if (buff.Modifier.IsWeaponStat && ClassMatches(buff.Modifier.WeaponClass, ranged) && BuffApplies(unit, part, buff))
                     result.Add(buff.Modifier);
 
-        // The bearer's setup-assigned Enhancement buffs its own weapons.
-        if (part.Enhancement is { } enh)
-            foreach (var mod in enh.StatModifiers)
-                if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
-                    result.Add(mod);
+        // Setup-assigned Enhancements buff the bearer's own weapons, or every model in the bearer's unit when
+        // the enhancement says so (e.g. Gauntlet of Compression's +6" Range across the unit).
+        foreach (var mod in EnhancementStatModifiers(unit, part))
+            if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
+                result.Add(mod);
 
         return result;
     }
@@ -212,13 +212,31 @@ public sealed class BattleRoster
                 if (!buff.Modifier.IsWeaponStat && BuffApplies(unit, part, buff))
                     result.Add(buff.Modifier);
 
-        // The bearer's setup-assigned Enhancement buffs its own statline.
-        if (part.Enhancement is { } enh)
-            foreach (var mod in enh.StatModifiers)
-                if (!mod.IsWeaponStat)
-                    result.Add(mod);
+        // Setup-assigned Enhancements buff the bearer's own statline, or every model in the bearer's unit when
+        // the enhancement is unit-wide.
+        foreach (var mod in EnhancementStatModifiers(unit, part))
+            if (!mod.IsWeaponStat)
+                result.Add(mod);
 
         return result;
+    }
+
+    /// <summary>
+    /// The stat modifiers from setup-assigned Enhancements that apply to <paramref name="part"/>: the part's
+    /// own enhancement, plus any unit-wide (<see cref="Enhancement.AffectsWholeUnit"/>) enhancement carried by
+    /// another model in the same combat group.
+    /// </summary>
+    private static IEnumerable<StatModifier> EnhancementStatModifiers(BattleUnit unit, BattlePart part)
+    {
+        foreach (var member in unit.Parts)
+        {
+            if (member.Enhancement is not { } enh)
+                continue;
+            if (!enh.AffectsWholeUnit && !ReferenceEquals(member, part))
+                continue;
+            foreach (var mod in enh.StatModifiers)
+                yield return mod;
+        }
     }
 
     /// <summary>Unit-wide abilities granted to this group by attached Leaders (e.g. "Feel No Pain 5+").</summary>

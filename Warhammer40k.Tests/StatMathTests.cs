@@ -39,6 +39,12 @@ public class StatMathTests
         Assert.Equal(expected, StatMath.Apply(raw, delta));
 
     [Theory]
+    [InlineData("24\"", 6, "30\"")] // Gauntlet of Compression: +6" weapon Range
+    [InlineData("12\"", 6, "18\"")]
+    public void Range_adds_delta_to_inches(string raw, int delta, string expected) =>
+        Assert.Equal(expected, StatMath.Apply(raw, delta));
+
+    [Theory]
     [InlineData("D6", 1, "D6+1")]    // no constant → fold into a formula
     [InlineData("D3+1", 1, "D3+2")]  // existing constant → combine
     [InlineData("D3+1", -1, "D3")]   // constant cancels out

@@ -100,6 +100,12 @@ public sealed class Enhancement
     /// </summary>
     public List<StatModifier> StatModifiers { get; set; } = [];
 
+    /// <summary>
+    /// When true, <see cref="StatModifiers"/> apply to <b>every model in the bearer's unit</b> (the whole
+    /// combat group in Play Mode), not just the bearer — e.g. Gauntlet of Compression's <c>+6"</c> Range.
+    /// </summary>
+    public bool AffectsWholeUnit { get; set; }
+
     /// <summary>A compact one-line summary of <see cref="StatModifiers"/> for the "Applied: …" note; empty when none.</summary>
     public string EffectSummary => string.Join("; ", StatModifiers.Select(m => m.Describe()));
 

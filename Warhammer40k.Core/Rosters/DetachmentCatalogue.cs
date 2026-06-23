@@ -1,3 +1,4 @@
+using Warhammer40k.Core.Catalogue;
 using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Text;
 
@@ -157,6 +158,15 @@ public static class DetachmentCatalogue
         Author(d, "quantum-abacus",
             "NECRONS model only. Each time you select the bearer's unit as the target of a Stratagem, roll one D6, " +
             "adding 1 if it is within range of one or more objectives: on a 4+, you gain 1CP.");
+
+        // Gauntlet of Compression is a live, unit-wide buff: +6" Range on every ranged weapon in the bearer's
+        // unit. Play Mode applies it to the whole combat group and shows the increased Rng on each weapon.
+        var gauntlet = d.FindEnhancement("gauntlet-of-compression")!;
+        gauntlet.AffectsWholeUnit = true;
+        gauntlet.StatModifiers =
+        [
+            new StatModifier { Target = StatTarget.Range, Delta = 6, WeaponClass = WeaponClass.Ranged, Label = "+6\" Range" },
+        ];
 
         d.Rules =
         [

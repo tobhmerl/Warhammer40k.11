@@ -1,3 +1,4 @@
+using Warhammer40k.Core.Catalogue;
 using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
@@ -143,5 +144,17 @@ public class DetachmentCatalogueTests
         Assert.Equal(EnhancementScope.Unit, tools.Scope);
         Assert.Equal(15, tools.Points);
         Assert.Contains("Immortals", tools.Eligibility.RequiredKeywords);
+    }
+
+    [Fact]
+    public void Gauntlet_of_Compression_is_a_unit_wide_range_buff()
+    {
+        var gauntlet = DetachmentCatalogue.FindById("cryptek-conclave")!.FindEnhancement("gauntlet-of-compression")!;
+
+        Assert.True(gauntlet.AffectsWholeUnit);
+        var mod = Assert.Single(gauntlet.StatModifiers);
+        Assert.Equal(StatTarget.Range, mod.Target);
+        Assert.Equal(6, mod.Delta);
+        Assert.Equal(WeaponClass.Ranged, mod.WeaponClass);
     }
 }

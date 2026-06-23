@@ -646,6 +646,46 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Unit_wide_enhancement_buffs_every_models_ranged_weapons()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4",
+            weapons: [new WeaponProfile { Name = "Tachyon arrow", Type = "Ranged", Range = "48\"" }]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons:
+            [
+                new WeaponProfile { Name = "Gauss flayer", Type = "Ranged", Range = "24\"" },
+                new WeaponProfile { Name = "Close combat weapon", Type = "Melee", Range = "Melee" },
+            ]);
+        var detachment = EnhancementDetachment(new Enhancement
+        {
+            Id = "gauntlet", Name = "Gauntlet of Compression", Points = 20,
+            AffectsWholeUnit = true,
+            StatModifiers = [new StatModifier { Target = StatTarget.Range, Delta = 6, WeaponClass = WeaponClass.Ranged }],
+        });
+        var roster = new Roster
+        {
+            DetachmentIds = ["test-detachment"],
+            Units =
+            [
+                Bearer("ov", "overlord", "gauntlet", attachedTo: "wa"),
+                Unit("wa", "necron-warriors", models: 10),
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(overlord, warriors), [detachment]);
+        var group = Assert.Single(battle.Units);
+        var bearer = group.Parts.Single(p => p.Datasheet.Id == "overlord");
+        var bodyguard = group.Primary; // Necron Warriors
+
+        // The +6" Range reaches the bearer AND the rest of the unit's ranged weapons (unit-wide).
+        Assert.Contains(battle.WeaponStatModifiers(group, bearer, ranged: true), m => m.Target == StatTarget.Range);
+        Assert.Contains(battle.WeaponStatModifiers(group, bodyguard, ranged: true), m => m.Target == StatTarget.Range);
+        Assert.Equal("30\"", StatMath.ApplyAll("24\"", battle.WeaponStatModifiers(group, bodyguard, ranged: true)));
+        // It never touches melee weapons.
+        Assert.Empty(battle.WeaponStatModifiers(group, bodyguard, ranged: false));
+    }
+
+    [Fact]
     public void Active_ability_count_includes_phase_text_abilities_and_excludes_passives()
     {
         var imotekh = Sheet("imotekh", "Imotekh", wounds: "6", abilities:

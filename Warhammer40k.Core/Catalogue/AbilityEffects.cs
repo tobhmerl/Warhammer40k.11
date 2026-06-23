@@ -36,6 +36,9 @@ public enum StatTarget
     Skill = 11,
     Strength = 12,
     Damage = 13,
+
+    /// <summary>The weapon's Range (e.g. <c>24"</c>); a positive delta adds inches.</summary>
+    Range = 14,
 }
 
 /// <summary>
@@ -58,7 +61,7 @@ public sealed class StatModifier
 
     /// <summary>True when this modifier targets a weapon characteristic (vs. the unit statline).</summary>
     [JsonIgnore]
-    public bool IsWeaponStat => Target is StatTarget.Attacks or StatTarget.Skill or StatTarget.Strength or StatTarget.Damage;
+    public bool IsWeaponStat => Target is StatTarget.Attacks or StatTarget.Skill or StatTarget.Strength or StatTarget.Damage or StatTarget.Range;
 
     /// <summary>A short human label such as <c>"+1 to Hit"</c> or <c>"+1 Move"</c>.</summary>
     public string Describe()
@@ -81,6 +84,7 @@ public sealed class StatModifier
         StatTarget.Skill => "to Hit",
         StatTarget.Strength => "Strength",
         StatTarget.Damage => "Damage",
+        StatTarget.Range => "Range",
         _ => target.ToString(),
     };
 }
