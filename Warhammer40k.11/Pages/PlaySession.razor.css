@@ -482,10 +482,11 @@ html[data-scroll="up"] .hud.sticky {
     flex: none;
     min-width: 2.4rem;
     height: 2rem;
-    padding: 0 0.5rem;
+    padding: 0 0.45rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.3rem;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-2);
@@ -500,6 +501,24 @@ html[data-scroll="up"] .hud.sticky {
     transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
+/* Count of abilities usable right now for this unit — mirrors the phase-button badge at the bottom. */
+.dd-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.05rem;
+    height: 1.05rem;
+    padding: 0 0.28rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent-strong);
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
 .deck-dot:hover {
     border-color: var(--accent);
     color: var(--accent-strong);
@@ -512,8 +531,19 @@ html[data-scroll="up"] .hud.sticky {
     box-shadow: var(--glow-sm);
 }
 
+/* On the active button the badge inverts to read against the bright fill. */
+.deck-dot.on .dd-badge {
+    background: rgba(4, 19, 13, 0.22);
+    border-color: rgba(4, 19, 13, 0.3);
+    color: #04130d;
+}
+
 .deck-dot.dead {
     opacity: 0.45;
+}
+
+/* Strike only the initials when dead — keep the badge legible (it will be 0/hidden anyway). */
+.deck-dot.dead .dd-label {
     text-decoration: line-through;
 }
 

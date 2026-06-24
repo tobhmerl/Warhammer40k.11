@@ -238,9 +238,16 @@ else
 						{
 							var index = i;
 							var u = _battle.Units[index];
+							var dUsable = IsDead(u) ? 0 : u.ActiveAbilityCount(_phase, _turn);
 							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
 									role="tab" aria-selected="@(index == _activeCard)"
-									title="@u.Name" @onclick="() => SelectCard(index)">@DeckLabel(u)</button>
+									title="@($"{u.Name}{(dUsable > 0 ? $" · {dUsable} usable now" : "")}")" @onclick="() => SelectCard(index)">
+								<span class="dd-label">@DeckLabel(u)</span>
+								@if (dUsable > 0)
+								{
+									<span class="dd-badge" aria-hidden="true">@dUsable</span>
+								}
+							</button>
 						}
 					</div>
 				}
