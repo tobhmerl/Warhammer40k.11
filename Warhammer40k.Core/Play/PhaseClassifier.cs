@@ -53,6 +53,20 @@ public static class PhaseClassifier
         return match.Success ? (match.Groups[1].Value, ScopeOf(ability.Text)) : null;
     }
 
+    /// <summary>
+    /// True when an ability is a model's / unit's <b>own</b> always-on save rule (e.g. "This model has a 4+
+    /// invulnerable save" or "Models in this unit have a 5+ invulnerable save") rather than a conditional
+    /// ability that <i>confers</i> a save (e.g. a Leader's "While this model is leading a unit, …"). Own save
+    /// rules are surfaced as an always-on chip and are not schedulable; conferral abilities are listed in setup
+    /// and applied manually.
+    /// </summary>
+    public static bool IsOwnSaveRule(Ability ability)
+    {
+        if (InvulnerableSaveScoped(ability) is null && FeelNoPainScoped(ability) is null)
+            return false;
+        return !(ability.Text ?? "").Contains("leading a unit", StringComparison.OrdinalIgnoreCase);
+    }
+
     // A save reads as unit-wide when its text talks about "(models in) this/that unit"; otherwise it's a
     // single model's save (e.g. a Character's own "this model has a 4+ invulnerable save").
     private static SaveScope ScopeOf(string text) =>

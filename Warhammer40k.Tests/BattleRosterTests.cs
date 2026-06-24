@@ -160,10 +160,9 @@ public class BattleRosterTests
 
         Assert.Single(part.RangedWeapons);
         Assert.Single(part.MeleeWeapons);
-        // Every ability is listed (incl. the invuln save) so it can be scheduled/applied; the save is not
-        // applied (no chip) until the player ticks "Apply to unit".
-        Assert.Equal(new[] { "Protocols", "Invulnerable Save" }, group.CombinedAbilities.Select(a => a.Ability.Name));
-        Assert.Null(group.InvulnerableSave);
+        // The own invuln save rule is a chip (hidden from the list); the prose ability remains listed.
+        Assert.Equal(new[] { "Protocols" }, group.CombinedAbilities.Select(a => a.Ability.Name));
+        Assert.Equal("4+", group.InvulnerableSave);
     }
 
     [Fact]
@@ -744,25 +743,21 @@ public class BattleRosterTests
         Assert.Empty(battle.WeaponStatModifiers(group, bodyguard, ranged: false));
     }
 
-    // ---------- Invulnerable / Feel No Pain saves: shown as abilities, applied only when ticked ----------
+    // ---------- Invulnerable / Feel No Pain saves ----------
 
     [Fact]
-    public void Own_invuln_is_not_applied_until_ticked_then_tagged_to_the_model()
+    public void Own_invuln_save_rule_is_an_always_on_model_chip_not_a_listed_ability()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
             [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
         var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
         var roster = new Roster { Units = [Unit("u1", "overlord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
 
-        // Not applied yet → no chip; the ability is still listed so it can be configured.
-        var before = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
-        Assert.Empty(before.InvulnerableSaves);
-        Assert.Contains(before.CombinedAbilities, a => a.Ability.Name == "Invulnerable Save");
-
-        ApplyAbility(roster, "overlord", "Invulnerable Save");
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
-        var inv = Assert.Single(group.InvulnerableSaves);
 
+        // The model's own save rule is profile data: it shows as a chip with no scheduling, and is not in the list.
+        Assert.DoesNotContain(group.CombinedAbilities, a => a.Ability.Name == "Invulnerable Save");
+        var inv = Assert.Single(group.InvulnerableSaves);
         Assert.Equal("4+", inv.Value);
         Assert.False(inv.UnitWide);
         Assert.Equal("Overlord", inv.ModelName);
@@ -793,18 +788,6 @@ public class BattleRosterTests
     }
 
     [Fact]
-    public void Own_invuln_save_ability_offers_an_apply_to_unit_summary()
-    {
-        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
-            [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
-        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "overlord")] }, Catalogue(overlord)).Units);
-
-        var ability = Assert.Single(group.CombinedAbilities, a => a.Ability.Name == "Invulnerable Save");
-        Assert.True(ability.CanApplyToUnit);
-        Assert.Equal("Invulnerable 4+", ability.ConferredSummary);
-    }
-
-    [Fact]
     public void Conferred_feel_no_pain_is_unit_wide_only_when_applied()
     {
         var techno = Sheet("technomancer", "Technomancer", wounds: "4", abilities:
@@ -821,7 +804,7 @@ public class BattleRosterTests
     }
 
     [Fact]
-    public void Play_card_hides_only_the_leader_admin_ability()
+    public void Play_card_hides_leader_admin_and_own_save_rule_abilities()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
         [
@@ -834,11 +817,8 @@ public class BattleRosterTests
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord)).Units);
         var names = group.CombinedAbilities.Select(a => a.Ability.Name).ToList();
 
-        // Leader is hidden (setup-only); the invuln save and the text ability are both shown so they can be configured.
-        Assert.DoesNotContain("Leader", names);
-        Assert.Contains("Invulnerable Save", names);
-        Assert.Contains("My Will Be Done", names);
-        Assert.Equal(2, names.Count);
+        // Leader (setup-only) and the own invuln save rule (a chip) are hidden; the real ability remains listed.
+        Assert.Equal(new[] { "My Will Be Done" }, names);
     }
 
     [Fact]

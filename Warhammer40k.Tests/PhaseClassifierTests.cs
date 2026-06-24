@@ -35,6 +35,20 @@ public class PhaseClassifierTests
         Assert.Equal(scope, parsed.Value.Scope);
     }
 
+    [Theory]
+    // A model's / unit's own always-on save rule → own rule (chip, not a schedulable ability).
+    [InlineData("This model has a 4+ invulnerable save.", true)]
+    [InlineData("Models in this unit have a 5+ invulnerable save.", true)]
+    [InlineData("Models in this unit have the Feel No Pain 5+ ability.", true)]
+    // A conditional ability that confers a save → not an own rule (real ability, applied manually).
+    [InlineData("While this model is leading a unit, models in that unit have a 4+ invulnerable save.", false)]
+    public void IsOwnSaveRule_distinguishes_profile_saves_from_conferring_abilities(string text, bool expected) =>
+        Assert.Equal(expected, PhaseClassifier.IsOwnSaveRule(new Ability { Name = "X", Text = text }));
+
+    [Fact]
+    public void IsOwnSaveRule_is_false_for_a_non_save_ability() =>
+        Assert.False(PhaseClassifier.IsOwnSaveRule(new Ability { Name = "Grand Strategist", Text = "Gain 1CP." }));
+
     [Fact]
     public void Melee_weapon_maps_to_fight_phase()
     {

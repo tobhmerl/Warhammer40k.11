@@ -420,10 +420,10 @@ public sealed class BattleUnit
     /// <summary>The group's headline Feel No Pain value (first badge), or null when none.</summary>
     public string? FeelNoPain => FeelNoPains.Count > 0 ? FeelNoPains[0].Value : null;
 
-    // Builds the save badges across the group from the abilities the player has applied (ticked "Apply to
-    // unit") only — nothing is auto-applied. One unit-wide badge (the best/lowest value found on a unit-wide
-    // ability or one a Leader confers onto the led unit), plus a model-only badge for each part that carries
-    // its own single-model save of a different value.
+    // Builds the save badges across the group. A model's / unit's own always-on save rule (e.g. "This model
+    // has a 4+ invulnerable save") is always shown — it is profile data. A save that a *conferring* ability
+    // grants (e.g. a Leader's Master Chronomancer) only counts once the player has applied that ability in
+    // setup. One unit-wide badge (best/lowest value), plus a model-only badge per part with its own value.
     private IReadOnlyList<SaveBadge> CollectSaves(Func<Ability, (string Value, SaveScope Scope)?> parse)
     {
         string? unitValue = null;
@@ -434,8 +434,9 @@ public sealed class BattleUnit
             {
                 if (parse(ability) is not { } save)
                     continue;
-                // The save only counts once the player has applied that ability in setup.
-                if (!_roster.IsApplied(AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name)))
+                // Own save rule → always-on; conferring ability → only when the player ticked "Apply to unit".
+                if (!PhaseClassifier.IsOwnSaveRule(ability)
+                    && !_roster.IsApplied(AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name)))
                     continue;
                 if (save.Scope == SaveScope.Unit)
                 {
@@ -530,9 +531,9 @@ public sealed class BattleUnit
 
     /// <summary>
     /// The short summary of the effect an ability would apply when "Apply to unit" is ticked: a leader's
-    /// conferral (e.g. "United In Destruction" → [LETHAL HITS]), or a parsed invulnerable / Feel No Pain save
-    /// on any model's own ability (e.g. "Invulnerable 4+"). Null when the ability applies nothing, so it stays
-    /// plain text with no apply toggle.
+    /// conferral (e.g. "United In Destruction" → [LETHAL HITS]), or the save granted by a conditional ability
+    /// that confers one (e.g. a Leader's Master Chronomancer → "Invulnerable 4+"). A model's own always-on
+    /// save rule is hidden from the list, so it never reaches here. Null when the ability applies nothing.
     /// </summary>
     private static string? ConferredSummaryFor(BattlePart part, string abilityName, Ability ability)
     {
@@ -542,18 +543,24 @@ public sealed class BattleUnit
                     && string.Equals(conferral.SourceAbility, abilityName, StringComparison.OrdinalIgnoreCase))
                     return conferral.Summary;
 
-        if (PhaseClassifier.InvulnerableSaveScoped(ability) is { } inv)
-            return $"Invulnerable {inv.Value}";
-        if (PhaseClassifier.FeelNoPainScoped(ability) is { } fnp)
-            return $"Feel No Pain {fnp.Value}";
+        // A conditional save-granting ability (not a plain own-save rule) can be applied as a save.
+        if (!PhaseClassifier.IsOwnSaveRule(ability))
+        {
+            if (PhaseClassifier.InvulnerableSaveScoped(ability) is { } inv)
+                return $"Invulnerable {inv.Value}";
+            if (PhaseClassifier.FeelNoPainScoped(ability) is { } fnp)
+                return $"Feel No Pain {fnp.Value}";
+        }
         return null;
     }
 
-    // The only ability hidden in Play Mode is the setup-only "Leader" attach list (it just names valid
-    // bodyguards). Every other ability — including invulnerable / Feel No Pain saves — is shown so it can be
-    // scheduled and (for saves/buffs) applied to the unit via its "Apply to unit" toggle.
+    // Abilities not shown in the Play-Mode ability list: the setup-only "Leader" attach list, and a model's /
+    // unit's own always-on save rule (e.g. "This model has a 4+ invulnerable save") — that is profile data
+    // surfaced as a chip, not a schedulable ability. Conditional save abilities that *confer* a save (e.g. a
+    // Leader's Master Chronomancer) are real abilities and stay in the list.
     private static bool HiddenInPlay(Ability ability) =>
-        string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase);
+        string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase)
+        || PhaseClassifier.IsOwnSaveRule(ability);
 
     /// <summary>
     /// True when an ability is "usable now": its manual schedule has a window ticked for <paramref name="phase"/>
