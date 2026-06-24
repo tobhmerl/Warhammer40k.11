@@ -291,13 +291,25 @@ else
 			{
 				<div class="cfg-block">
 					<span class="cfg-label">Abilities — when usable in Play Mode</span>
-					<p class="cfg-hint">Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it.</p>
+					<p class="cfg-hint">Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it. Tap a name to read its rules.</p>
 					@foreach (var ab in schedAbilities)
 					{
 						var key = AbilityScheduleKeys.ForUnitAbility(sheet.Id, ab.Name);
+						var textOpen = _openSchedText.Contains(ab.Name);
+						var hasText = !string.IsNullOrWhiteSpace(ab.Text);
 						<div class="sched" @key="key">
 							<div class="sched-head">
-								<span class="sched-name">@ab.Name</span>
+								@if (hasText)
+								{
+									<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(ab.Name)" aria-expanded="@textOpen" title="Show this ability's rules text">
+										<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
+										<span class="sched-name">@ab.Name</span>
+									</button>
+								}
+								else
+								{
+									<span class="sched-name">@ab.Name</span>
+								}
 								@if (ab.Summary is { } sum)
 								{
 									<label class="sched-apply" title="Apply @sum to the unit instead of showing the rules text">
@@ -306,6 +318,10 @@ else
 									</label>
 								}
 							</div>
+							@if (textOpen && hasText)
+							{
+								<p class="sched-text">@CleanText(ab.Text)</p>
+							}
 							@ScheduleGrid(key)
 						</div>
 					}
@@ -736,8 +752,24 @@ else
 
 	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
 
-	/// <summary>A datasheet ability that gets a schedule grid, plus its conferred-effect summary (when any).</summary>
-	private sealed record SchedAbility(string Name, string? Summary);
+	/// <summary>A datasheet ability that gets a schedule grid: its name, rules text, and conferred-effect summary.</summary>
+	private sealed record SchedAbility(string Name, string Text, string? Summary);
+
+	// Ability names whose rules text the user expanded in the scheduler (collapsed by default).
+	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
+
+	private void ToggleSchedText(string abilityName)
+	{
+		if (!_openSchedText.Remove(abilityName))
+			_openSchedText.Add(abilityName);
+	}
+
+	// Strips the seed's markdown/bullet artefacts so the rules text reads cleanly (mirrors Play Mode).
+	private static string CleanText(string text) =>
+		text.Replace("^^**", " ", StringComparison.Ordinal)
+			.Replace("^^", " ", StringComparison.Ordinal)
+			.Replace("**", " ", StringComparison.Ordinal)
+			.Replace("■", "•", StringComparison.Ordinal);
 
 	// The datasheet abilities shown in the scheduler: every printed ability except the setup-only "Leader"
 	// entry and a model's / unit's own always-on save rule (that is a chip in Play, not a schedulable ability).
@@ -755,7 +787,7 @@ else
 				continue;
 			if (!seen.Add(ability.Name))
 				continue;
-			result.Add(new SchedAbility(ability.Name, ApplySummary(sheet, ability)));
+			result.Add(new SchedAbility(ability.Name, ability.Text ?? "", ApplySummary(sheet, ability)));
 		}
 		return result;
 	}
