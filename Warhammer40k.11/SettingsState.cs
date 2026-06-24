@@ -21,6 +21,9 @@ public sealed class SettingsState(IApiClient api, IJSRuntime js)
     /// <summary>Whether the Play Mode control HUD is pinned (sticky) rather than floating/auto-hiding.</summary>
     public bool PlayHudSticky => Current.PlayHudSticky;
 
+    /// <summary>Whether Play Mode shows one swipeable card at a time rather than a vertical scrolling list.</summary>
+    public bool PlayCardSwipe => Current.PlayCardSwipe;
+
     /// <summary>Raised after settings load or change.</summary>
     public event Action? Changed;
 

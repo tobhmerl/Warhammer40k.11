@@ -197,6 +197,10 @@
 
 .switch:hover { border-color: var(--accent); }
 
+.switch + .switch {
+    margin-top: 0.6rem;
+}
+
 .switch.on {
     border-color: var(--accent);
     background: var(--accent-soft);

@@ -4,6 +4,7 @@
 @using Warhammer40k.Core.Play
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k._11.Components
+@implements IAsyncDisposable
 @inject IApiClient Api
 @inject IJSRuntime JS
 @inject SettingsState Settings
@@ -44,9 +45,12 @@ else
 		<div class="topbar">
 			<h1 class="rname">@_roster.Name</h1>
 			<div class="topbar-actions">
-				<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
-					@(AllCollapsed ? "Expand all" : "Collapse all")
-				</button>
+				@if (!_cardSwipe)
+				{
+					<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
+						@(AllCollapsed ? "Expand all" : "Collapse all")
+					</button>
+				}
 				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset CP, VP and models">Reset</button>
 				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
@@ -188,8 +192,20 @@ else
 		}
 		else
 		{
+			@if (_cardSwipe)
+			{
+				<div class="deck-bar" role="group" aria-label="Unit cards">
+					<button type="button" class="deck-nav" @onclick="PrevCard" disabled="@(_activeCard <= 0)" aria-label="Previous unit">‹</button>
+					<span class="deck-pos">
+						<span class="deck-name">@_battle.Units[Math.Clamp(_activeCard, 0, _battle.Units.Count - 1)].Name</span>
+						<span class="deck-count">@(Math.Clamp(_activeCard, 0, _battle.Units.Count - 1) + 1) / @_battle.Units.Count</span>
+					</span>
+					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= _battle.Units.Count - 1)" aria-label="Next unit">›</button>
+				</div>
+			}
+			<div class="@(_cardSwipe ? "deck" : null)" @ref="_deckRef" @onkeydown="OnDeckKeyDown" tabindex="@(_cardSwipe ? 0 : -1)">
 			<ul class="unit-list">
-				@foreach (var unit in _battle.Units)
+				@foreach (var unit in UnitsToRender)
 				{
 					var dead = IsDead(unit);
 					var collapsed = IsCollapsed(unit);
@@ -494,6 +510,7 @@ else
 					</li>
 				}
 			</ul>
+			</div>
 		}
 			<section class="page-meta" aria-label="Victory points">
 				<div class="vp" aria-label="Victory points">
@@ -643,6 +660,13 @@ else
 	// Whether the bottom control HUD is pinned (always visible) instead of floating/auto-hiding. User preference.
 	private bool _hudSticky;
 
+	// Swipe-deck layout: show one unit card at a time and page through them (vs the default vertical scroll list).
+	private bool _cardSwipe;
+	private int _activeCard;
+	private ElementReference _deckRef;
+	private DotNetObjectReference<PlaySession>? _deckSelf;
+	private bool _deckBound;
+
 	protected override async Task OnParametersSetAsync()
 	{
 		if (_loadedId == Id)
@@ -655,6 +679,28 @@ else
 	{
 		if (firstRender)
 			await JS.InvokeVoidAsync("tombworld.initScroll");
+
+		// Bind the touch-swipe handler once the deck element exists (swipe mode, roster loaded).
+		if (_cardSwipe && _battle is { Units.Count: > 0 } && !_deckBound)
+		{
+			_deckBound = true;
+			_deckSelf ??= DotNetObjectReference.Create(this);
+			await JS.InvokeVoidAsync("tombworld.deck.attach", _deckRef, _deckSelf);
+		}
+	}
+
+	[JSInvokable]
+	public void SwipeNext()
+	{
+		if (GoToCard(_activeCard + 1))
+			StateHasChanged();
+	}
+
+	[JSInvokable]
+	public void SwipePrev()
+	{
+		if (GoToCard(_activeCard - 1))
+			StateHasChanged();
 	}
 
 	private async Task LoadAsync()
@@ -668,6 +714,7 @@ else
 		{
 			await Settings.InitializeAsync();
 			_hudSticky = Settings.PlayHudSticky;
+			_cardSwipe = Settings.PlayCardSwipe;
 
 			if (_catalogue.Datasheets.Count == 0)
 				_catalogue = await Api.GetCatalogueAsync();
@@ -836,6 +883,12 @@ else
 			foreach (var part in unit.Parts)
 				_track[part.Unit.Id] = part.TrackMax;
 		}
+		// In swipe mode you view one card at a time, so start the visible (first) card expanded.
+		if (_cardSwipe && _battle.Units.Count > 0)
+		{
+			_activeCard = 0;
+			_collapsed.Remove(_battle.Units[0].Id);
+		}
 	}
 
 	// ---- Per-part tracking: models for multi-model units, wounds for single multi-wound models ----
@@ -934,6 +987,80 @@ else
 	private void OpenDetail(BattleUnit unit) => _detail = unit;
 
 	private void CloseDetail() => _detail = null;
+
+	// ---- Swipe deck navigation (one card at a time) ----
+	private int CardCount => _battle?.Units.Count ?? 0;
+
+	// In swipe mode only the active card is rendered (one at a time); otherwise the whole list.
+	private IEnumerable<BattleUnit> UnitsToRender
+	{
+		get
+		{
+			if (_battle is null)
+				return [];
+			if (!_cardSwipe)
+				return _battle.Units;
+			var index = Math.Clamp(_activeCard, 0, _battle.Units.Count - 1);
+			return [_battle.Units[index]];
+		}
+	}
+
+	private bool GoToCard(int index)
+	{
+		var count = CardCount;
+		if (count == 0)
+			return false;
+		var clamped = Math.Clamp(index, 0, count - 1);
+		if (clamped == _activeCard)
+			return false;
+		_activeCard = clamped;
+		// Each card is shown expanded in the deck, so make sure the active unit isn't collapsed.
+		if (_battle is not null)
+			_collapsed.Remove(_battle.Units[_activeCard].Id);
+		return true;
+	}
+
+	private void NextCard()
+	{
+		if (GoToCard(_activeCard + 1))
+			StateHasChanged();
+	}
+
+	private void PrevCard()
+	{
+		if (GoToCard(_activeCard - 1))
+			StateHasChanged();
+	}
+
+	private void OnDeckKeyDown(KeyboardEventArgs e)
+	{
+		if (!_cardSwipe)
+			return;
+		if (e.Key == "ArrowRight")
+			NextCard();
+		else if (e.Key == "ArrowLeft")
+			PrevCard();
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		if (_deckBound)
+		{
+			try
+			{
+				await JS.InvokeVoidAsync("tombworld.deck.detach");
+			}
+			catch (JSDisconnectedException)
+			{
+				// Circuit already gone — nothing to detach.
+			}
+			catch (InvalidOperationException)
+			{
+				// Prerendering / no JS runtime — safe to ignore.
+			}
+		}
+		_deckSelf?.Dispose();
+	}
 
 	private static string Clean(string text) =>
 		text.Replace("^^**", " ", StringComparison.Ordinal)

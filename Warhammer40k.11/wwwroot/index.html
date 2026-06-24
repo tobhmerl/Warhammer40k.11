@@ -91,6 +91,43 @@
             },
             scrollBottom: function () {
                 window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+            },
+            // Horizontal swipe deck for Play Mode: binds touch gestures on the deck element and calls back into
+            // .NET to page one unit card at a time. Only a deliberate horizontal swipe pages (so taps on the
+            // in-card steppers/toggles still work). Idempotent per element; detach() clears the previous binding.
+            deck: {
+                _el: null,
+                _onStart: null,
+                _onEnd: null,
+                attach: function (el, dotNetRef) {
+                    if (!el) return;
+                    this.detach();
+                    let sx = 0, sy = 0, st = 0;
+                    const onStart = function (e) {
+                        const t = e.changedTouches ? e.changedTouches[0] : e;
+                        sx = t.clientX; sy = t.clientY; st = Date.now();
+                    };
+                    const onEnd = function (e) {
+                        const t = e.changedTouches ? e.changedTouches[0] : e;
+                        const dx = t.clientX - sx;
+                        const dy = t.clientY - sy;
+                        const dt = Date.now() - st;
+                        // Deliberate, mostly-horizontal flick: far enough, more across than down, not too slow.
+                        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 700) {
+                            dotNetRef.invokeMethodAsync(dx < 0 ? 'SwipeNext' : 'SwipePrev');
+                        }
+                    };
+                    el.addEventListener('touchstart', onStart, { passive: true });
+                    el.addEventListener('touchend', onEnd, { passive: true });
+                    this._el = el; this._onStart = onStart; this._onEnd = onEnd;
+                },
+                detach: function () {
+                    if (this._el) {
+                        this._el.removeEventListener('touchstart', this._onStart);
+                        this._el.removeEventListener('touchend', this._onEnd);
+                    }
+                    this._el = null; this._onStart = null; this._onEnd = null;
+                }
             }
         };
     </script>

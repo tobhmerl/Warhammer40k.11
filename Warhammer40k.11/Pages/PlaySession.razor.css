@@ -413,6 +413,95 @@ html[data-scroll="up"] .hud.sticky {
     color: #04130d;
 }
 
+/* ---- Swipe deck: one card at a time, paged left/right ---- */
+.deck-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.deck-nav {
+    flex: none;
+    width: 2.6rem;
+    height: 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--accent-strong);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.deck-nav:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.deck-nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.deck-pos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.deck-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 0.98rem;
+    color: var(--text);
+}
+
+.deck-count {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The deck wrapper takes focus for arrow-key paging without showing an outline box. */
+.deck {
+    outline: none;
+}
+
+/* Replay a quick slide-in whenever the visible card changes (the single <li> is re-keyed by unit). */
+.deck .unit {
+    animation: deck-in 0.22s var(--ease) both;
+}
+
+@keyframes deck-in {
+    from {
+        opacity: 0;
+        transform: translateX(1.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deck .unit {
+        animation: none;
+    }
+}
+
 /* ---- Unit cards ---- */
 .unit-list {
     list-style: none;

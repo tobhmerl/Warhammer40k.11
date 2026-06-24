@@ -26,12 +26,14 @@ public sealed class SettingsEntity : ITableEntity
     public int DefaultPointsLimit { get; set; } = 2000;
     public string Theme { get; set; } = AppThemes.Default;
     public bool PlayHudSticky { get; set; }
+    public bool PlayCardSwipe { get; set; }
 
     public UserSettings ToSettings() => new()
     {
         DefaultPointsLimit = DefaultPointsLimit,
         Theme = AppThemes.Normalize(Theme),
         PlayHudSticky = PlayHudSticky,
+        PlayCardSwipe = PlayCardSwipe,
     };
 
     public static SettingsEntity From(string userId, UserSettings settings) => new()
@@ -41,6 +43,7 @@ public sealed class SettingsEntity : ITableEntity
         DefaultPointsLimit = settings.DefaultPointsLimit,
         Theme = AppThemes.Normalize(settings.Theme),
         PlayHudSticky = settings.PlayHudSticky,
+        PlayCardSwipe = settings.PlayCardSwipe,
     };
 }
 

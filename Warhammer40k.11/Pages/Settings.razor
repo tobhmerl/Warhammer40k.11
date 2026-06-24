@@ -77,18 +77,31 @@
 		</section>
 
 		<section class="card pad">
-			<h2 class="sec-h">Play Mode control bar</h2>
-			<p class="muted">Choose how the turn &amp; phase bar behaves on the battle screen. Try both in a game and keep the one you prefer.</p>
+			<h2 class="sec-h">Play Mode layout</h2>
+			<p class="muted">Tune how the battle screen behaves. Try both options in a game and keep the ones you prefer.</p>
 			<button type="button" role="switch" aria-checked="@_settings.PlayHudSticky"
 					class="switch @(_settings.PlayHudSticky ? "on" : "")"
 					@onclick="() => _settings.PlayHudSticky = !_settings.PlayHudSticky">
 				<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
 				<span class="switch-text">
-					<span class="switch-name">@(_settings.PlayHudSticky ? "Sticky — always visible" : "Floating — auto-hides")</span>
+					<span class="switch-name">Control bar: @(_settings.PlayHudSticky ? "Sticky — always visible" : "Floating — auto-hides")</span>
 					<span class="switch-desc">
 						@(_settings.PlayHudSticky
-							? "The bar stays pinned to the bottom at all times."
-							: "The bar floats and slides away while you scroll up.")
+							? "The turn & phase bar stays pinned to the bottom at all times."
+							: "The turn & phase bar floats and slides away while you scroll up.")
+					</span>
+				</span>
+			</button>
+			<button type="button" role="switch" aria-checked="@_settings.PlayCardSwipe"
+					class="switch @(_settings.PlayCardSwipe ? "on" : "")"
+					@onclick="() => _settings.PlayCardSwipe = !_settings.PlayCardSwipe">
+				<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+				<span class="switch-text">
+					<span class="switch-name">Unit cards: @(_settings.PlayCardSwipe ? "Swipe deck — one at a time" : "Scroll list — stacked")</span>
+					<span class="switch-desc">
+						@(_settings.PlayCardSwipe
+							? "Show a single card and swipe left/right (or use the arrows) for the next unit."
+							: "Stack all unit cards in one column and scroll up/down.")
 					</span>
 				</span>
 			</button>
@@ -293,5 +306,6 @@
 		DefaultPointsLimit = s.DefaultPointsLimit,
 		Theme = s.Theme,
 		PlayHudSticky = s.PlayHudSticky,
+		PlayCardSwipe = s.PlayCardSwipe,
 	};
 }
