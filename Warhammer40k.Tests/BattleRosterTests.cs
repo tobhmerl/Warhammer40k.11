@@ -160,9 +160,10 @@ public class BattleRosterTests
 
         Assert.Single(part.RangedWeapons);
         Assert.Single(part.MeleeWeapons);
-        // The invuln save is surfaced as a chip (hidden from the ability list); the prose ability remains.
-        Assert.Equal(new[] { "Protocols" }, group.CombinedAbilities.Select(a => a.Ability.Name));
-        Assert.Equal("4+", group.InvulnerableSave);
+        // Every ability is listed (incl. the invuln save) so it can be scheduled/applied; the save is not
+        // applied (no chip) until the player ticks "Apply to unit".
+        Assert.Equal(new[] { "Protocols", "Invulnerable Save" }, group.CombinedAbilities.Select(a => a.Ability.Name));
+        Assert.Null(group.InvulnerableSave);
     }
 
     [Fact]
@@ -743,16 +744,22 @@ public class BattleRosterTests
         Assert.Empty(battle.WeaponStatModifiers(group, bodyguard, ranged: false));
     }
 
-    // ---------- Invulnerable / Feel No Pain scope + hidden abilities ----------
+    // ---------- Invulnerable / Feel No Pain saves: shown as abilities, applied only when ticked ----------
 
     [Fact]
-    public void Leader_own_invuln_is_tagged_to_the_model_not_the_whole_unit()
+    public void Own_invuln_is_not_applied_until_ticked_then_tagged_to_the_model()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
             [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
         var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
         var roster = new Roster { Units = [Unit("u1", "overlord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
 
+        // Not applied yet → no chip; the ability is still listed so it can be configured.
+        var before = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
+        Assert.Empty(before.InvulnerableSaves);
+        Assert.Contains(before.CombinedAbilities, a => a.Ability.Name == "Invulnerable Save");
+
+        ApplyAbility(roster, "overlord", "Invulnerable Save");
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
         var inv = Assert.Single(group.InvulnerableSaves);
 
@@ -762,13 +769,21 @@ public class BattleRosterTests
     }
 
     [Fact]
-    public void Leader_conferred_invuln_is_tagged_unit_wide()
+    public void Master_chronomancer_is_listed_and_confers_unit_wide_invuln_only_when_applied()
     {
         var orikan = Sheet("orikan", "Orikan", wounds: "5", abilities:
             [new Ability { Name = "Master Chronomancer", Text = "While this model is leading a unit, models in that unit have a 4+ invulnerable save." }]);
         var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
         var roster = new Roster { Units = [Unit("u1", "orikan", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
 
+        // The ability is listed (not hidden) and not auto-applied: no chip until the player ticks Apply.
+        var before = Assert.Single(BattleRoster.Build(roster, Catalogue(orikan, warriors)).Units);
+        var ability = Assert.Single(before.CombinedAbilities, a => a.Ability.Name == "Master Chronomancer");
+        Assert.True(ability.CanApplyToUnit);
+        Assert.Null(ability.AppliedSummary);
+        Assert.Empty(before.InvulnerableSaves);
+
+        ApplyAbility(roster, "orikan", "Master Chronomancer");
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(orikan, warriors)).Units);
         var inv = Assert.Single(group.InvulnerableSaves);
 
@@ -778,12 +793,25 @@ public class BattleRosterTests
     }
 
     [Fact]
-    public void Leader_conferred_feel_no_pain_is_tagged_unit_wide()
+    public void Own_invuln_save_ability_offers_an_apply_to_unit_summary()
+    {
+        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
+            [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
+        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "overlord")] }, Catalogue(overlord)).Units);
+
+        var ability = Assert.Single(group.CombinedAbilities, a => a.Ability.Name == "Invulnerable Save");
+        Assert.True(ability.CanApplyToUnit);
+        Assert.Equal("Invulnerable 4+", ability.ConferredSummary);
+    }
+
+    [Fact]
+    public void Conferred_feel_no_pain_is_unit_wide_only_when_applied()
     {
         var techno = Sheet("technomancer", "Technomancer", wounds: "4", abilities:
             [new Ability { Name = "Rites of Reanimation", Text = "While this model is leading a unit, models in that unit have the Feel No Pain 5+ ability." }]);
         var wraiths = Sheet("canoptek-wraiths", "Canoptek Wraiths", wounds: "3");
         var roster = new Roster { Units = [Unit("u1", "technomancer", attachedTo: "u2"), Unit("u2", "canoptek-wraiths", models: 3)] };
+        ApplyAbility(roster, "technomancer", "Rites of Reanimation");
 
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(techno, wraiths)).Units);
         var fnp = Assert.Single(group.FeelNoPains);
@@ -793,7 +821,7 @@ public class BattleRosterTests
     }
 
     [Fact]
-    public void Play_card_hides_leader_and_invulnerable_save_abilities()
+    public void Play_card_hides_only_the_leader_admin_ability()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
         [
@@ -806,7 +834,11 @@ public class BattleRosterTests
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord)).Units);
         var names = group.CombinedAbilities.Select(a => a.Ability.Name).ToList();
 
-        Assert.Equal(new[] { "My Will Be Done" }, names);
+        // Leader is hidden (setup-only); the invuln save and the text ability are both shown so they can be configured.
+        Assert.DoesNotContain("Leader", names);
+        Assert.Contains("Invulnerable Save", names);
+        Assert.Contains("My Will Be Done", names);
+        Assert.Equal(2, names.Count);
     }
 
     [Fact]

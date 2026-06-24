@@ -420,9 +420,10 @@ public sealed class BattleUnit
     /// <summary>The group's headline Feel No Pain value (first badge), or null when none.</summary>
     public string? FeelNoPain => FeelNoPains.Count > 0 ? FeelNoPains[0].Value : null;
 
-    // Builds the save badges across the group: one unit-wide badge (the best/lowest value found on a unit-wide
-    // ability or conferred by an attached Leader onto the led unit), plus a model-only badge for each part that
-    // carries its own single-model save of a different value.
+    // Builds the save badges across the group from the abilities the player has applied (ticked "Apply to
+    // unit") only — nothing is auto-applied. One unit-wide badge (the best/lowest value found on a unit-wide
+    // ability or one a Leader confers onto the led unit), plus a model-only badge for each part that carries
+    // its own single-model save of a different value.
     private IReadOnlyList<SaveBadge> CollectSaves(Func<Ability, (string Value, SaveScope Scope)?> parse)
     {
         string? unitValue = null;
@@ -432,6 +433,9 @@ public sealed class BattleUnit
             foreach (var ability in part.Datasheet.Abilities)
             {
                 if (parse(ability) is not { } save)
+                    continue;
+                // The save only counts once the player has applied that ability in setup.
+                if (!_roster.IsApplied(AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name)))
                     continue;
                 if (save.Scope == SaveScope.Unit)
                 {
@@ -495,7 +499,7 @@ public sealed class BattleUnit
                         result.Add(new BattleAbility(ability, part.Datasheet.Name)
                         {
                             Key = key,
-                            ConferredSummary = ConferredSummaryFor(part, ability.Name),
+                            ConferredSummary = ConferredSummaryFor(part, ability.Name, ability),
                             Windows = schedule?.Windows ?? [],
                             ApplyToUnit = schedule?.ApplyToUnit ?? false,
                         });
@@ -525,25 +529,31 @@ public sealed class BattleUnit
     }
 
     /// <summary>
-    /// The conferred-effect summary for a leader's conferral ability (e.g. "United In Destruction" →
-    /// [LETHAL HITS]), or null when the ability has no applicable effect (so it is plain text only).
+    /// The short summary of the effect an ability would apply when "Apply to unit" is ticked: a leader's
+    /// conferral (e.g. "United In Destruction" → [LETHAL HITS]), or a parsed invulnerable / Feel No Pain save
+    /// on any model's own ability (e.g. "Invulnerable 4+"). Null when the ability applies nothing, so it stays
+    /// plain text with no apply toggle.
     /// </summary>
-    private static string? ConferredSummaryFor(BattlePart part, string abilityName)
+    private static string? ConferredSummaryFor(BattlePart part, string abilityName, Ability ability)
     {
-        if (!part.IsLeader)
-            return null;
-        foreach (var conferral in part.Datasheet.LeaderConferrals)
-            if (!conferral.IsEmpty
-                && string.Equals(conferral.SourceAbility, abilityName, StringComparison.OrdinalIgnoreCase))
-                return conferral.Summary;
+        if (part.IsLeader)
+            foreach (var conferral in part.Datasheet.LeaderConferrals)
+                if (!conferral.IsEmpty
+                    && string.Equals(conferral.SourceAbility, abilityName, StringComparison.OrdinalIgnoreCase))
+                    return conferral.Summary;
+
+        if (PhaseClassifier.InvulnerableSaveScoped(ability) is { } inv)
+            return $"Invulnerable {inv.Value}";
+        if (PhaseClassifier.FeelNoPainScoped(ability) is { } fnp)
+            return $"Feel No Pain {fnp.Value}";
         return null;
     }
 
-    // Abilities not worth showing in Play Mode: the Leader ability (an attach list that only matters in setup)
-    // and the Invulnerable Save (already surfaced as a chip beside the unit name, with its unit/model scope).
+    // The only ability hidden in Play Mode is the setup-only "Leader" attach list (it just names valid
+    // bodyguards). Every other ability — including invulnerable / Feel No Pain saves — is shown so it can be
+    // scheduled and (for saves/buffs) applied to the unit via its "Apply to unit" toggle.
     private static bool HiddenInPlay(Ability ability) =>
-        string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase)
-        || PhaseClassifier.InvulnerableSaveScoped(ability) is not null;
+        string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// True when an ability is "usable now": its manual schedule has a window ticked for <paramref name="phase"/>

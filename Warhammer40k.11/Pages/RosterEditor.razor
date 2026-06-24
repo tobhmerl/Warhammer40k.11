@@ -740,8 +740,8 @@ else
 	private sealed record SchedAbility(string Name, string? Summary);
 
 	// The datasheet abilities shown in the scheduler: every printed ability except the setup-only "Leader"
-	// entry and the invulnerable save (surfaced as a chip in Play, not a usable-now ability). Each carries the
-	// short summary of any conferred effect (e.g. "[LETHAL HITS]") so it can offer an "Apply to unit" toggle.
+	// entry. Each carries the short summary of any effect it can apply (a leader conferral like "[LETHAL HITS]"
+	// or a parsed invulnerable / Feel No Pain save) so it can offer an "Apply to unit" toggle.
 	private static List<SchedAbility> ScheduleAbilities(Datasheet sheet)
 	{
 		var result = new List<SchedAbility>();
@@ -752,12 +752,24 @@ else
 				continue;
 			if (!seen.Add(ability.Name))
 				continue;
-			var conferral = sheet.LeaderConferrals.FirstOrDefault(c =>
-				!c.IsEmpty && string.Equals(c.SourceAbility, ability.Name, StringComparison.OrdinalIgnoreCase));
-			var summary = conferral is { IsEmpty: false } ? conferral.Summary : null;
-			result.Add(new SchedAbility(ability.Name, string.IsNullOrWhiteSpace(summary) ? null : summary));
+			result.Add(new SchedAbility(ability.Name, ApplySummary(sheet, ability)));
 		}
 		return result;
+	}
+
+	// The short summary of what an ability would apply to the unit (drives the "Apply [X]" checkbox), matching
+	// the engine: a leader conferral, or a parsed invulnerable / Feel No Pain save.
+	private static string? ApplySummary(Datasheet sheet, Ability ability)
+	{
+		var conferral = sheet.LeaderConferrals.FirstOrDefault(c =>
+			!c.IsEmpty && string.Equals(c.SourceAbility, ability.Name, StringComparison.OrdinalIgnoreCase));
+		if (conferral is { IsEmpty: false } && !string.IsNullOrWhiteSpace(conferral.Summary))
+			return conferral.Summary;
+		if (PhaseClassifier.InvulnerableSaveScoped(ability) is { } inv)
+			return $"Invulnerable {inv.Value}";
+		if (PhaseClassifier.FeelNoPainScoped(ability) is { } fnp)
+			return $"Feel No Pain {fnp.Value}";
+		return null;
 	}
 
 	private bool IsScheduled(string key, BattlePhase phase, BattleTurn turn) =>
