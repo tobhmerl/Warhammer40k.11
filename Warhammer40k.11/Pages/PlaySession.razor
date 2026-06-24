@@ -311,6 +311,9 @@ else
 							var activeAbilities = unit.CombinedAbilities
 								.Where(a => BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
 								.ToList();
+							var alwaysAbilities = unit.CombinedAbilities
+								.Where(a => a.IsAlwaysAvailable)
+								.ToList();
 						}
 						@if (!dead && activeAbilities.Count > 0)
 						{
@@ -324,6 +327,37 @@ else
 											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
 												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 												<span class="ua-name">@a.Ability.Name</span>
+												@if (a.IsEnhancement)
+												{
+													<span class="a-tag enh">Enhancement</span>
+												}
+												@if (unit.Parts.Count > 1)
+												{
+													<span class="a-src">@a.Source</span>
+												}
+											</button>
+											@if (open)
+											{
+												<p class="a-text">@Clean(a.Ability.Text)</p>
+											}
+										</li>
+									}
+								</ul>
+							</div>
+						}
+
+						@if (!dead && alwaysAbilities.Count > 0)
+						{
+							<div class="u-always" aria-label="Abilities always available">
+								<span class="ua-head muted">Always available</span>
+								<ul class="ua-list">
+									@foreach (var a in alwaysAbilities)
+									{
+										var open = IsAbilityOpen(unit, a);
+										<li class="al-item @(open ? "open" : "")" @key="a.Ability.Name">
+											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
+												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
+												<span class="al-name">@a.Ability.Name</span>
 												@if (a.IsEnhancement)
 												{
 													<span class="a-tag enh">Enhancement</span>
@@ -507,7 +541,7 @@ else
 
 								@{
 									var referenceAbilities = unit.CombinedAbilities
-										.Where(a => !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
+										.Where(a => !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn) && !a.IsAlwaysAvailable)
 										.ToList();
 								}
 								@if (referenceAbilities.Count > 0)

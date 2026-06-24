@@ -1286,6 +1286,35 @@ html[data-scroll="up"] .hud.sticky {
     margin-top: 0.4rem;
 }
 
+/* ---- "Always available" band: abilities ticked for every phase/turn. Calm, never highlighted. ---- */
+.u-always {
+    margin: 0;
+    padding: 0.5rem 0.7rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.ua-head.muted {
+    color: var(--text-faint);
+}
+
+.al-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    padding: 0.45rem 0.6rem;
+}
+
+.al-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.al-item .a-text {
+    margin-top: 0.4rem;
+}
+
 /* ---- Army-rules "usable now" band (sits above the unit cards) ---- */
 .army-now {
     margin-bottom: 1.25rem;

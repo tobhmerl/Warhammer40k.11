@@ -899,6 +899,57 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Ability_ticked_for_every_phase_and_turn_is_always_available_and_never_highlighted()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Ever Vigilant", Text = "This unit is always watchful." }]);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+        // Tick all 10 cells (every phase × both turns).
+        foreach (var phase in BattlePhases.Ordered)
+        {
+            ScheduleAbility(roster, "lord", "Ever Vigilant", phase, BattleTurn.Player);
+            ScheduleAbility(roster, "lord", "Ever Vigilant", phase, BattleTurn.Opponent);
+        }
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Ever Vigilant");
+
+        Assert.True(a.IsAlwaysAvailable);
+        // It is never highlighted as "usable now" in any phase/turn, and never counted toward the markers.
+        foreach (var phase in BattlePhases.Ordered)
+        {
+            Assert.False(BattleUnit.IsAbilityActiveInPhase(a, phase, BattleTurn.Player));
+            Assert.False(BattleUnit.IsAbilityActiveInPhase(a, phase, BattleTurn.Opponent));
+            Assert.Equal(0, group.ActiveAbilityCount(phase, BattleTurn.Player));
+            Assert.Equal(0, group.ActiveAbilityCount(phase, BattleTurn.Opponent));
+        }
+    }
+
+    [Fact]
+    public void Ability_missing_one_window_is_not_always_available()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Nearly Always", Text = "Almost every phase." }]);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+        foreach (var phase in BattlePhases.Ordered)
+        {
+            ScheduleAbility(roster, "lord", "Nearly Always", phase, BattleTurn.Player);
+            ScheduleAbility(roster, "lord", "Nearly Always", phase, BattleTurn.Opponent);
+        }
+        // Remove a single window so it is no longer "all 10".
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility("lord", "Nearly Always"))
+            .SetWindow(BattlePhase.Fight, BattleTurn.Opponent, false);
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Nearly Always");
+
+        Assert.False(a.IsAlwaysAvailable);
+        // It still highlights normally in the windows that remain.
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Fight, BattleTurn.Player));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Fight, BattleTurn.Opponent));
+    }
+
+    [Fact]
     public void Stat_enhancement_is_never_phase_marked_even_when_its_text_names_a_phase()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4");

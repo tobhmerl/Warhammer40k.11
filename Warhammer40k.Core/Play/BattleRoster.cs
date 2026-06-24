@@ -565,12 +565,13 @@ public sealed class BattleUnit
     /// <summary>
     /// True when an ability is "usable now": its manual schedule has a window ticked for <paramref name="phase"/>
     /// in <paramref name="turn"/>. An ability whose conferred effect is applied to the unit
-    /// (<see cref="BattleAbility.AppliedSummary"/>) is always-on — shown on the card, never as a "usable now"
-    /// prompt — so it is excluded. Scheduling is entirely manual: an unconfigured ability is never active.
+    /// (<see cref="BattleAbility.AppliedSummary"/>) is always-on and excluded, as is one ticked for <i>every</i>
+    /// phase and turn (<see cref="BattleAbility.IsAlwaysAvailable"/>) — those are listed calmly rather than
+    /// highlighted each phase. Scheduling is entirely manual: an unconfigured ability is never active.
     /// </summary>
     public static bool IsAbilityActiveInPhase(BattleAbility ability, BattlePhase phase, BattleTurn turn)
     {
-        if (ability.AppliedSummary is not null)
+        if (ability.AppliedSummary is not null || ability.IsAlwaysAvailable)
             return false;
         return ability.Windows.Any(w => w.Phase == phase && w.Turn == turn);
     }
@@ -619,6 +620,18 @@ public sealed record BattleAbility(Ability Ability, string Source)
 
     /// <summary>True when this ability has a conferable effect that the player <i>could</i> apply to the unit.</summary>
     public bool CanApplyToUnit => ConferredSummary is not null;
+
+    /// <summary>
+    /// True when the player ticked <b>every</b> phase + turn window (all 10 cells) for a text ability — it is
+    /// usable in any phase of either turn. Such abilities are listed in a calm "always available" section
+    /// rather than highlighted as "usable now" in each phase. Applied abilities are excluded (they show as the
+    /// applied effect instead).
+    /// </summary>
+    public bool IsAlwaysAvailable =>
+        AppliedSummary is null
+        && BattlePhases.Ordered.All(p =>
+            Windows.Any(w => w.Phase == p && w.Turn == BattleTurn.Player)
+            && Windows.Any(w => w.Phase == p && w.Turn == BattleTurn.Opponent));
 
     /// <summary>
     /// Non-null only when the player ticked "Apply to unit" for an ability that confers an effect: the short
