@@ -231,11 +231,6 @@ else
 											{
 												<span class="chip warlord">Warlord</span>
 											}
-											@{ var usableNow = unit.ActiveAbilityCount(_phase, _turn); }
-											@if (usableNow > 0)
-											{
-												<span class="chip usable" title="@($"{usableNow} abilit{(usableNow == 1 ? "y" : "ies")} usable in the {BattlePhases.Label(_phase)} phase — expand to see")">@usableNow usable</span>
-											}
 											@foreach (var inv in unit.InvulnerableSaves)
 											{
 												<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
@@ -274,6 +269,42 @@ else
 								</span>
 							}
 						</div>
+
+						@{
+							var activeAbilities = unit.CombinedAbilities
+								.Where(a => BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
+								.ToList();
+						}
+						@if (!dead && activeAbilities.Count > 0)
+						{
+							<div class="u-active" aria-label="Abilities usable now">
+								<span class="ua-head">Usable now</span>
+								<ul class="ua-list">
+									@foreach (var a in activeAbilities)
+									{
+										var open = IsAbilityOpen(unit, a);
+										<li class="ua-item @(open ? "open" : "")" @key="a.Ability.Name">
+											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
+												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
+												<span class="ua-name">@a.Ability.Name</span>
+												@if (a.IsEnhancement)
+												{
+													<span class="a-tag enh">Enhancement</span>
+												}
+												@if (unit.Parts.Count > 1)
+												{
+													<span class="a-src">@a.Source</span>
+												}
+											</button>
+											@if (open)
+											{
+												<p class="a-text">@Clean(a.Ability.Text)</p>
+											}
+										</li>
+									}
+								</ul>
+							</div>
+						}
 
 						@if (!collapsed)
 						{
@@ -437,10 +468,15 @@ else
 									</div>
 								}
 
-								@if (unit.CombinedAbilities.Count > 0)
+								@{
+									var referenceAbilities = unit.CombinedAbilities
+										.Where(a => !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
+										.ToList();
+								}
+								@if (referenceAbilities.Count > 0)
 								{
 									<ul class="abilities">
-										@foreach (var a in unit.CombinedAbilities)
+										@foreach (var a in referenceAbilities)
 										{
 											var applied = a.AppliedSummary;
 											var hasText = !string.IsNullOrWhiteSpace(a.Ability.Text);
