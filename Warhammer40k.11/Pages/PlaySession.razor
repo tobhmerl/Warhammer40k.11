@@ -40,10 +40,7 @@ else if (_notFound || _roster is null || _battle is null)
 else
 {
 	<div class="play">
-		<a class="back" href="play">&larr; Play</a>
-
 		<div class="topbar">
-			<h1 class="rname">@_roster.Name</h1>
 			<div class="topbar-actions">
 				@if (!_cardSwipe)
 				{
@@ -51,11 +48,12 @@ else
 						@(AllCollapsed ? "Expand all" : "Collapse all")
 					</button>
 				}
-				<button class="btn small ghost" type="button" @onclick="ResetTrackers" title="Reset CP, VP and models">Reset</button>
 				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
 					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
 				}
+				<button class="btn small ghost" type="button" @onclick="OpenVp" title="Victory points">VPs</button>
+				<button class="btn small ghost reset" type="button" @onclick="RequestReset" title="Reset CP, VP and models">Reset</button>
 			</div>
 		</div>
 
@@ -217,7 +215,10 @@ else
 									aria-expanded="@(!collapsed)" aria-label="@($"Toggle {unit.Name}")">
 								<span class="chev" aria-hidden="true">@(collapsed ? "▸" : "▾")</span>
 								<span class="u-titles">
-									<span class="u-name">@unit.Name</span>
+									@if (!_cardSwipe)
+									{
+										<span class="u-name">@unit.Name</span>
+									}
 									<span class="u-chips">
 											@if (unit.IsWarlord)
 											{
@@ -333,7 +334,7 @@ else
 								}
 								@if (ranged.Count > 0)
 								{
-									<div class="weapon-block @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
+									<div class="weapon-block ranged @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
 										<div class="wb-head"><span class="wb-title">Ranged</span></div>
 										<ul class="weapon-list">
 											@foreach (var row in ranged)
@@ -384,7 +385,7 @@ else
 								}
 								@if (melee.Count > 0)
 								{
-									<div class="weapon-block @(_phase == BattlePhase.Fight ? "phase-on" : "")">
+									<div class="weapon-block melee @(_phase == BattlePhase.Fight ? "phase-on" : "")">
 										<div class="wb-head"><span class="wb-title">Melee</span></div>
 										<ul class="weapon-list">
 											@foreach (var row in melee)
@@ -512,45 +513,57 @@ else
 			</ul>
 			</div>
 		}
-			<section class="page-meta" aria-label="Victory points">
-				<div class="vp" aria-label="Victory points">
-					<div class="vp-grid">
-						<span class="vp-corner">VP</span>
-						<span class="vp-h">You</span>
-						<span class="vp-h">Opp</span>
-
-						<span class="vp-rl">Primary</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(0, -1)" aria-label="Your primary minus">−</button>
-							<span class="vp-n">@_vpYouPrimary</span>
-							<button type="button" @onclick="() => StepVp(0, 1)" aria-label="Your primary plus">+</button>
-						</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(1, -1)" aria-label="Opponent primary minus">−</button>
-							<span class="vp-n">@_vpOppPrimary</span>
-							<button type="button" @onclick="() => StepVp(1, 1)" aria-label="Opponent primary plus">+</button>
-						</span>
-
-						<span class="vp-rl">Second.</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(2, -1)" aria-label="Your secondary minus">−</button>
-							<span class="vp-n">@_vpYouSecondary</span>
-							<button type="button" @onclick="() => StepVp(2, 1)" aria-label="Your secondary plus">+</button>
-						</span>
-						<span class="vp-cell">
-							<button type="button" @onclick="() => StepVp(3, -1)" aria-label="Opponent secondary minus">−</button>
-							<span class="vp-n">@_vpOppSecondary</span>
-							<button type="button" @onclick="() => StepVp(3, 1)" aria-label="Opponent secondary plus">+</button>
-						</span>
-
-						<span class="vp-rl total">Total</span>
-						<span class="vp-total">@(_vpYouPrimary + _vpYouSecondary)</span>
-						<span class="vp-total">@(_vpOppPrimary + _vpOppSecondary)</span>
-					</div>
-				</div>
-			</section>
+			<a class="back" href="play">&larr; Play</a>
 		</div>
 	}
+
+	<Sheet Open="_vpOpen" Eyebrow="Score" Title="Victory points" OnCloseRequested="CloseVp">
+		<div class="vp" aria-label="Victory points">
+			<div class="vp-grid">
+				<span class="vp-corner">VP</span>
+				<span class="vp-h">You</span>
+				<span class="vp-h">Opp</span>
+
+				<span class="vp-rl">Primary</span>
+				<span class="vp-cell">
+					<button type="button" @onclick="() => StepVp(0, -1)" aria-label="Your primary minus">−</button>
+					<span class="vp-n">@_vpYouPrimary</span>
+					<button type="button" @onclick="() => StepVp(0, 1)" aria-label="Your primary plus">+</button>
+				</span>
+				<span class="vp-cell">
+					<button type="button" @onclick="() => StepVp(1, -1)" aria-label="Opponent primary minus">−</button>
+					<span class="vp-n">@_vpOppPrimary</span>
+					<button type="button" @onclick="() => StepVp(1, 1)" aria-label="Opponent primary plus">+</button>
+				</span>
+
+				<span class="vp-rl">Second.</span>
+				<span class="vp-cell">
+					<button type="button" @onclick="() => StepVp(2, -1)" aria-label="Your secondary minus">−</button>
+					<span class="vp-n">@_vpYouSecondary</span>
+					<button type="button" @onclick="() => StepVp(2, 1)" aria-label="Your secondary plus">+</button>
+				</span>
+				<span class="vp-cell">
+					<button type="button" @onclick="() => StepVp(3, -1)" aria-label="Opponent secondary minus">−</button>
+					<span class="vp-n">@_vpOppSecondary</span>
+					<button type="button" @onclick="() => StepVp(3, 1)" aria-label="Opponent secondary plus">+</button>
+				</span>
+
+				<span class="vp-rl total">Total</span>
+				<span class="vp-total">@(_vpYouPrimary + _vpYouSecondary)</span>
+				<span class="vp-total">@(_vpOppPrimary + _vpOppSecondary)</span>
+			</div>
+		</div>
+	</Sheet>
+
+	<Sheet Open="_confirmReset" Eyebrow="Confirm" Title="Reset this game?" OnCloseRequested="CancelReset">
+		<div class="reset-confirm">
+			<p class="rc-text">This clears command points, victory points, model counts and the current phase back to the start. This can't be undone.</p>
+			<div class="rc-actions">
+				<button class="btn danger" type="button" @onclick="ConfirmReset">Reset everything</button>
+				<button class="btn ghost" type="button" @onclick="CancelReset">Cancel</button>
+			</div>
+		</div>
+	</Sheet>
 
 	<Sheet Open="_detail is not null" Eyebrow="Datasheet" Title="@_detail?.Name" OnCloseRequested="CloseDetail">
 	@if (_detail is { } d)
@@ -754,6 +767,26 @@ else
 	private void OpenRules() => _rulesOpen = true;
 
 	private void CloseRules() => _rulesOpen = false;
+
+	// Victory points panel (opened from the top bar; the scores persist until an explicit Reset).
+	private bool _vpOpen;
+
+	private void OpenVp() => _vpOpen = true;
+
+	private void CloseVp() => _vpOpen = false;
+
+	// Reset is confirmed first so a stray tap can't wipe the game.
+	private bool _confirmReset;
+
+	private void RequestReset() => _confirmReset = true;
+
+	private void CancelReset() => _confirmReset = false;
+
+	private void ConfirmReset()
+	{
+		_confirmReset = false;
+		ResetTrackers();
+	}
 
 	// ---- Command-phase cues (your turn): which units must act this Command phase ----
 	private bool MyCommandPhase => _phase == BattlePhase.Command && _turn == BattleTurn.Player;
