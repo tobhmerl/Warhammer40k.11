@@ -789,9 +789,16 @@ html[data-scroll="up"] .hud.sticky {
 
 .statline {
     padding: 0.55rem 0.6rem;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(96, 165, 250, 0.4);
     border-radius: var(--radius-sm);
-    background: var(--surface-2);
+    background:
+        linear-gradient(180deg, rgba(96, 165, 250, 0.08), transparent 60%),
+        var(--surface-2);
+}
+
+/* Unit statlines read blue, setting them apart from the orange (ranged) and red (melee) weapon blocks. */
+.statline .st .lab {
+    color: #8fbdff;
 }
 
 .statline.down {
