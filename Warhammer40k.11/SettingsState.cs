@@ -10,7 +10,9 @@ namespace Warhammer40k._11;
 /// </summary>
 public sealed class SettingsState(IApiClient api, IJSRuntime js)
 {
-    private bool _initialized;
+    // The in-flight (or completed) initial load. Concurrent callers await the SAME task so none of them reads
+    // Current before the real settings have landed — fixes a reload race where Play Mode fell back to defaults.
+    private Task? _initialization;
 
     /// <summary>The current settings (defaults until <see cref="InitializeAsync"/> completes).</summary>
     public UserSettings Current { get; private set; } = UserSettings.Default;
@@ -27,13 +29,15 @@ public sealed class SettingsState(IApiClient api, IJSRuntime js)
     /// <summary>Raised after settings load or change.</summary>
     public event Action? Changed;
 
-    /// <summary>Loads settings and applies the theme. Safe to call repeatedly; only the first call does work.</summary>
-    public async Task InitializeAsync()
-    {
-        if (_initialized)
-            return;
-        _initialized = true;
+    /// <summary>
+    /// Loads settings and applies the theme. Safe to call repeatedly and concurrently: the first call starts
+    /// the load and every caller (including ones that arrive mid-flight) awaits the same completion, so no one
+    /// reads <see cref="Current"/> before the saved settings have arrived.
+    /// </summary>
+    public Task InitializeAsync() => _initialization ??= LoadOnceAsync();
 
+    private async Task LoadOnceAsync()
+    {
         Current = await api.GetSettingsAsync();
         await ApplyThemeAsync(Current.Theme);
         Changed?.Invoke();
