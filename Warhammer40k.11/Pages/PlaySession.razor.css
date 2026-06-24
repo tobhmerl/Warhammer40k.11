@@ -1555,10 +1555,29 @@ html[data-scroll="up"] .hud.sticky {
     gap: 0.5rem;
 }
 
+/* The name acts as the expand/collapse toggle: only the title shows until the row is opened. */
+.s-name-btn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
 .s-name {
     font-weight: 700;
     font-size: 0.98rem;
     color: var(--text);
+}
+
+.s-name-btn:hover .s-name {
+    color: var(--accent-strong);
 }
 
 .s-id {

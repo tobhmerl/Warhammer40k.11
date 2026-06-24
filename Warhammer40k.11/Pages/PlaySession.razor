@@ -134,14 +134,18 @@ else
 				<ul class="strat-list">
 					@foreach (var s in strats)
 					{
+						var open = IsStratOpen(s);
 						<li class="strat @(CanAfford(s) ? "" : "broke")" @key="(s.Source + s.Id)">
 							<div class="s-head">
-								<span class="s-name">@s.Name</span>
-								<span class="s-id">@s.Source</span>
-								@if (!string.IsNullOrEmpty(s.Type))
-								{
-									<span class="s-type">@s.Type</span>
-								}
+								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
+									<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
+									<span class="s-name">@s.Name</span>
+									<span class="s-id">@s.Source</span>
+									@if (!string.IsNullOrEmpty(s.Type))
+									{
+										<span class="s-type">@s.Type</span>
+									}
+								</button>
 								<span class="s-cp">@s.Cost CP</span>
 								<button class="btn small s-use" type="button"
 										disabled="@(!CanAfford(s))" @onclick="() => UseStratagem(s)"
@@ -149,32 +153,35 @@ else
 									Use
 								</button>
 							</div>
-							@if (!string.IsNullOrWhiteSpace(s.Flavour))
+							@if (open)
 							{
-								<p class="s-flavour">@s.Flavour</p>
+								@if (!string.IsNullOrWhiteSpace(s.Flavour))
+								{
+									<p class="s-flavour">@s.Flavour</p>
+								}
+								<dl class="s-body">
+									@if (!string.IsNullOrWhiteSpace(s.When))
+									{
+										<dt>When</dt>
+										<dd>@s.When</dd>
+									}
+									@if (!string.IsNullOrWhiteSpace(s.Target))
+									{
+										<dt>Target</dt>
+										<dd>@s.Target</dd>
+									}
+									@if (!string.IsNullOrWhiteSpace(s.Effect))
+									{
+										<dt>Effect</dt>
+										<dd>@s.Effect</dd>
+									}
+									@if (!string.IsNullOrWhiteSpace(s.Restrictions))
+									{
+										<dt>Restrictions</dt>
+										<dd>@s.Restrictions</dd>
+									}
+								</dl>
 							}
-							<dl class="s-body">
-								@if (!string.IsNullOrWhiteSpace(s.When))
-								{
-									<dt>When</dt>
-									<dd>@s.When</dd>
-								}
-								@if (!string.IsNullOrWhiteSpace(s.Target))
-								{
-									<dt>Target</dt>
-									<dd>@s.Target</dd>
-								}
-								@if (!string.IsNullOrWhiteSpace(s.Effect))
-								{
-									<dt>Effect</dt>
-									<dd>@s.Effect</dd>
-								}
-								@if (!string.IsNullOrWhiteSpace(s.Restrictions))
-								{
-									<dt>Restrictions</dt>
-									<dd>@s.Restrictions</dd>
-								}
-							</dl>
 						</li>
 					}
 				</ul>
@@ -644,6 +651,8 @@ else
 	private int _vpOppSecondary;
 	// Whether the Stratagems panel is expanded (collapsible like the unit cards).
 	private bool _stratsOpen = false;
+	// Stratagems whose details the user expanded (collapsed to just the name by default), keyed by source + id.
+	private readonly HashSet<string> _openStrats = new(StringComparer.Ordinal);
 	// Per-part current tracked value (models for multi-model units, wounds for single multi-wound models),
 	// keyed by roster-unit id (in-memory, like the round/CP trackers).
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
@@ -859,6 +868,16 @@ else
 
 	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
 
+	// Each stratagem shows only its name until clicked; the details (flavour/when/target/effect) open on demand.
+	private bool IsStratOpen(StratView stratagem) => _openStrats.Contains(stratagem.Source + "\u0001" + stratagem.Id);
+
+	private void ToggleStrat(StratView stratagem)
+	{
+		var key = stratagem.Source + "\u0001" + stratagem.Id;
+		if (!_openStrats.Remove(key))
+			_openStrats.Add(key);
+	}
+
 	// ---- Weapon stat selection (mark the exact cell you're on while resolving an attack) ----
 	private bool IsCellSelected(object weapon, string stat) =>
 		_selectedCell is { } c && ReferenceEquals(c.Weapon, weapon) && string.Equals(c.Stat, stat, StringComparison.Ordinal);
@@ -905,6 +924,7 @@ else
 		_track.Clear();
 		_collapsed.Clear();
 		_openAbilities.Clear();
+		_openStrats.Clear();
 		_shootingChoice.Clear();
 		_selectedMember.Clear();
 		_selectedCell = null;
