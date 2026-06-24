@@ -231,6 +231,19 @@ else
 					</span>
 					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= _battle.Units.Count - 1)" aria-label="Next unit">›</button>
 				</div>
+				@if (_battle.Units.Count > 1)
+				{
+					<div class="deck-dots" role="tablist" aria-label="Jump to unit">
+						@for (var i = 0; i < _battle.Units.Count; i++)
+						{
+							var index = i;
+							var u = _battle.Units[index];
+							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
+									role="tab" aria-selected="@(index == _activeCard)"
+									title="@u.Name" @onclick="() => SelectCard(index)">@(index + 1)</button>
+						}
+					</div>
+				}
 			}
 			<div class="@(_cardSwipe ? "deck" : null)" @ref="_deckRef" @onkeydown="OnDeckKeyDown" tabindex="@(_cardSwipe ? 0 : -1)">
 			<ul class="unit-list">
@@ -1161,6 +1174,12 @@ else
 	private void PrevCard()
 	{
 		if (GoToCard(_activeCard - 1))
+			StateHasChanged();
+	}
+
+	private void SelectCard(int index)
+	{
+		if (GoToCard(index))
 			StateHasChanged();
 	}
 
