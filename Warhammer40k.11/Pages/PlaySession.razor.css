@@ -45,12 +45,12 @@
     left: 0;
     right: 0;
     z-index: 6;
-    width: min(46rem, calc(100% - 1.2rem));
+    width: min(46rem, calc(100% - 1rem));
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.6rem;
+    gap: 0.4rem;
+    padding: 0.45rem 0.5rem;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius);
     background: rgba(3, 9, 7, 0.95);
@@ -58,6 +58,13 @@
     backdrop-filter: blur(14px) saturate(1.3);
     box-shadow: var(--shadow), var(--shadow-inset);
     transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
+}
+
+/* Row 1: CP stepper (left) + the YOU/OPP turn toggle (fills the rest). */
+.hud-top {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
 }
 
 /* The JS scroll watcher sets data-scroll on <html>: hide the HUD (slide down) while scrolling up. */
@@ -85,7 +92,7 @@ html[data-scroll="up"] .hud.sticky {
     flex: 1 1 6rem;
 }
 
-/* ---- Floating right-side rail: CP control (top) + scroll arrows ---- */
+/* ---- Floating right-side rail: scroll arrows (scroll mode only) ---- */
 .play-rail {
     position: fixed;
     top: auto;
@@ -98,22 +105,28 @@ html[data-scroll="up"] .hud.sticky {
     gap: 0.6rem;
 }
 
-.cp-float {
+/* ---- CP stepper, inline at the left of the HUD ---- */
+.cp {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.3rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
+}
+
+.cp-val {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.15rem;
-    padding: 0.3rem 0.3rem 0.35rem;
-    border: 1px solid var(--border-strong);
-    border-radius: 999px;
-    background: rgba(3, 9, 7, 0.92);
-    -webkit-backdrop-filter: blur(10px) saturate(1.3);
-    backdrop-filter: blur(10px) saturate(1.3);
-    box-shadow: var(--shadow), var(--shadow-inset);
+    line-height: 1;
+    min-width: 1.5rem;
 }
 
 .cp-label {
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -121,24 +134,23 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .cp-num {
-    min-width: 1.4rem;
     text-align: center;
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 700;
     line-height: 1;
     color: var(--accent-strong);
 }
 
 .cp-btn {
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 2rem;
+    height: 2rem;
     flex: none;
     border-radius: 50%;
     border: 1px solid var(--border-strong);
-    background: var(--surface-2);
+    background: var(--surface);
     color: var(--accent);
-    font-size: 1rem;
+    font-size: 1.05rem;
     line-height: 1;
     cursor: pointer;
     transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
@@ -349,14 +361,16 @@ html[data-scroll="up"] .hud.sticky {
 .phase {
     flex: 1 1 0;
     min-width: 0;
+    min-height: 2.4rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.1rem;
-    padding: 0.5rem 0.25rem;
+    justify-content: center;
+    gap: 0.12rem;
+    padding: 0.3rem 0.2rem;
     border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--surface);
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--text-dim);
     font-family: inherit;
     cursor: pointer;
@@ -368,18 +382,18 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--text);
 }
 
+/* Active phase: a calm soft fill (no glow) so it reads as "selected" without shouting. */
 .phase.on {
-    border-color: transparent;
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
-    color: #04130d;
-    box-shadow: var(--glow-sm);
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
 }
 
 .ph-name {
     max-width: 100%;
-    font-size: clamp(0.62rem, 2.6vw, 0.82rem);
+    font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.06em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -402,9 +416,10 @@ html[data-scroll="up"] .hud.sticky {
     line-height: 1;
 }
 
+/* On the active phase the badge becomes a solid accent chip — the one element meant to pop. */
 .phase.on .ph-badge {
-    background: rgba(4, 19, 13, 0.22);
-    border-color: rgba(4, 19, 13, 0.3);
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
     color: #04130d;
 }
 
@@ -1668,45 +1683,46 @@ html[data-scroll="up"] .hud.sticky {
 
 /* ---- Turn toggle ---- */
 .turn-toggle {
+    flex: 1 1 auto;
     display: flex;
-    gap: 0.4rem;
+    gap: 0.25rem;
+    padding: 0.15rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
 }
 
 .turn {
     flex: 1 1 0;
     min-width: 0;
-    padding: 0.45rem 0.5rem;
-    border: 1px solid var(--border);
+    min-height: 2rem;
+    padding: 0.3rem 0.5rem;
+    border: none;
     border-radius: 999px;
-    background: var(--surface);
+    background: transparent;
     color: var(--text-dim);
     font-family: inherit;
-    font-size: clamp(0.72rem, 2.6vw, 0.82rem);
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
-    transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
+    transition: color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
 .turn:hover {
-    border-color: var(--border-strong);
     color: var(--text);
 }
 
+/* Active turn: a calm soft fill (no glow). Your turn = accent, opponent = danger. */
 .turn.on {
-    border-color: transparent;
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
-    color: #04130d;
-    box-shadow: var(--glow-sm);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
 }
 
 .turn.opp.on {
-    background: linear-gradient(180deg, #ff8a84, var(--danger));
-    color: #1a0605;
-    box-shadow: 0 0 0.4rem var(--danger-soft);
+    background: var(--danger-soft);
+    color: var(--danger);
 }
 
 /* ---- Stratagems panel ---- */

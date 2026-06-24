@@ -58,37 +58,42 @@ else
 		</div>
 
 		<div class="play-rail">
-			<div class="cp-float" aria-label="Command points">
-				<span class="cp-label">CP</span>
-				<button class="cp-btn" type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
-				<span class="cp-num">@_cp</span>
-				<button class="cp-btn" type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
-			</div>
-			<div class="scroll-nav" aria-label="Scroll">
-				<button class="scroll-btn" type="button" @onclick="ScrollTop" aria-label="Scroll to top" title="Top">↑</button>
-				<button class="scroll-btn" type="button" @onclick="ScrollBottom" aria-label="Scroll to bottom" title="Bottom">↓</button>
-			</div>
+			@if (!_cardSwipe)
+			{
+				<div class="scroll-nav" aria-label="Scroll">
+					<button class="scroll-btn" type="button" @onclick="ScrollTop" aria-label="Scroll to top" title="Top">↑</button>
+					<button class="scroll-btn" type="button" @onclick="ScrollBottom" aria-label="Scroll to bottom" title="Bottom">↓</button>
+				</div>
+			}
 		</div>
 
-		@* Control HUD: sticks to the bottom. Floating (default) auto-hides while scrolling up; sticky stays put. *@
+		@* Slim control HUD: CP stepper + turn toggle on one row, the phase row below. *@
 		<div class="hud @(_hudSticky ? "sticky" : null)">
-			<div class="turn-toggle" role="group" aria-label="Whose turn it is">
-				<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
-						aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)">
-					Your turn
-				</button>
-				<button type="button" class="turn opp @(_turn == BattleTurn.Opponent ? "on" : "")"
-						aria-pressed="@(_turn == BattleTurn.Opponent)" @onclick="() => SetTurn(BattleTurn.Opponent)">
-					Opponent's turn
-				</button>
+			<div class="hud-top">
+				<div class="cp" aria-label="Command points">
+					<button class="cp-btn" type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
+					<span class="cp-val"><span class="cp-num">@_cp</span><span class="cp-label">CP</span></span>
+					<button class="cp-btn" type="button" @onclick="() => StepCp(1)" aria-label="Gain command point">+</button>
+				</div>
+
+				<div class="turn-toggle" role="group" aria-label="Whose turn it is">
+					<button type="button" class="turn @(_turn == BattleTurn.Player ? "on" : "")"
+							aria-pressed="@(_turn == BattleTurn.Player)" @onclick="() => SetTurn(BattleTurn.Player)" title="Your turn">
+						YOU
+					</button>
+					<button type="button" class="turn opp @(_turn == BattleTurn.Opponent ? "on" : "")"
+							aria-pressed="@(_turn == BattleTurn.Opponent)" @onclick="() => SetTurn(BattleTurn.Opponent)" title="Opponent's turn">
+						OPP
+					</button>
+				</div>
 			</div>
 
 			<nav class="phases" aria-label="Battle phases">
 				@foreach (var phase in BattlePhases.Ordered)
 				{
 					var usable = PhaseAbilityCount(phase);
-					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)">
-						<span class="ph-name">@BattlePhases.Label(phase)</span>
+					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)" title="@BattlePhases.Label(phase)">
+						<span class="ph-name">@BattlePhases.ShortLabel(phase)</span>
 						@if (usable > 0)
 						{
 							<span class="ph-badge" title="@($"{usable} usable {(usable == 1 ? "ability" : "abilities")} this phase")">@usable</span>

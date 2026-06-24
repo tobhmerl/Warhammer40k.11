@@ -38,4 +38,15 @@ public static class BattlePhases
         BattlePhase.Fight => "Fight",
         _ => "Always",
     };
+
+    /// <summary>A compact 3-letter label for a phase, for tight controls (e.g. the Play-Mode phase bar).</summary>
+    public static string ShortLabel(BattlePhase phase) => phase switch
+    {
+        BattlePhase.Command => "CMD",
+        BattlePhase.Movement => "MOV",
+        BattlePhase.Shooting => "SHO",
+        BattlePhase.Charge => "CHG",
+        BattlePhase.Fight => "FGT",
+        _ => "ALL",
+    };
 }
