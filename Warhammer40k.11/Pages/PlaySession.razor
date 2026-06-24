@@ -240,7 +240,7 @@ else
 							var u = _battle.Units[index];
 							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
 									role="tab" aria-selected="@(index == _activeCard)"
-									title="@u.Name" @onclick="() => SelectCard(index)">@(index + 1)</button>
+									title="@u.Name" @onclick="() => SelectCard(index)">@DeckLabel(u)</button>
 						}
 					</div>
 				}
@@ -1181,6 +1181,44 @@ else
 	{
 		if (GoToCard(index))
 			StateHasChanged();
+	}
+
+	// Words ignored when abbreviating a unit name, so "Imotekh the Stormlord" reads as "IS", not "ITS".
+	private static readonly string[] DeckNoiseWords = ["the", "of", "and", "a", "an"];
+
+	// A short, leader-first label for a unit's deck button. A single model uses word-initials for a multi-word
+	// name (e.g. "Necron Warriors" → "NW") or the first three letters of a single-word name ("Lychguard" → "LYC").
+	// A led unit shows each model's first initial, leader first ("Imotekh + Lychguard" → "I+L").
+	private static string DeckLabel(BattleUnit unit)
+	{
+		var parts = unit.Parts.OrderByDescending(p => p.IsLeader).ToList(); // leaders first, then the bodyguard
+		if (parts.Count == 1)
+			return AbbreviateName(parts[0].Datasheet.Name);
+		return string.Join("+", parts.Select(p => FirstInitial(p.Datasheet.Name)));
+	}
+
+	private static IEnumerable<string> SignificantWords(string? name) =>
+		(name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			.Where(w => !DeckNoiseWords.Contains(w, StringComparer.OrdinalIgnoreCase));
+
+	private static string AbbreviateName(string name)
+	{
+		var words = SignificantWords(name).ToList();
+		if (words.Count >= 2)
+		{
+			var initials = string.Concat(words.Take(3).Select(w => char.ToUpperInvariant(w[0])));
+			return initials;
+		}
+		var word = words.FirstOrDefault() ?? (name ?? "").Trim();
+		if (word.Length == 0)
+			return "?";
+		return (word.Length <= 3 ? word : word[..3]).ToUpperInvariant();
+	}
+
+	private static string FirstInitial(string name)
+	{
+		var word = SignificantWords(name).FirstOrDefault();
+		return string.IsNullOrEmpty(word) ? "?" : char.ToUpperInvariant(word[0]).ToString();
 	}
 
 	private void OnDeckKeyDown(KeyboardEventArgs e)
