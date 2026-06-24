@@ -1020,3 +1020,96 @@
         align-self: flex-start;
     }
 }
+
+/* ---- Ability / stratagem scheduling grid (manual phase + turn windows) ---- */
+.sched {
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sched + .sched {
+    margin-top: 0.5rem;
+}
+
+.sched-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.sched-name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--accent-strong);
+}
+
+.sched-src {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+}
+
+.sched-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.sched-apply input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+}
+
+.sched-grid {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.3rem 0.7rem;
+}
+
+.sg-corner {
+    min-height: 1px;
+}
+
+.sg-h {
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.sg-rl {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.sg-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.sg-cell input {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+}

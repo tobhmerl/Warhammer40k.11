@@ -161,12 +161,4 @@ public static class CoreStratagemCatalogue
             Effect = "Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight (12.04).",
         },
     ];
-
-    /// <summary>
-    /// The Core Stratagems usable right now: those whose "Used in" marker allows <paramref name="turn"/> and
-    /// whose phase set includes <paramref name="phase"/> (an empty phase set means any phase). Rulebook order
-    /// is preserved so the list reads the same as the cards.
-    /// </summary>
-    public static IReadOnlyList<CoreStratagem> Usable(BattlePhase phase, BattleTurn turn) =>
-        All.Where(s => s.UsableNow(phase, turn)).ToList();
 }

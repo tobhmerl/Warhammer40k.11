@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Azure;
 using Azure.Data.Tables;
+using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
 namespace Warhammer40k.Api;
@@ -52,6 +53,9 @@ public sealed class RosterEntity : ITableEntity
     /// <summary>The roster's units serialized as JSON (Table Storage cannot store collections natively).</summary>
     public string UnitsJson { get; set; } = "[]";
 
+    /// <summary>The player's manual Play-Mode ability/stratagem schedules, serialized as JSON.</summary>
+    public string AbilitySchedulesJson { get; set; } = "[]";
+
     public Roster ToRoster() => new()
     {
         Id = RowKey,
@@ -64,6 +68,7 @@ public sealed class RosterEntity : ITableEntity
         CreatedUtc = CreatedUtc,
         ModifiedUtc = Timestamp ?? CreatedUtc,
         Units = DeserializeUnits(UnitsJson),
+        AbilitySchedules = DeserializeSchedules(AbilitySchedulesJson),
     };
 
     public static RosterEntity From(string userId, Roster roster) => new()
@@ -78,6 +83,7 @@ public sealed class RosterEntity : ITableEntity
         CatalogueVersion = roster.CatalogueVersion,
         CreatedUtc = roster.CreatedUtc,
         UnitsJson = JsonSerializer.Serialize(roster.Units, UnitsJsonOptions),
+        AbilitySchedulesJson = JsonSerializer.Serialize(roster.AbilitySchedules, UnitsJsonOptions),
     };
 
     private static List<RosterUnit> DeserializeUnits(string? json)
@@ -87,6 +93,20 @@ public sealed class RosterEntity : ITableEntity
         try
         {
             return JsonSerializer.Deserialize<List<RosterUnit>>(json, UnitsJsonOptions) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static List<AbilitySchedule> DeserializeSchedules(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<AbilitySchedule>>(json, UnitsJsonOptions) ?? [];
         }
         catch (JsonException)
         {

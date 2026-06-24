@@ -33,6 +33,27 @@ public class BattleRosterTests
         IsWarlord = warlord,
     };
 
+    // Ticks "Apply to unit" for a datasheet ability (a Leader conferral) so its effect is applied in Play Mode.
+    private static Roster ApplyAbility(Roster roster, string datasheetId, string abilityName)
+    {
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility(datasheetId, abilityName)).ApplyToUnit = true;
+        return roster;
+    }
+
+    // Ticks "Apply to unit" for a setup-assigned enhancement so its stat/weapon effect is applied in Play Mode.
+    private static Roster ApplyEnhancement(Roster roster, string enhancementId)
+    {
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForEnhancement(enhancementId)).ApplyToUnit = true;
+        return roster;
+    }
+
+    // Schedules a datasheet ability as usable in a phase + turn (for the "usable now" assertions).
+    private static Roster ScheduleAbility(Roster roster, string datasheetId, string abilityName, BattlePhase phase, BattleTurn turn)
+    {
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility(datasheetId, abilityName)).SetWindow(phase, turn, true);
+        return roster;
+    }
+
     [Fact]
     public void Merges_attached_leader_into_bodyguard_as_one_group()
     {
@@ -119,7 +140,7 @@ public class BattleRosterTests
         Assert.Null(BattleRoster.ParseWounds(wounds));
 
     [Fact]
-    public void Splits_weapons_and_phase_content()
+    public void Splits_weapons_into_ranged_and_melee()
     {
         var sheet = Sheet("immortals", "Immortals", wounds: "1",
             weapons:
@@ -139,10 +160,8 @@ public class BattleRosterTests
 
         Assert.Single(part.RangedWeapons);
         Assert.Single(part.MeleeWeapons);
-        Assert.True(group.HasContentIn(BattlePhase.Shooting));
-        Assert.True(group.HasContentIn(BattlePhase.Fight));
-        // Command shows the command-phase ability AND the passive invuln ability.
-        Assert.Equal(2, part.AbilitiesIn(BattlePhase.Command).Count);
+        // The invuln save is surfaced as a chip (hidden from the ability list); the prose ability remains.
+        Assert.Equal(new[] { "Protocols" }, group.CombinedAbilities.Select(a => a.Ability.Name));
         Assert.Equal("4+", group.InvulnerableSave);
     }
 
@@ -396,6 +415,7 @@ public class BattleRosterTests
                 Unit("u2", "skorpekh-destroyers", models: 3),
             ],
         };
+        ApplyAbility(roster, "skorpekh-lord", "United In Destruction");
 
         var battle = BattleRoster.Build(roster, Catalogue(lord, destroyers));
         var group = Assert.Single(battle.Units);
@@ -439,12 +459,44 @@ public class BattleRosterTests
         {
             Units = [Unit("u1", "technomancer", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)],
         };
+        ApplyAbility(roster, "technomancer", "Rites of Reanimation");
 
         var battle = BattleRoster.Build(roster, Catalogue(techno, warriors));
         var group = Assert.Single(battle.Units);
 
         Assert.Contains("Feel No Pain 5+", battle.ConferredUnitAbilities(group));
         Assert.Equal("Feel No Pain 5+", group.AppliedSummaryFor("Rites of Reanimation"));
+    }
+
+    [Fact]
+    public void Conferral_is_not_applied_until_apply_to_unit_is_ticked()
+    {
+        var lord = LeaderSheet("skorpekh-lord", "Skorpekh Lord", "7",
+            new ConferredEffect
+            {
+                SourceAbility = "United In Destruction",
+                WeaponClass = WeaponClass.Melee,
+                WeaponAbilities = ["Lethal Hits"],
+            });
+        lord.Abilities = [new Ability { Name = "United In Destruction", Text = "Models in this unit's melee weapons have [LETHAL HITS]." }];
+        var destroyers = Sheet("skorpekh-destroyers", "Skorpekh Destroyers", wounds: "3",
+            weapons: [new WeaponProfile { Name = "Skorpekh hyperphase weapons", Type = "Melee" }]);
+
+        // No schedule ticked → the conferral does not apply (pure manual model).
+        var roster = new Roster
+        {
+            Units = [Unit("u1", "skorpekh-lord", attachedTo: "u2"), Unit("u2", "skorpekh-destroyers", models: 3)],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(lord, destroyers));
+        var group = Assert.Single(battle.Units);
+        var destroyersPart = group.Parts.Single(p => p.Datasheet.Id == "skorpekh-destroyers");
+
+        Assert.Empty(battle.GrantedWeaponAbilities(group, destroyersPart, ranged: false));
+        // The ability still shows as ordinary text (it can be applied, but is not flagged applied).
+        var ability = group.CombinedAbilities.Single(a => a.Ability.Name == "United In Destruction");
+        Assert.True(ability.CanApplyToUnit);
+        Assert.Null(ability.AppliedSummary);
     }
 
     [Fact]
@@ -463,6 +515,7 @@ public class BattleRosterTests
         {
             Units = [Unit("o", "overlord", attachedTo: "w"), Unit("w", "necron-warriors", models: 10)],
         };
+        ApplyAbility(roster, "overlord", "Awakened Command");
 
         var battle = BattleRoster.Build(roster, Catalogue(lord, warriors));
         var group = Assert.Single(battle.Units);
@@ -543,6 +596,7 @@ public class BattleRosterTests
                 Unit("u2", destroyers.Id, models: 3),
             ],
         };
+        ApplyAbility(roster, lord.Id, "United In Destruction");
 
         var battle = BattleRoster.Build(roster, catalogue);
         var group = Assert.Single(battle.Units);
@@ -606,6 +660,7 @@ public class BattleRosterTests
             DetachmentIds = ["test-detachment"],
             Units = [Bearer("u1", "overlord", "sempiternal-weave")],
         };
+        ApplyEnhancement(roster, "sempiternal-weave");
 
         var battle = BattleRoster.Build(roster, Catalogue(overlord), [detachment]);
         var group = Assert.Single(battle.Units);
@@ -636,6 +691,7 @@ public class BattleRosterTests
                 Unit("wa", "necron-warriors", models: 10),
             ],
         };
+        ApplyEnhancement(roster, "honed-edge");
 
         var battle = BattleRoster.Build(roster, Catalogue(overlord, warriors), [detachment]);
         var group = Assert.Single(battle.Units);
@@ -672,6 +728,7 @@ public class BattleRosterTests
                 Unit("wa", "necron-warriors", models: 10),
             ],
         };
+        ApplyEnhancement(roster, "gauntlet");
 
         var battle = BattleRoster.Build(roster, Catalogue(overlord, warriors), [detachment]);
         var group = Assert.Single(battle.Units);
@@ -767,6 +824,7 @@ public class BattleRosterTests
             DetachmentIds = ["test-detachment"],
             Units = [Bearer("u1", "overlord", "weave")],
         };
+        ApplyEnhancement(roster, "weave");
 
         var abilities = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units).CombinedAbilities;
 
@@ -786,15 +844,17 @@ public class BattleRosterTests
             new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." },
         ]);
         var roster = new Roster { Units = [Unit("u1", "imotekh")] };
+        // Manually schedule Grand Strategist for the Command phase in my turn only.
+        ScheduleAbility(roster, "imotekh", "Grand Strategist", BattlePhase.Command, BattleTurn.Player);
 
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(imotekh)).Units);
         var grand = group.CombinedAbilities.Single(a => a.Ability.Name == "Grand Strategist");
 
         Assert.True(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command, BattleTurn.Player));
-        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command, BattleTurn.Opponent)); // "your" → not the opponent's turn
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Command, BattleTurn.Opponent)); // only my turn ticked
         Assert.False(BattleUnit.IsAbilityActiveInPhase(grand, BattlePhase.Shooting, BattleTurn.Player));
         Assert.Equal(1, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Player)); // passive invuln save is not counted
-        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Opponent)); // Your-gated
+        Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Command, BattleTurn.Opponent));
         Assert.Equal(0, group.ActiveAbilityCount(BattlePhase.Fight, BattleTurn.Player));
     }
 
@@ -803,7 +863,9 @@ public class BattleRosterTests
     {
         var lord = Sheet("lord", "Lord", wounds: "5", abilities:
             [new Ability { Name = "Aura", Text = "In your Command phase, do a thing." }]);
-        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "lord")] }, Catalogue(lord)).Units);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+        ScheduleAbility(roster, "lord", "Aura", BattlePhase.Command, BattleTurn.Player);
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
         var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Aura");
 
         Assert.True(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Player));
@@ -815,7 +877,9 @@ public class BattleRosterTests
     {
         var lord = Sheet("lord", "Lord", wounds: "5", abilities:
             [new Ability { Name = "Dread Aura", Text = "In your opponent's Command phase, enemy units take a Battle-shock test." }]);
-        var group = Assert.Single(BattleRoster.Build(new Roster { Units = [Unit("u1", "lord")] }, Catalogue(lord)).Units);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+        ScheduleAbility(roster, "lord", "Dread Aura", BattlePhase.Command, BattleTurn.Opponent);
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
         var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Dread Aura");
 
         Assert.True(BattleUnit.IsAbilityActiveInPhase(a, BattlePhase.Command, BattleTurn.Opponent));
@@ -837,6 +901,9 @@ public class BattleRosterTests
             DetachmentIds = ["test-detachment"],
             Units = [Bearer("u1", "overlord", "phylactery")],
         };
+        // Apply it AND tick a Command-phase window: the applied stat enhancement must still never be phase-marked.
+        ApplyEnhancement(roster, "phylactery");
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForEnhancement("phylactery")).SetWindow(BattlePhase.Command, BattleTurn.Player, true);
 
         var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord), [detachment]).Units);
 
@@ -858,6 +925,7 @@ public class BattleRosterTests
             DetachmentIds = ["test-detachment"],
             Units = [Bearer("u1", "plasmancer", "atomic-disintegrators")],
         };
+        ApplyEnhancement(roster, "atomic-disintegrators");
 
         var battle = BattleRoster.Build(roster, Catalogue(plasmancer), [detachment]);
         var unit = Assert.Single(battle.Units);

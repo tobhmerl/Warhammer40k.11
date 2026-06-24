@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Warhammer40k.Core.Catalogue;
+using Warhammer40k.Core.Play;
 
 namespace Warhammer40k.Core.Rosters;
 
@@ -74,7 +75,37 @@ public sealed class Roster
     /// <summary>The units in this roster, in any order; rules group them by datasheet/role as needed.</summary>
     public List<RosterUnit> Units { get; set; } = [];
 
+    /// <summary>
+    /// The player's manual Play-Mode schedules for abilities, army rules and stratagems (keyed by
+    /// <see cref="AbilityScheduleKeys"/>). Empty by default — nothing is surfaced as "usable now" or applied
+    /// to a unit until the player ticks boxes in setup. Persisted with the roster.
+    /// </summary>
+    public List<AbilitySchedule> AbilitySchedules { get; set; } = [];
+
     /// <summary>Finds a unit by its roster-unique <see cref="RosterUnit.Id"/>.</summary>
     public RosterUnit? FindUnit(string rosterUnitId) =>
         Units.FirstOrDefault(u => string.Equals(u.Id, rosterUnitId, StringComparison.Ordinal));
+
+    /// <summary>The schedule for a key, or null when the player has not configured it yet.</summary>
+    public AbilitySchedule? FindSchedule(string key) =>
+        AbilitySchedules.FirstOrDefault(s => string.Equals(s.Key, key, StringComparison.Ordinal));
+
+    /// <summary>The schedule for a key, creating (and storing) an empty one if none exists yet.</summary>
+    public AbilitySchedule GetOrCreateSchedule(string key)
+    {
+        var existing = FindSchedule(key);
+        if (existing is not null)
+            return existing;
+        var created = new AbilitySchedule { Key = key };
+        AbilitySchedules.Add(created);
+        return created;
+    }
+
+    /// <summary>True when the keyed ability is scheduled for the given phase + turn (false when unconfigured).</summary>
+    public bool IsScheduledNow(string key, BattlePhase phase, BattleTurn turn) =>
+        FindSchedule(key)?.Covers(phase, turn) ?? false;
+
+    /// <summary>True when the keyed ability's effect is applied to the unit (false when unconfigured).</summary>
+    public bool IsApplied(string key) =>
+        FindSchedule(key)?.ApplyToUnit ?? false;
 }

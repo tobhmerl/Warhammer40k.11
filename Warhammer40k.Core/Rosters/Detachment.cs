@@ -217,22 +217,6 @@ public sealed class Stratagem
         StratagemTurn.Opponent => turn == BattleTurn.Opponent,
         _ => false,
     };
-
-    /// <summary>
-    /// True when this stratagem is usable right now (phase + turn). Single-phase stratagems use the authored
-    /// <see cref="Turn"/>; a stratagem listing two or more phases derives the turn per phase from its
-    /// <see cref="When"/> text, so "your Shooting phase or the Fight phase" is your-turn-only for Shooting but
-    /// usable in either turn's Fight phase.
-    /// </summary>
-    public bool UsableNow(BattlePhase phase, BattleTurn turn)
-    {
-        if (!AppliesInPhase(phase))
-            return false;
-        var scope = Phases.Count >= 2
-            ? PhaseClassifier.TurnForPhase(When, phase) ?? Turn
-            : Turn;
-        return scope.Allows(turn);
-    }
 }
 
 /// <summary>Which of a model's/unit's weapons a detachment effect targets.</summary>

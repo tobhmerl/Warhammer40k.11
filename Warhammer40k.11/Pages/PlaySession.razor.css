@@ -1235,6 +1235,74 @@ html[data-scroll="up"] .hud.sticky {
     margin-top: 0.4rem;
 }
 
+/* ---- Army-rules "usable now" band (sits above the unit cards) ---- */
+.army-now {
+    margin-bottom: 1.25rem;
+    padding: 0.6rem 0.8rem 0.7rem;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.10), transparent 75%),
+        var(--surface);
+    box-shadow: var(--glow-sm);
+}
+
+.an-head {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+}
+
+.an-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.an-item {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    padding: 0.45rem 0.6rem;
+}
+
+.an-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.an-toggle .chev {
+    flex: none;
+    color: var(--accent);
+    font-size: 0.7rem;
+}
+
+.an-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--accent-strong);
+}
+
+.an-item .a-text {
+    margin-top: 0.4rem;
+}
+
 /* ---- Abilities ---- */
 .abilities {
     list-style: none;

@@ -10,10 +10,11 @@ namespace Warhammer40k.Core.Play;
 /// </summary>
 public sealed class BattleRoster
 {
-    private BattleRoster(IReadOnlyList<BattleUnit> units, IReadOnlyList<Detachment> detachments)
+    private BattleRoster(IReadOnlyList<BattleUnit> units, IReadOnlyList<Detachment> detachments, Roster roster)
     {
         Units = units;
         Detachments = detachments;
+        Source = roster;
         ArmyKeywords = units
             .SelectMany(u => u.Parts)
             .SelectMany(p => p.Datasheet.Keywords)
@@ -25,6 +26,9 @@ public sealed class BattleRoster
 
     /// <summary>The detachments selected for this roster — drive the smart weapon-ability effects in Play Mode.</summary>
     public IReadOnlyList<Detachment> Detachments { get; }
+
+    /// <summary>The underlying roster — carries the player's manual ability/stratagem <see cref="AbilitySchedule"/>s.</summary>
+    public Roster Source { get; }
 
     /// <summary>
     /// Every unit keyword fielded anywhere in this army (case-insensitive). Drives the "need to know" filtering
@@ -40,6 +44,23 @@ public sealed class BattleRoster
     public bool ArmyHasAnyKeyword(IReadOnlyList<string> requiredKeywords) =>
         requiredKeywords is null or { Count: 0 }
         || requiredKeywords.Any(ArmyKeywords.Contains);
+
+    /// <summary>
+    /// True when a Core Stratagem should surface right now: the army is eligible (has any required keyword)
+    /// AND the player has manually scheduled it for the current <paramref name="phase"/> + <paramref name="turn"/>.
+    /// Scheduling is entirely manual — an unconfigured stratagem never surfaces.
+    /// </summary>
+    public bool CoreStratagemUsable(CoreStratagem stratagem, BattlePhase phase, BattleTurn turn) =>
+        ArmyHasAnyKeyword(stratagem.RequiredUnitKeywords)
+        && Source.IsScheduledNow(AbilityScheduleKeys.ForCoreStratagem(stratagem.Id), phase, turn);
+
+    /// <summary>
+    /// True when a detachment stratagem should surface right now: the army is eligible AND the player has
+    /// manually scheduled it for the current <paramref name="phase"/> + <paramref name="turn"/>.
+    /// </summary>
+    public bool DetachmentStratagemUsable(Detachment detachment, Stratagem stratagem, BattlePhase phase, BattleTurn turn) =>
+        ArmyHasAnyKeyword(stratagem.RequiredUnitKeywords)
+        && Source.IsScheduledNow(AbilityScheduleKeys.ForDetachmentStratagem(detachment.Id, stratagem.Id), phase, turn);
 
     /// <summary>Builds a battle roster, skipping units whose datasheet is missing from the catalogue.</summary>
     public static BattleRoster Build(Roster roster, CatalogueData catalogue)
@@ -117,10 +138,10 @@ public sealed class BattleRoster
             var members = new List<BattlePart> { primary };
             if (attachedToHost.TryGetValue(id, out var leaders))
                 members.AddRange(leaders);
-            units.Add(new BattleUnit(members));
+            units.Add(new BattleUnit(members, roster));
         }
 
-        return new BattleRoster(units, detachments);
+        return new BattleRoster(units, detachments, roster);
     }
 
     /// <summary>
@@ -165,12 +186,15 @@ public sealed class BattleRoster
             }
         }
 
-        // Leader-conferred weapon abilities apply to every model in the led unit (incl. the Leader itself).
+        // Leader-conferred weapon abilities apply to every model in the led unit (incl. the Leader itself),
+        // but only when the player ticked "Apply to unit" for that Leader ability in setup.
         foreach (var leader in unit.Parts.Where(p => p.IsLeader))
         {
             foreach (var conferral in leader.Datasheet.LeaderConferrals)
             {
                 if (!ClassMatches(conferral.WeaponClass, ranged))
+                    continue;
+                if (!ConferralApplied(leader, conferral))
                     continue;
                 foreach (var ability in conferral.WeaponAbilities)
                 {
@@ -194,9 +218,10 @@ public sealed class BattleRoster
 
         foreach (var leader in unit.Parts.Where(p => p.IsLeader))
             foreach (var conferral in leader.Datasheet.LeaderConferrals)
-                foreach (var mod in conferral.StatModifiers)
-                    if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
-                        result.Add(mod);
+                if (ConferralApplied(leader, conferral))
+                    foreach (var mod in conferral.StatModifiers)
+                        if (mod.IsWeaponStat && ClassMatches(mod.WeaponClass, ranged))
+                            result.Add(mod);
 
         foreach (var detachment in Detachments)
             foreach (var buff in detachment.StatBuffs)
@@ -222,9 +247,10 @@ public sealed class BattleRoster
 
         foreach (var leader in unit.Parts.Where(p => p.IsLeader))
             foreach (var conferral in leader.Datasheet.LeaderConferrals)
-                foreach (var mod in conferral.StatModifiers)
-                    if (!mod.IsWeaponStat)
-                        result.Add(mod);
+                if (ConferralApplied(leader, conferral))
+                    foreach (var mod in conferral.StatModifiers)
+                        if (!mod.IsWeaponStat)
+                            result.Add(mod);
 
         foreach (var detachment in Detachments)
             foreach (var buff in detachment.StatBuffs)
@@ -243,13 +269,15 @@ public sealed class BattleRoster
     /// <summary>
     /// The stat modifiers from setup-assigned Enhancements that apply to <paramref name="part"/>: the part's
     /// own enhancement, plus any unit-wide (<see cref="Enhancement.AffectsWholeUnit"/>) enhancement carried by
-    /// another model in the same combat group.
+    /// another model in the same combat group. Only enhancements the player ticked "Apply to unit" for count.
     /// </summary>
-    private static IEnumerable<StatModifier> EnhancementStatModifiers(BattleUnit unit, BattlePart part)
+    private IEnumerable<StatModifier> EnhancementStatModifiers(BattleUnit unit, BattlePart part)
     {
         foreach (var member in unit.Parts)
         {
             if (member.Enhancement is not { } enh)
+                continue;
+            if (!Source.IsApplied(AbilityScheduleKeys.ForEnhancement(enh.Id)))
                 continue;
             if (!enh.AffectsWholeUnit && !ReferenceEquals(member, part))
                 continue;
@@ -264,10 +292,22 @@ public sealed class BattleRoster
         var result = new List<string>();
         foreach (var leader in unit.Parts.Where(p => p.IsLeader))
             foreach (var conferral in leader.Datasheet.LeaderConferrals)
-                foreach (var ability in conferral.UnitAbilities)
-                    if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
-                        result.Add(ability);
+                if (ConferralApplied(leader, conferral))
+                    foreach (var ability in conferral.UnitAbilities)
+                        if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                            result.Add(ability);
         return result;
+    }
+
+    /// <summary>
+    /// True when the player ticked "Apply to unit" for the Leader ability that drives this conferral (keyed
+    /// per the Leader's datasheet + the conferral's source ability). An empty conferral never applies.
+    /// </summary>
+    private bool ConferralApplied(BattlePart leader, ConferredEffect conferral)
+    {
+        if (conferral.IsEmpty || string.IsNullOrEmpty(conferral.SourceAbility))
+            return false;
+        return Source.IsApplied(AbilityScheduleKeys.ForUnitAbility(leader.Datasheet.Id, conferral.SourceAbility));
     }
 
     private static bool BuffApplies(BattleUnit unit, BattlePart part, DetachmentStatBuff buff)
@@ -303,7 +343,7 @@ public sealed class BattleRoster
     {
         var result = new List<string>();
         foreach (var part in unit.Parts)
-            if (part.Enhancement is { } enh)
+            if (part.Enhancement is { } enh && Source.IsApplied(AbilityScheduleKeys.ForEnhancement(enh.Id)))
                 foreach (var option in enh.ShootingAbilityOptions)
                     if (!result.Contains(option, StringComparer.OrdinalIgnoreCase))
                         result.Add(option);
@@ -335,10 +375,13 @@ public sealed class BattleRoster
 /// </summary>
 public sealed class BattleUnit
 {
-    internal BattleUnit(IReadOnlyList<BattlePart> parts)
+    private readonly Roster _roster;
+
+    internal BattleUnit(IReadOnlyList<BattlePart> parts, Roster roster)
     {
         Parts = parts;
         Primary = parts[0];
+        _roster = roster;
     }
 
     /// <summary>Stable id for tracker state — the primary (bodyguard) roster-unit id.</summary>
@@ -430,14 +473,11 @@ public sealed class BattleUnit
         }
     }
 
-    /// <summary>True when any part has content (weapons or abilities) to show in the given phase.</summary>
-    public bool HasContentIn(BattlePhase phase) => Parts.Any(p => p.HasContentIn(phase));
-
     /// <summary>
     /// Every ability across the group (primary unit first, then attached Leaders), de-duplicated by name so
     /// shared rules aren't repeated, followed by any setup-assigned Enhancements on the group's characters.
-    /// Each entry records which member it came from, whether it is an Enhancement, and — for leader conferrals
-    /// or stat-changing enhancements — its applied-effect summary.
+    /// Each entry carries its manual <see cref="AbilitySchedule"/> (windows + apply flag), the member it came
+    /// from, whether it is an Enhancement, and — when it confers an effect — the summary that would be applied.
     /// </summary>
     public IReadOnlyList<BattleAbility> CombinedAbilities
     {
@@ -449,20 +489,32 @@ public sealed class BattleUnit
             {
                 foreach (var ability in part.Datasheet.Abilities)
                     if (!HiddenInPlay(ability) && seen.Add(ability.Name))
+                    {
+                        var key = AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name);
+                        var schedule = _roster.FindSchedule(key);
                         result.Add(new BattleAbility(ability, part.Datasheet.Name)
                         {
-                            AppliedSummary = ConferredSummaryFor(part, ability.Name),
+                            Key = key,
+                            ConferredSummary = ConferredSummaryFor(part, ability.Name),
+                            Windows = schedule?.Windows ?? [],
+                            ApplyToUnit = schedule?.ApplyToUnit ?? false,
                         });
+                    }
 
-                // A character's setup-assigned Enhancement is shown on its card as an ability: as a live stat
-                // change ("Applied: …") when it buffs stats, otherwise as its rules text.
+                // A character's setup-assigned Enhancement is shown on its card as an ability: as the applied
+                // effect ("Applied: …") when the player ticks "Apply to unit", otherwise as its rules text.
                 if (part.Enhancement is { } enh && seen.Add(enh.Name))
                 {
+                    var key = AbilityScheduleKeys.ForEnhancement(enh.Id);
+                    var schedule = _roster.FindSchedule(key);
                     var summary = enh.EffectSummary;
                     result.Add(new BattleAbility(new Ability { Name = enh.Name, Text = enh.Text }, part.Datasheet.Name)
                     {
                         IsEnhancement = true,
-                        AppliedSummary = string.IsNullOrWhiteSpace(summary) ? null : summary,
+                        Key = key,
+                        ConferredSummary = string.IsNullOrWhiteSpace(summary) ? null : summary,
+                        Windows = schedule?.Windows ?? [],
+                        ApplyToUnit = schedule?.ApplyToUnit ?? false,
                     });
                 }
             }
@@ -473,8 +525,8 @@ public sealed class BattleUnit
     }
 
     /// <summary>
-    /// The "Applied: …" summary for a leader's conferral ability (e.g. "United In Destruction" → [LETHAL HITS]),
-    /// or null when the ability is ordinary (collapsible) text.
+    /// The conferred-effect summary for a leader's conferral ability (e.g. "United In Destruction" →
+    /// [LETHAL HITS]), or null when the ability has no applicable effect (so it is plain text only).
     /// </summary>
     private static string? ConferredSummaryFor(BattlePart part, string abilityName)
     {
@@ -494,22 +546,16 @@ public sealed class BattleUnit
         || PhaseClassifier.InvulnerableSaveScoped(ability) is not null;
 
     /// <summary>
-    /// True when an ability is a <i>text</i> ability whose rules text is relevant to <paramref name="phase"/>
-    /// in <paramref name="turn"/>, so Play Mode should highlight it as "usable now". The turn is read from the
-    /// text: "in your … phase" → your turn only, "in your opponent's … phase" → opponent's turn only, an
-    /// unqualified phase → either turn. Abilities whose effect is applied straight to the card
-    /// (<see cref="BattleAbility.AppliedSummary"/> — leader conferrals and stat-changing enhancements) are
-    /// always-on and are never phase-marked: stat abilities simply change the stats while they apply.
+    /// True when an ability is "usable now": its manual schedule has a window ticked for <paramref name="phase"/>
+    /// in <paramref name="turn"/>. An ability whose conferred effect is applied to the unit
+    /// (<see cref="BattleAbility.AppliedSummary"/>) is always-on — shown on the card, never as a "usable now"
+    /// prompt — so it is excluded. Scheduling is entirely manual: an unconfigured ability is never active.
     /// </summary>
     public static bool IsAbilityActiveInPhase(BattleAbility ability, BattlePhase phase, BattleTurn turn)
     {
         if (ability.AppliedSummary is not null)
             return false;
-        if (!PhaseClassifier.Classify(ability.Ability).Contains(phase))
-            return false;
-        var scope = PhaseClassifier.TurnForPhase(ability.Ability.Name + " " + ability.Ability.Text, phase)
-            ?? StratagemTurn.Either;
-        return scope.Allows(turn);
+        return ability.Windows.Any(w => w.Phase == phase && w.Turn == turn);
     }
 
     /// <summary>How many of this group's text abilities are usable in <paramref name="phase"/> during
@@ -539,12 +585,30 @@ public sealed record BattleAbility(Ability Ability, string Source)
     /// <summary>True when this entry is a setup-assigned Enhancement rather than a printed datasheet ability.</summary>
     public bool IsEnhancement { get; init; }
 
+    /// <summary>The manual-schedule key (<see cref="AbilityScheduleKeys"/>) used to configure this in setup.</summary>
+    public string Key { get; init; } = string.Empty;
+
+    /// <summary>The phase + turn windows the player ticked for this ability. Empty = never "usable now".</summary>
+    public IReadOnlyList<AbilityWindow> Windows { get; init; } = [];
+
+    /// <summary>Whether the player ticked "Apply to unit": when true the conferred effect is applied and prose hidden.</summary>
+    public bool ApplyToUnit { get; init; }
+
     /// <summary>
-    /// Non-null when this ability's effect is applied straight to the card (a leader conferral or an
-    /// enhancement's stat buff): the short "Applied: …" summary to show instead of, or alongside, prose.
-    /// Such "stat" abilities are always-on and are excluded from the per-phase "usable now" markers.
+    /// The short summary of this ability's conferred effect (e.g. "[LETHAL HITS]"), when it has one. Independent
+    /// of whether the player chose to apply it — use <see cref="AppliedSummary"/> for the displayed value.
     /// </summary>
-    public string? AppliedSummary { get; init; }
+    public string? ConferredSummary { get; init; }
+
+    /// <summary>True when this ability has a conferable effect that the player <i>could</i> apply to the unit.</summary>
+    public bool CanApplyToUnit => ConferredSummary is not null;
+
+    /// <summary>
+    /// Non-null only when the player ticked "Apply to unit" for an ability that confers an effect: the short
+    /// "Applied: …" summary to show instead of prose. Such applied abilities are always-on, so they are
+    /// excluded from the per-phase "usable now" markers.
+    /// </summary>
+    public string? AppliedSummary => ApplyToUnit ? ConferredSummary : null;
 }
 
 /// <summary>
@@ -615,27 +679,4 @@ public sealed class BattlePart
 
     /// <summary>Melee weapons in play (used in the Fight phase).</summary>
     public IReadOnlyList<WeaponProfile> MeleeWeapons { get; }
-
-    /// <summary>
-    /// Abilities relevant to a phase. Passive/always-on abilities are surfaced under
-    /// <see cref="BattlePhase.Command"/> so they are reviewed at the top of the round.
-    /// </summary>
-    public IReadOnlyList<Ability> AbilitiesIn(BattlePhase phase) =>
-        Datasheet.Abilities
-            .Where(a =>
-            {
-                var phases = PhaseClassifier.Classify(a);
-                return phases.Contains(phase) || (phase == BattlePhase.Command && phases.Count == 0);
-            })
-            .ToList();
-
-    /// <summary>True when this part has weapons or abilities to display in the given phase.</summary>
-    public bool HasContentIn(BattlePhase phase)
-    {
-        if (phase == BattlePhase.Shooting && RangedWeapons.Count > 0)
-            return true;
-        if (phase == BattlePhase.Fight && MeleeWeapons.Count > 0)
-            return true;
-        return AbilitiesIn(phase).Count > 0;
-    }
 }

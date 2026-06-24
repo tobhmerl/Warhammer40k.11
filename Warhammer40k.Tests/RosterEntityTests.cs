@@ -1,4 +1,5 @@
 using Warhammer40k.Api;
+using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
 namespace Warhammer40k.Tests;
@@ -46,6 +47,15 @@ public class RosterEntityTests
                 ModelCount = 1,
                 AppliedBindingId = "Quantum Goad",
                 BindingSurcharge = 45,
+            },
+        ],
+        AbilitySchedules =
+        [
+            new AbilitySchedule
+            {
+                Key = AbilityScheduleKeys.ForUnitAbility("overlord", "My Will Be Done"),
+                ApplyToUnit = true,
+                Windows = [new AbilityWindow(BattlePhase.Command, BattleTurn.Player)],
             },
         ],
     };
@@ -113,5 +123,25 @@ public class RosterEntityTests
         entity.Timestamp = stamp;
 
         Assert.Equal(stamp, entity.ToRoster().ModifiedUtc);
+    }
+
+    [Fact]
+    public void Round_trip_preserves_ability_schedules_through_json_column()
+    {
+        var roster = RosterEntity.From(UserId, SampleRoster()).ToRoster();
+
+        var schedule = Assert.Single(roster.AbilitySchedules);
+        Assert.Equal(AbilityScheduleKeys.ForUnitAbility("overlord", "My Will Be Done"), schedule.Key);
+        Assert.True(schedule.ApplyToUnit);
+        Assert.True(schedule.Covers(BattlePhase.Command, BattleTurn.Player));
+        Assert.False(schedule.Covers(BattlePhase.Command, BattleTurn.Opponent));
+    }
+
+    [Fact]
+    public void To_roster_falls_back_to_empty_schedules_for_blank_json()
+    {
+        var entity = new RosterEntity { RowKey = "x", Name = "Empty", Faction = "Necrons", AbilitySchedulesJson = "" };
+
+        Assert.Empty(entity.ToRoster().AbilitySchedules);
     }
 }

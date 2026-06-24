@@ -1,6 +1,7 @@
 @page "/rosters/{Id}"
 @using Warhammer40k.Core
 @using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Play
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k.Core.Rosters.Validation
 @inject IApiClient Api
@@ -145,6 +146,7 @@ else
 			}
 
 			<div class="editor-actions">
+				<button class="btn ghost" type="button" @onclick="OpenTiming">Play timing</button>
 				<button class="btn ghost" type="button" @onclick="OpenSummary">Summary &amp; export</button>
 			</div>
 
@@ -284,6 +286,32 @@ else
 				</div>
 			}
 
+			@{ var schedAbilities = ScheduleAbilities(sheet); }
+			@if (schedAbilities.Count > 0)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Abilities — when usable in Play Mode</span>
+					<p class="cfg-hint">Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it.</p>
+					@foreach (var ab in schedAbilities)
+					{
+						var key = AbilityScheduleKeys.ForUnitAbility(sheet.Id, ab.Name);
+						<div class="sched" @key="key">
+							<div class="sched-head">
+								<span class="sched-name">@ab.Name</span>
+								@if (ab.Summary is { } sum)
+								{
+									<label class="sched-apply" title="Apply @sum to the unit instead of showing the rules text">
+										<input type="checkbox" checked="@IsApplied(key)" @onchange="e => SetApplied(key, (bool)e.Value!)" />
+										Apply @sum
+									</label>
+								}
+							</div>
+							@ScheduleGrid(key)
+						</div>
+					}
+				</div>
+			}
+
 			<div class="cfg-block">
 				<button type="button" class="ds-toggle" @onclick="() => _showDatasheet = !_showDatasheet" aria-expanded="@_showDatasheet">
 					<span class="cfg-label">Datasheet</span>
@@ -308,6 +336,67 @@ else
 		<textarea class="summary-text" readonly rows="16">@BuildSummary()</textarea>
 		<p class="cfg-note">Select all and copy to export this list as text.</p>
 	</div>
+</Sheet>
+
+<Sheet Open="_timingOpen" Eyebrow="Play Mode" Title="Play timing" OnCloseRequested="CloseTiming">
+	@if (_roster is not null)
+	{
+		<div class="config">
+			<p class="cfg-note">Tick the phase + turn each army rule and stratagem can be used in. Nothing appears in Play Mode until you tick it.</p>
+
+			@{ var armyRules = ArmyRuleCatalogue.ForFaction(_roster.Faction); }
+			@if (armyRules.Count > 0)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Army rules</span>
+					@foreach (var rule in armyRules)
+					{
+						var key = AbilityScheduleKeys.ForArmyRule(rule.Name);
+						<div class="sched" @key="key">
+							<div class="sched-head"><span class="sched-name">@rule.Name</span></div>
+							@ScheduleGrid(key)
+						</div>
+					}
+				</div>
+			}
+
+			<div class="cfg-block">
+				<span class="cfg-label">Core stratagems</span>
+				@foreach (var s in CoreStratagemCatalogue.All)
+				{
+					var key = AbilityScheduleKeys.ForCoreStratagem(s.Id);
+					<div class="sched" @key="key">
+						<div class="sched-head">
+							<span class="sched-name">@s.Name</span>
+							<span class="sched-src">@s.Cost CP</span>
+						</div>
+						@ScheduleGrid(key)
+					</div>
+				}
+			</div>
+
+			@foreach (var det in _detachments)
+			{
+				@if (det.Stratagems.Count > 0)
+				{
+					<div class="cfg-block" @key="det.Id">
+						<span class="cfg-label">@det.Name stratagems</span>
+						@foreach (var s in det.Stratagems)
+						{
+							var key = AbilityScheduleKeys.ForDetachmentStratagem(det.Id, s.Id);
+							<div class="sched" @key="key">
+								<div class="sched-head">
+									<span class="sched-name">@s.Name</span>
+									<span class="sched-src">@s.CpCost CP</span>
+								</div>
+								@ScheduleGrid(key)
+							</div>
+						}
+					</div>
+				}
+			}
+		</div>
+	}
 </Sheet>
 
 <Sheet Open="_detachInfoOpen" Eyebrow="Detachments" Title="@($"Detachments · {DpSpent}/{DpBudget} DP")" OnCloseRequested="CloseDetachInfo">
@@ -373,6 +462,7 @@ else
 	private string _pickQuery = "";
 	private RosterUnit? _configuring;
 	private bool _summaryOpen;
+	private bool _timingOpen;
 	private bool _detachInfoOpen;
 	private bool _showDatasheet;
 
@@ -521,6 +611,10 @@ else
 
 	private void CloseSummary() => _summaryOpen = false;
 
+	private void OpenTiming() => _timingOpen = true;
+
+	private void CloseTiming() => _timingOpen = false;
+
 	private void OpenDetachInfo() => _detachInfoOpen = true;
 
 	private void CloseDetachInfo() => _detachInfoOpen = false;
@@ -639,6 +733,75 @@ else
 		group.Min == group.Max ? $"exactly {group.Min}"
 		: group.Max > 0 ? $"{group.Min}–{group.Max}"
 		: $"{group.Min}+";
+
+	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
+
+	/// <summary>A datasheet ability that gets a schedule grid, plus its conferred-effect summary (when any).</summary>
+	private sealed record SchedAbility(string Name, string? Summary);
+
+	// The datasheet abilities shown in the scheduler: every printed ability except the setup-only "Leader"
+	// entry and the invulnerable save (surfaced as a chip in Play, not a usable-now ability). Each carries the
+	// short summary of any conferred effect (e.g. "[LETHAL HITS]") so it can offer an "Apply to unit" toggle.
+	private static List<SchedAbility> ScheduleAbilities(Datasheet sheet)
+	{
+		var result = new List<SchedAbility>();
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var ability in sheet.Abilities)
+		{
+			if (string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase))
+				continue;
+			if (!seen.Add(ability.Name))
+				continue;
+			var conferral = sheet.LeaderConferrals.FirstOrDefault(c =>
+				!c.IsEmpty && string.Equals(c.SourceAbility, ability.Name, StringComparison.OrdinalIgnoreCase));
+			var summary = conferral is { IsEmpty: false } ? conferral.Summary : null;
+			result.Add(new SchedAbility(ability.Name, string.IsNullOrWhiteSpace(summary) ? null : summary));
+		}
+		return result;
+	}
+
+	private bool IsScheduled(string key, BattlePhase phase, BattleTurn turn) =>
+		_roster?.FindSchedule(key)?.Covers(phase, turn) ?? false;
+
+	private void ToggleWindow(string key, BattlePhase phase, BattleTurn turn, bool on)
+	{
+		if (_roster is null)
+			return;
+		_roster.GetOrCreateSchedule(key).SetWindow(phase, turn, on);
+		MarkChanged();
+	}
+
+	private bool IsApplied(string key) => _roster?.FindSchedule(key)?.ApplyToUnit ?? false;
+
+	private void SetApplied(string key, bool on)
+	{
+		if (_roster is null)
+			return;
+		_roster.GetOrCreateSchedule(key).ApplyToUnit = on;
+		MarkChanged();
+	}
+
+	// A 5×2 grid: a row per phase, a "My turn" / "Opp turn" checkbox each.
+	private RenderFragment ScheduleGrid(string key) => __builder =>
+	{
+		<div class="sched-grid">
+			<span class="sg-corner"></span>
+			<span class="sg-h">My turn</span>
+			<span class="sg-h">Opp turn</span>
+			@foreach (var phase in BattlePhases.Ordered)
+			{
+				<span class="sg-rl">@BattlePhases.Label(phase)</span>
+				<label class="sg-cell" title="@($"{BattlePhases.Label(phase)} · my turn")">
+					<input type="checkbox" checked="@IsScheduled(key, phase, BattleTurn.Player)"
+						   @onchange="e => ToggleWindow(key, phase, BattleTurn.Player, (bool)e.Value!)" />
+				</label>
+				<label class="sg-cell" title="@($"{BattlePhases.Label(phase)} · opponent's turn")">
+					<input type="checkbox" checked="@IsScheduled(key, phase, BattleTurn.Opponent)"
+						   @onchange="e => ToggleWindow(key, phase, BattleTurn.Opponent, (bool)e.Value!)" />
+				</label>
+			}
+		</div>
+	};
 
 	// ---- View helpers ----
 	private bool Over => _roster is not null && _validation.TotalPoints > _roster.PointsLimit;

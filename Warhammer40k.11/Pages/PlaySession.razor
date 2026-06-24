@@ -189,6 +189,30 @@ else
 			}
 		</section>
 
+		@{ var usableRules = UsableArmyRules; }
+		@if (usableRules.Count > 0)
+		{
+			<section class="army-now" aria-label="Army rules usable now">
+				<span class="an-head">Army rules — usable now</span>
+				<ul class="an-list">
+					@foreach (var rule in usableRules)
+					{
+						var ruleOpen = _openArmyRules.Contains(rule.Name);
+						<li class="an-item @(ruleOpen ? "open" : "")" @key="rule.Name">
+							<button type="button" class="an-toggle" @onclick="() => ToggleArmyRule(rule.Name)" aria-expanded="@ruleOpen">
+								<span class="chev" aria-hidden="true">@(ruleOpen ? "▾" : "▸")</span>
+								<span class="an-name">@rule.Name</span>
+							</button>
+							@if (ruleOpen)
+							{
+								<p class="a-text">@rule.Text</p>
+							}
+						</li>
+					}
+				</ul>
+			</section>
+		}
+
 		@if (_battle.Units.Count == 0)
 		{
 			<div class="card empty">
@@ -807,6 +831,23 @@ else
 	private IReadOnlyList<ArmyRule> ArmyRules =>
 		_roster is null ? [] : ArmyRuleCatalogue.ForFaction(_roster.Faction);
 
+	// Army rules the player scheduled for the current phase + turn (surfaced as a "usable now" band).
+	private IReadOnlyList<ArmyRule> UsableArmyRules =>
+		_roster is null
+			? []
+			: ArmyRules
+				.Where(r => _roster.IsScheduledNow(AbilityScheduleKeys.ForArmyRule(r.Name), _phase, _turn))
+				.ToList();
+
+	// Army rules whose text the user expanded (collapsed to the name by default), keyed by rule name.
+	private readonly HashSet<string> _openArmyRules = new(StringComparer.Ordinal);
+
+	private void ToggleArmyRule(string name)
+	{
+		if (!_openArmyRules.Remove(name))
+			_openArmyRules.Add(name);
+	}
+
 	private bool _rulesOpen;
 
 	private void OpenRules() => _rulesOpen = true;
@@ -868,14 +909,16 @@ else
 		get
 		{
 			var list = new List<StratView>();
-			foreach (var s in CoreStratagemCatalogue.Usable(_phase, _turn))
-				if (_battle is null || _battle.ArmyHasAnyKeyword(s.RequiredUnitKeywords))
-					list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
 			if (_battle is not null)
+			{
+				foreach (var s in CoreStratagemCatalogue.All)
+					if (_battle.CoreStratagemUsable(s, _phase, _turn))
+						list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
 				foreach (var det in _battle.Detachments)
 					foreach (var s in det.Stratagems)
-						if (s.UsableNow(_phase, _turn) && _battle.ArmyHasAnyKeyword(s.RequiredUnitKeywords))
+						if (_battle.DetachmentStratagemUsable(det, s, _phase, _turn))
 							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
+			}
 			return list;
 		}
 	}

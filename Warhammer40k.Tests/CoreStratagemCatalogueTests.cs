@@ -3,15 +3,12 @@ using Warhammer40k.Core.Play;
 namespace Warhammer40k.Tests;
 
 /// <summary>
-/// Pins the "need to know now" filtering of <see cref="CoreStratagemCatalogue"/>: a stratagem only surfaces
-/// when both its phase set (empty = any phase) and its "Used in" turn marker match the current moment, the
-/// rulebook order is preserved, and the authored content is well-formed.
+/// Pins <see cref="CoreStratagemCatalogue"/>'s authored content: the catalogue is well-formed, ordered by
+/// id, and each keyword-gated stratagem declares the unit keyword its "need to know" filter checks. Phase/turn
+/// timing is now configured manually per roster (see <see cref="AbilitySchedule"/>), not authored here.
 /// </summary>
 public class CoreStratagemCatalogueTests
 {
-    private static readonly BattlePhase[] AllPhases =
-        [BattlePhase.Command, BattlePhase.Movement, BattlePhase.Shooting, BattlePhase.Charge, BattlePhase.Fight];
-
     [Fact]
     public void Command_reroll_is_any_phase()
     {
@@ -19,55 +16,10 @@ public class CoreStratagemCatalogueTests
         Assert.True(reroll.AppliesInAnyPhase);
     }
 
-    [Theory]
-    [InlineData(BattleTurn.Player)]
-    [InlineData(BattleTurn.Opponent)]
-    public void Command_reroll_surfaces_in_every_phase_for_both_turns(BattleTurn turn)
-    {
-        foreach (var phase in AllPhases)
-            Assert.Contains(CoreStratagemCatalogue.Usable(phase, turn), s => s.Id == "15.02");
-    }
-
     [Fact]
-    public void Explosives_only_surfaces_in_your_shooting_phase()
+    public void Catalogue_is_ordered_by_id()
     {
-        Assert.Contains(CoreStratagemCatalogue.Usable(BattlePhase.Shooting, BattleTurn.Player), s => s.Id == "15.05");
-        // Wrong phase.
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Fight, BattleTurn.Player), s => s.Id == "15.05");
-        // Wrong turn (marked "Your turn").
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Shooting, BattleTurn.Opponent), s => s.Id == "15.05");
-    }
-
-    [Fact]
-    public void Insane_bravery_only_surfaces_in_your_command_phase()
-    {
-        Assert.Contains(CoreStratagemCatalogue.Usable(BattlePhase.Command, BattleTurn.Player), s => s.Id == "15.04");
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Command, BattleTurn.Opponent), s => s.Id == "15.04");
-    }
-
-    [Fact]
-    public void Counteroffensive_only_surfaces_in_opponents_fight_phase()
-    {
-        Assert.Contains(CoreStratagemCatalogue.Usable(BattlePhase.Fight, BattleTurn.Opponent), s => s.Id == "15.12");
-        // Wrong turn (marked "Opponent's turn").
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Fight, BattleTurn.Player), s => s.Id == "15.12");
-        // Wrong phase.
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Shooting, BattleTurn.Opponent), s => s.Id == "15.12");
-    }
-
-    [Theory]
-    [InlineData(BattleTurn.Player)]
-    [InlineData(BattleTurn.Opponent)]
-    public void Epic_challenge_surfaces_in_the_fight_phase_in_either_turn(BattleTurn turn)
-    {
-        Assert.Contains(CoreStratagemCatalogue.Usable(BattlePhase.Fight, turn), s => s.Id == "15.03");
-        Assert.DoesNotContain(CoreStratagemCatalogue.Usable(BattlePhase.Shooting, turn), s => s.Id == "15.03");
-    }
-
-    [Fact]
-    public void Usable_preserves_rulebook_order()
-    {
-        var ids = CoreStratagemCatalogue.Usable(BattlePhase.Fight, BattleTurn.Player).Select(s => s.Id).ToList();
+        var ids = CoreStratagemCatalogue.All.Select(s => s.Id).ToList();
         Assert.Equal(ids.OrderBy(id => id, StringComparer.Ordinal), ids);
     }
 

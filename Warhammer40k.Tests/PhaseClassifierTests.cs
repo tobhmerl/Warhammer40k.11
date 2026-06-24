@@ -10,6 +10,8 @@ namespace Warhammer40k.Tests;
 /// </summary>
 public class PhaseClassifierTests
 {
+    private static Ability Ab(string name, string text) => new() { Name = name, Text = text };
+
     [Theory]
     [InlineData("This model has a 4+ invulnerable save.", "4+", SaveScope.Model)]
     [InlineData("Models in this unit have a 5+ invulnerable save.", "5+", SaveScope.Unit)]
@@ -33,21 +35,6 @@ public class PhaseClassifierTests
         Assert.Equal(scope, parsed.Value.Scope);
     }
 
-    [Theory]
-    [InlineData("In your Command phase, gain 1CP.", BattlePhase.Command, StratagemTurn.Your)]
-    [InlineData("In your opponent's Shooting phase, do a thing.", BattlePhase.Shooting, StratagemTurn.Opponent)]
-    [InlineData("Your Shooting phase or the Fight phase.", BattlePhase.Shooting, StratagemTurn.Your)]
-    [InlineData("Your Shooting phase or the Fight phase.", BattlePhase.Fight, StratagemTurn.Either)]
-    [InlineData("Your opponent's Shooting phase or the Fight phase.", BattlePhase.Shooting, StratagemTurn.Opponent)]
-    [InlineData("Your opponent's Shooting phase or the Fight phase.", BattlePhase.Fight, StratagemTurn.Either)]
-    public void TurnForPhase_reads_the_qualifier_before_the_phase(string text, BattlePhase phase, StratagemTurn expected) =>
-        Assert.Equal(expected, PhaseClassifier.TurnForPhase(text, phase));
-
-    [Fact]
-    public void TurnForPhase_is_null_when_the_phase_is_not_named() =>
-        Assert.Null(PhaseClassifier.TurnForPhase("Each time this unit shoots, re-roll a 1.", BattlePhase.Shooting));
-    private static Ability Ab(string name, string text) => new() { Name = name, Text = text };
-
     [Fact]
     public void Melee_weapon_maps_to_fight_phase()
     {
@@ -63,50 +50,6 @@ public class PhaseClassifierTests
     {
         var weapon = new WeaponProfile { Name = "Gauss flayer", Type = type };
         Assert.Equal(BattlePhase.Shooting, PhaseClassifier.PhaseForWeapon(weapon));
-    }
-
-    [Fact]
-    public void Classifies_shooting_ability_from_text()
-    {
-        var phases = PhaseClassifier.Classify(Ab("Deadly", "In your Shooting phase this model can shoot twice."));
-        Assert.Contains(BattlePhase.Shooting, phases);
-    }
-
-    [Fact]
-    public void Classifies_command_phase_ability()
-    {
-        var phases = PhaseClassifier.Classify(Ab("Protocols", "At the start of your Command phase, choose a protocol."));
-        Assert.Contains(BattlePhase.Command, phases);
-    }
-
-    [Fact]
-    public void Classifies_fights_first_into_fight_phase()
-    {
-        var phases = PhaseClassifier.Classify(Ab("Vicious", "This unit has the Fights First ability."));
-        Assert.Contains(BattlePhase.Fight, phases);
-    }
-
-    [Fact]
-    public void Word_boundary_guard_does_not_match_move_inside_remove()
-    {
-        // "remove" must not be read as the Movement cue "move".
-        var phases = PhaseClassifier.Classify(Ab("Reanimation", "Return models that were removed from play."));
-        Assert.DoesNotContain(BattlePhase.Movement, phases);
-    }
-
-    [Fact]
-    public void Word_boundary_guard_does_not_match_charge_inside_discharge()
-    {
-        var phases = PhaseClassifier.Classify(Ab("Capacitor", "Discharge stored energy into the enemy."));
-        Assert.DoesNotContain(BattlePhase.Charge, phases);
-    }
-
-    [Fact]
-    public void Passive_ability_classifies_to_no_phase()
-    {
-        var ability = Ab("Resilient", "Each time an attack is allocated to this model, subtract 1 from the Damage.");
-        Assert.Empty(PhaseClassifier.Classify(ability));
-        Assert.True(PhaseClassifier.IsPassive(ability));
     }
 
     [Fact]

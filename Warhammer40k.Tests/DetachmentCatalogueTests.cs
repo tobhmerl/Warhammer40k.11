@@ -183,27 +183,57 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
-    public void Multi_phase_your_turn_stratagem_keeps_the_fight_phase_in_both_turns()
+    public void Detachment_stratagem_surfaces_only_when_scheduled_and_eligible()
     {
-        // "Your Shooting phase or the Fight phase": Shooting is your-turn-only; the Fight phase is either turn.
-        var molecular = DetachmentCatalogue.FindById("cryptek-conclave")!.Stratagems.Single(s => s.Name == "Molecular Targeting");
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
+        var molecular = cryptek.Stratagems.Single(s => s.Name == "Molecular Targeting");
 
-        Assert.True(molecular.UsableNow(BattlePhase.Shooting, BattleTurn.Player));
-        Assert.False(molecular.UsableNow(BattlePhase.Shooting, BattleTurn.Opponent));
-        Assert.True(molecular.UsableNow(BattlePhase.Fight, BattleTurn.Player));
-        Assert.True(molecular.UsableNow(BattlePhase.Fight, BattleTurn.Opponent));
+        // A Necrons army (Plasmancer is a CRYPTEK) so keyword eligibility passes for CRYPTEK/NECRONS stratagems.
+        var plasmancer = new Datasheet
+        {
+            Id = "plasmancer", Name = "Plasmancer",
+            StatProfiles = [new StatProfile { Name = "Plasmancer", Wounds = "4" }],
+            Keywords = ["Necrons", "Character", "Cryptek"],
+        };
+        var roster = new Roster { Units = [new RosterUnit { Id = "u1", DatasheetId = "plasmancer", ModelCount = 1 }] };
+        var catalogue = new CatalogueData { Datasheets = [plasmancer] };
+
+        var battle = BattleRoster.Build(roster, catalogue, [cryptek]);
+
+        // Not scheduled yet ? never surfaces, in any phase or turn.
+        Assert.False(battle.DetachmentStratagemUsable(cryptek, molecular, BattlePhase.Shooting, BattleTurn.Player));
+
+        // Schedule it for my Shooting phase ? surfaces there, but not in the Fight phase or the opponent's turn.
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForDetachmentStratagem(cryptek.Id, molecular.Id))
+            .SetWindow(BattlePhase.Shooting, BattleTurn.Player, true);
+
+        Assert.True(battle.DetachmentStratagemUsable(cryptek, molecular, BattlePhase.Shooting, BattleTurn.Player));
+        Assert.False(battle.DetachmentStratagemUsable(cryptek, molecular, BattlePhase.Shooting, BattleTurn.Opponent));
+        Assert.False(battle.DetachmentStratagemUsable(cryptek, molecular, BattlePhase.Fight, BattleTurn.Player));
     }
 
     [Fact]
-    public void Multi_phase_opponent_turn_stratagem_keeps_the_fight_phase_in_both_turns()
+    public void Keyword_gated_detachment_stratagem_is_hidden_without_the_keyword()
     {
-        // "Your opponent's Shooting phase or the Fight phase": Shooting is opponent-only; the Fight phase is either turn.
-        var swarm = DetachmentCatalogue.FindById("cryptek-conclave")!.Stratagems.Single(s => s.Name == "Microscarab Swarm");
+        var cryptek = DetachmentCatalogue.FindById("cryptek-conclave")!;
+        var swarm = cryptek.Stratagems.Single(s => s.Name == "Microscarab Swarm"); // requires CRYPTEK
 
-        Assert.True(swarm.UsableNow(BattlePhase.Shooting, BattleTurn.Opponent));
-        Assert.False(swarm.UsableNow(BattlePhase.Shooting, BattleTurn.Player));
-        Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Player));
-        Assert.True(swarm.UsableNow(BattlePhase.Fight, BattleTurn.Opponent));
+        // An army with no CRYPTEK unit (plain Warriors).
+        var warriors = new Datasheet
+        {
+            Id = "necron-warriors", Name = "Necron Warriors",
+            StatProfiles = [new StatProfile { Name = "Necron Warriors", Wounds = "1" }],
+            Keywords = ["Necrons", "Necron Warriors"],
+        };
+        var roster = new Roster { Units = [new RosterUnit { Id = "u1", DatasheetId = "necron-warriors", ModelCount = 10 }] };
+        var catalogue = new CatalogueData { Datasheets = [warriors] };
+        var battle = BattleRoster.Build(roster, catalogue, [cryptek]);
+
+        // Even when scheduled, it stays hidden because the army fields no CRYPTEK unit.
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForDetachmentStratagem(cryptek.Id, swarm.Id))
+            .SetWindow(BattlePhase.Shooting, BattleTurn.Opponent, true);
+
+        Assert.False(battle.DetachmentStratagemUsable(cryptek, swarm, BattlePhase.Shooting, BattleTurn.Opponent));
     }
 
     [Fact]
