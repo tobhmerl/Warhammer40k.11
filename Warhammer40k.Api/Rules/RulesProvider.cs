@@ -23,8 +23,10 @@ public sealed class RulesProvider
     public IReadOnlyList<RuleCard> Rules => _rules.Value;
 
     /// <summary>
-    /// Reads the rules corpus from the embedded resource. Returns an empty list when the corpus is the
-    /// placeholder <c>[]</c> or malformed, so the assistant degrades to an empty-state rather than throwing.
+    /// Reads the rules corpus from the embedded resource. Accepts either a bare array of rule cards or a
+    /// wrapper object with a <c>rules</c> array (plus optional meta/categories/table_of_contents). Returns an
+    /// empty list when the corpus is the placeholder <c>[]</c> or malformed, so the assistant degrades to an
+    /// empty-state rather than throwing.
     /// </summary>
     public static IReadOnlyList<RuleCard> LoadEmbedded()
     {
@@ -34,7 +36,23 @@ public sealed class RulesProvider
             using var stream = OpenStream(assembly);
             if (stream is null)
                 return [];
-            return JsonSerializer.Deserialize<List<RuleCard>>(stream, JsonOptions) ?? [];
+
+            using var doc = JsonDocument.Parse(stream);
+            var root = doc.RootElement;
+
+            // Wrapper object: { "rules": [ … ] }. Otherwise treat the root as the array itself.
+            JsonElement array = root;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (!root.TryGetProperty("rules", out array) || array.ValueKind != JsonValueKind.Array)
+                    return [];
+            }
+            else if (root.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return array.Deserialize<List<RuleCard>>(JsonOptions) ?? [];
         }
         catch (JsonException)
         {

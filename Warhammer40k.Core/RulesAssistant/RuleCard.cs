@@ -16,8 +16,10 @@ public sealed class RuleCard
     /// <summary>Stable rule reference, e.g. <c>"11.02"</c>.</summary>
     [JsonPropertyName("id")] public string Id { get; set; } = "";
 
-    /// <summary>Section number, e.g. <c>"11"</c>.</summary>
-    [JsonPropertyName("section")] public string Section { get; set; } = "";
+    /// <summary>Section number, e.g. <c>"11"</c>. Tolerant of corpora that write it as a JSON number.</summary>
+    [JsonPropertyName("section")]
+    [JsonConverter(typeof(StringOrNumberConverter))]
+    public string Section { get; set; } = "";
 
     [JsonPropertyName("section_title")] public string SectionTitle { get; set; } = "";
 

@@ -6,12 +6,13 @@ engine — no LLM**. It touches no existing models, validation, persistence, or 
 without affecting the rest of the app.
 
 ## Delete these files
-- `Warhammer40k.Core/RulesAssistant/` (whole folder: `RuleCard.cs`, `RulesAnswer.cs`, `RulesSearchEngine.cs`)
+- `Warhammer40k.Core/RulesAssistant/` (whole folder: `RuleCard.cs`, `RulesAnswer.cs`, `RulesSearchEngine.cs`, `StringOrNumberConverter.cs`)
 - `Warhammer40k.Api/RulesAssistant.cs` (the `POST /api/rules/search` Function + `RulesQuery`)
 - `Warhammer40k.Api/Rules/RulesProvider.cs`
 - `Warhammer40k.Api/Seed/core-rules.json`
 - `Warhammer40k.11/Components/RulesAssistantPanel.razor` (+ `.razor.css`)
 - `Warhammer40k.Tests/RulesSearchTests.cs`
+- `Warhammer40k.Tests/RulesCorpusTests.cs`
 - `docs/rules-assistant-REMOVE.md` (this file)
 
 ## Revert these small edits
@@ -33,5 +34,7 @@ without affecting the rest of the app.
   else references the feature).
 
 ## Note on the corpus
-`Warhammer40k.Api/Seed/core-rules.json` ships as `[]` (empty) until the real Core-Rules JSON is pasted in. With
-an empty corpus the panel shows a "No rules have been loaded yet" state; it never throws.
+`Warhammer40k.Api/Seed/core-rules.json` holds the Core Rules. The loader accepts either a bare array of rule
+cards or a wrapper object with a `rules` array (plus optional `meta`/`categories`/`table_of_contents`), and
+tolerates `section` written as a number or a string. With an empty corpus (`[]`) the panel shows a "No rules
+have been loaded yet" state; it never throws.
