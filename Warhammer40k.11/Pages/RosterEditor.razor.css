@@ -142,6 +142,10 @@
     box-shadow: 0 0 0 1px var(--accent-line);
 }
 
+.dp-item.disabled {
+    opacity: 0.5;
+}
+
 .dp-toggle {
     display: flex;
     align-items: center;
@@ -154,6 +158,10 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
+}
+
+.dp-toggle:disabled {
+    cursor: not-allowed;
 }
 
 .dp-check {
@@ -189,24 +197,27 @@
     font-size: 0.8rem;
 }
 
-.dp-rule {
-    padding: 0 0.7rem 0.5rem;
-}
-
-.dp-rule-name {
-    display: block;
-    color: var(--accent-strong);
+.dp-left {
+    margin-left: 0.4rem;
+    color: var(--accent);
     font-weight: 700;
-    font-size: 0.82rem;
-    margin-bottom: 0.1rem;
+    white-space: nowrap;
 }
 
-.dp-rule-text {
+.dp-rule-line {
     margin: 0;
-    color: var(--text-dim);
+    padding: 0 0.7rem 0.5rem;
+    color: var(--accent-strong);
+    font-weight: 600;
     font-size: 0.82rem;
-    line-height: 1.45;
-    white-space: pre-line;
+}
+
+.dp-note {
+    margin: 0;
+    padding: 0 0.7rem 0.5rem;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    font-style: italic;
 }
 
 .dp-enh {

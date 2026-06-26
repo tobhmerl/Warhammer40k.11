@@ -419,7 +419,10 @@ else
 
 <Sheet Open="_detachInfoOpen" Eyebrow="Detachments" Title="@($"Detachments · {DpSpent}/{DpBudget} DP")" OnCloseRequested="CloseDetachInfo">
 	<div class="detach-picker">
-		<p class="cfg-note">Spend up to <strong>@DpBudget</strong> Detachment Points at @(_roster?.PointsLimit) pts — pick one or more.</p>
+		<p class="cfg-note">
+			Spend up to <strong>@DpBudget</strong> Detachment Points at @(_roster?.PointsLimit) pts — pick one or more.
+			<span class="dp-left">@DpRemaining DP left</span>
+		</p>
 		@if (DpSpent > DpBudget)
 		{
 			<p class="dp-warn">Over budget by @(DpSpent - DpBudget) DP.</p>
@@ -427,18 +430,20 @@ else
 		@foreach (var d in DetachmentCatalogue.Selectable)
 		{
 			var selected = IsDetachmentSelected(d);
-			<div class="dp-item @(selected ? "on" : "")">
-				<button type="button" class="dp-toggle" @onclick="() => ToggleDetachment(d)" aria-pressed="@selected">
+			var disabled = !CanToggleDetachment(d);
+			<div class="dp-item @(selected ? "on" : "") @(disabled ? "disabled" : "")">
+				<button type="button" class="dp-toggle" @onclick="() => ToggleDetachment(d)" disabled="@disabled" aria-pressed="@selected">
 					<span class="dp-check" aria-hidden="true">@(selected ? "✓" : "")</span>
 					<span class="dp-name">@d.Name</span>
 					<span class="dp-cost">@d.DetachmentPoints DP</span>
 				</button>
-				@foreach (var rule in d.Rules)
+				@if (d.Rules.Count > 0)
 				{
-					<div class="dp-rule">
-						<span class="dp-rule-name">@rule.Name</span>
-						<p class="dp-rule-text">@rule.Text</p>
-					</div>
+					<p class="dp-rule-line">@string.Join(" · ", d.Rules.Select(r => r.Name))</p>
+				}
+				@if (disabled && !selected)
+				{
+					<p class="dp-note">@(ClashesWithSelection(d) ? $"Excluded — {string.Join("/", d.Tags).ToUpperInvariant()} detachment already chosen." : "Not enough Detachment Points left.")</p>
 				}
 				@if (d.Enhancements.Count > 0)
 				{
@@ -624,8 +629,20 @@ else
 
 	private int DpSpent => _detachments.Sum(d => d.DetachmentPoints);
 
+	private int DpRemaining => Math.Max(0, DpBudget - DpSpent);
+
 	private bool IsDetachmentSelected(Detachment d) =>
 		_roster is not null && _roster.EffectiveDetachmentIds.Contains(d.Id, StringComparer.OrdinalIgnoreCase);
+
+	// A detachment that shares an exclusivity tag (e.g. DYNASTY) with an already-selected one can't be added.
+	private bool ClashesWithSelection(Detachment d) =>
+		d.Tags.Count > 0 && _detachments.Any(s =>
+			!string.Equals(s.Id, d.Id, StringComparison.OrdinalIgnoreCase)
+			&& s.Tags.Any(t => d.Tags.Contains(t, StringComparer.OrdinalIgnoreCase)));
+
+	// You can always deselect; you can only add a detachment that fits the remaining DP and clashes with nothing.
+	private bool CanToggleDetachment(Detachment d) =>
+		IsDetachmentSelected(d) || (d.DetachmentPoints <= DpRemaining && !ClashesWithSelection(d));
 
 	private void ToggleDetachment(Detachment d)
 	{
@@ -637,8 +654,14 @@ else
 		if (ids.Count == 0 && !string.IsNullOrEmpty(_roster.DetachmentId))
 			ids.Add(_roster.DetachmentId);
 
-		if (ids.RemoveAll(id => string.Equals(id, d.Id, StringComparison.OrdinalIgnoreCase)) == 0)
+		var removed = ids.RemoveAll(id => string.Equals(id, d.Id, StringComparison.OrdinalIgnoreCase)) > 0;
+		if (!removed)
+		{
+			// Adding: refuse if it would break the DP budget or an exclusivity tag.
+			if (d.DetachmentPoints > DpRemaining || ClashesWithSelection(d))
+				return;
 			ids.Add(d.Id);
+		}
 
 		_roster.DetachmentId = ids.FirstOrDefault() ?? "";
 		ResolveDetachments();

@@ -110,7 +110,7 @@
 		<div class="field">
 			<span>Detachment</span>
 			<div class="detachments">
-				@foreach (var d in DetachmentCatalogue.BuiltIn)
+				@foreach (var d in DetachmentCatalogue.Selectable)
 				{
 					<button type="button" class="detachment @(_draft.DetachmentId == d.Id ? "on" : "")"
 							@onclick="() => _draft.DetachmentId = d.Id">@d.Name</button>
