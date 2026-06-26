@@ -527,6 +527,7 @@ public sealed class BattleUnit
                             ConferredSummary = ConferredSummaryFor(part, ability.Name, ability),
                             Windows = schedule?.Windows ?? [],
                             ApplyToUnit = schedule?.ApplyToUnit ?? false,
+                            ManualKeyword = schedule?.ManualKeyword,
                         });
                     }
 
@@ -544,6 +545,7 @@ public sealed class BattleUnit
                         ConferredSummary = string.IsNullOrWhiteSpace(summary) ? null : summary,
                         Windows = schedule?.Windows ?? [],
                         ApplyToUnit = schedule?.ApplyToUnit ?? false,
+                        ManualKeyword = schedule?.ManualKeyword,
                     });
                 }
             }
@@ -641,6 +643,16 @@ public sealed record BattleAbility(Ability Ability, string Source)
 
     /// <summary>Whether the player ticked "Apply to unit": when true the conferred effect is applied and prose hidden.</summary>
     public bool ApplyToUnit { get; init; }
+
+    /// <summary>
+    /// A player-authored short keyword chip (≤3 words, e.g. "Stealth") for an ability the engine can't summarise.
+    /// When set, Play Mode shows it as a passive keyword chip (alongside Inv/FNP), always visible regardless of
+    /// the phase/turn windows, with the original ability text available on tap. Null = none.
+    /// </summary>
+    public string? ManualKeyword { get; init; }
+
+    /// <summary>True when the player tagged this ability with a manual keyword chip.</summary>
+    public bool HasManualKeyword => !string.IsNullOrWhiteSpace(ManualKeyword);
 
     /// <summary>
     /// The short summary of this ability's conferred effect (e.g. "[LETHAL HITS]"), when it has one. Independent

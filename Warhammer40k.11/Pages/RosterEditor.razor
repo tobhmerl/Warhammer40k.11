@@ -316,6 +316,17 @@ else
 									</label>
 								}
 							</div>
+							<div class="sched-kw-row">
+								<label class="sched-kw" title="Show this ability as a short keyword chip in Play Mode (e.g. Stealth), like Inv/FNP">
+									<input type="checkbox" checked="@ShowKeyword(key)" @onchange="e => ToggleKeyword(key, (bool)e.Value!)" />
+									Show as keyword
+								</label>
+								@if (ShowKeyword(key))
+								{
+									<input class="sched-kw-text" maxlength="40" placeholder="e.g. Stealth (max 3 words)"
+										   value="@KeywordText(key)" @onchange="e => SetKeyword(key, e.Value?.ToString())" />
+								}
+							</div>
 							@if (textOpen && hasText)
 							{
 								<p class="sched-text">@CleanText(ab.Text)</p>
@@ -868,6 +879,10 @@ else
 	// Ability names (and stratagem schedule keys) whose rules text the user expanded in the scheduler (collapsed by default).
 	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
 
+	// Schedule keys whose "Show as keyword" text box is open (UI-only; the keyword itself persists on the
+	// schedule). A key is also treated as open when it already has a saved keyword.
+	private readonly HashSet<string> _keywordEditing = new(StringComparer.Ordinal);
+
 	private void ToggleSchedText(string id)
 	{
 		if (!_openSchedText.Remove(id))
@@ -953,6 +968,45 @@ else
 			return;
 		_roster.GetOrCreateSchedule(key).ApplyToUnit = on;
 		MarkChanged();
+	}
+
+	private string? KeywordText(string key) => _roster?.FindSchedule(key)?.ManualKeyword;
+
+	// The keyword box is shown when the user opened it, or when a keyword is already saved for this ability.
+	private bool ShowKeyword(string key) =>
+		_keywordEditing.Contains(key) || !string.IsNullOrWhiteSpace(KeywordText(key));
+
+	private void ToggleKeyword(string key, bool on)
+	{
+		if (on)
+		{
+			_keywordEditing.Add(key);
+			return;
+		}
+		_keywordEditing.Remove(key);
+		var schedule = _roster?.FindSchedule(key);
+		if (schedule is { ManualKeyword: not null })
+		{
+			schedule.ManualKeyword = null;
+			MarkChanged();
+		}
+	}
+
+	private void SetKeyword(string key, string? text)
+	{
+		if (_roster is null)
+			return;
+		_roster.GetOrCreateSchedule(key).ManualKeyword = TrimToWords(text, 3);
+		MarkChanged();
+	}
+
+	// Keeps a manual keyword short by taking only the first few words; returns null when empty.
+	private static string? TrimToWords(string? text, int maxWords)
+	{
+		if (string.IsNullOrWhiteSpace(text))
+			return null;
+		var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return words.Length == 0 ? null : string.Join(' ', words.Take(maxWords));
 	}
 
 	// A 5×2 grid: a row per phase, a "My turn" / "Opp turn" checkbox each.

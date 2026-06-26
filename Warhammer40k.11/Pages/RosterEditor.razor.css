@@ -1138,6 +1138,47 @@
     cursor: pointer;
 }
 
+/* "Show as keyword" row: opt in to a short keyword chip, then type the label (e.g. Stealth). */
+.sched-kw-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.6rem;
+}
+
+.sched-kw {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.sched-kw input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--accent-strong);
+    cursor: pointer;
+}
+
+.sched-kw-text {
+    flex: 1;
+    min-width: 8rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.82rem;
+}
+
+.sched-kw-text:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 .sched-grid {
     display: grid;
     grid-template-columns: 1fr auto auto;

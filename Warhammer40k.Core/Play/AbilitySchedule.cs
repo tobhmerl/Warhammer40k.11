@@ -47,6 +47,13 @@ public sealed class AbilitySchedule
     /// </summary>
     public bool ApplyToUnit { get; set; }
 
+    /// <summary>
+    /// A player-authored short keyword (≤3 words, e.g. "Stealth") for an ability the engine can't summarise
+    /// itself. When set, Play Mode shows the ability as a passive keyword chip (alongside Inv/FNP) reading this
+    /// label, regardless of the phase/turn windows, with the original ability text available on tap. Null = none.
+    /// </summary>
+    public string? ManualKeyword { get; set; }
+
     /// <summary>True when a window for the given phase + turn is ticked.</summary>
     public bool Covers(BattlePhase phase, BattleTurn turn) =>
         Windows.Any(w => w.Phase == phase && w.Turn == turn);

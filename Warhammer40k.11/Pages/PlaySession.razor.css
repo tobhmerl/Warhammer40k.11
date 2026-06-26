@@ -776,6 +776,22 @@ html[data-scroll="up"] .hud.sticky {
     color: #f3ecff;
 }
 
+/* Manual keyword chip (e.g. "Stealth"): a passive keyword shown beside Inv/FNP; tapping opens its rules text. */
+.chip.keyword {
+    cursor: pointer;
+    color: #bfe9d2;
+    border-color: var(--border-strong);
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.chip.keyword:hover,
+.chip.keyword:focus-visible {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #eafff5;
+    outline: none;
+}
+
 
 /* Inv / FNP scope: the small "unit" or model-name suffix, and a solid (unit-wide) vs dashed (single model) edge. */
 .chip .scope {

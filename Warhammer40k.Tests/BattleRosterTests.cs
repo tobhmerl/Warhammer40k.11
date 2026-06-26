@@ -1017,6 +1017,37 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Manual_keyword_on_a_schedule_surfaces_on_the_ability()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Shadowloom", Text = "The bearer has the Stealth ability." }]);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+        roster.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility("lord", "Shadowloom")).ManualKeyword = "Stealth";
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Shadowloom");
+
+        Assert.True(a.HasManualKeyword);
+        Assert.Equal("Stealth", a.ManualKeyword);
+        // The original ability text is still available (shown in the keyword chip's popup on tap).
+        Assert.Equal("The bearer has the Stealth ability.", a.Ability.Text);
+    }
+
+    [Fact]
+    public void Ability_without_a_manual_keyword_has_none()
+    {
+        var lord = Sheet("lord", "Lord", wounds: "5", abilities:
+            [new Ability { Name = "Plain", Text = "Nothing special." }]);
+        var roster = new Roster { Units = [Unit("u1", "lord")] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord)).Units);
+        var a = group.CombinedAbilities.Single(x => x.Ability.Name == "Plain");
+
+        Assert.False(a.HasManualKeyword);
+        Assert.Null(a.ManualKeyword);
+    }
+
+    [Fact]
     public void Stat_enhancement_is_never_phase_marked_even_when_its_text_names_a_phase()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4");
