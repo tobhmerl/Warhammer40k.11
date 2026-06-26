@@ -54,7 +54,7 @@ public static class CatalogueSeedLoader
             d.HasLeaderAbility = leaderText is not null
                 || d.FactionRules.Any(r => r.Equals("Leader", StringComparison.OrdinalIgnoreCase));
             d.AllowsCoLeader = leaderText is not null
-                && leaderText.Contains("already been attached", StringComparison.OrdinalIgnoreCase);
+                && NormalizeWhitespace(leaderText).Contains("already been attached", StringComparison.OrdinalIgnoreCase);
             d.LeaderTargetIds.Clear();
 
             // Structured effects this Leader confers on the unit it leads (e.g. [LETHAL HITS], Feel No Pain,
@@ -94,13 +94,40 @@ public static class CatalogueSeedLoader
     }
 
     private static bool HasAbilityText(Datasheet d, string needle) =>
-        d.Abilities.Any(a => a.Text.Contains(needle, StringComparison.OrdinalIgnoreCase));
+        d.Abilities.Any(a => NormalizeWhitespace(a.Text).Contains(needle, StringComparison.OrdinalIgnoreCase));
 
     private static string CleanText(string text) =>
-        text.Replace("^^**", " ", StringComparison.Ordinal)
-            .Replace("^^", " ", StringComparison.Ordinal)
-            .Replace("**", " ", StringComparison.Ordinal)
-            .Replace("■", " ", StringComparison.Ordinal);
+        NormalizeWhitespace(
+            text.Replace("^^**", " ", StringComparison.Ordinal)
+                .Replace("^^", " ", StringComparison.Ordinal)
+                .Replace("**", " ", StringComparison.Ordinal)
+                .Replace("■", " ", StringComparison.Ordinal));
+
+    /// <summary>
+    /// Collapses every run of whitespace — including non-breaking spaces (<c>\u00A0</c>) and newlines that the
+    /// rulebook PDF export sprinkles mid-sentence — to single spaces, so substring checks like
+    /// "already been attached" match regardless of how the seed text was line-wrapped.
+    /// </summary>
+    private static string NormalizeWhitespace(string text)
+    {
+        var sb = new System.Text.StringBuilder(text.Length);
+        var pendingSpace = false;
+        foreach (var ch in text)
+        {
+            if (char.IsWhiteSpace(ch) || ch == '\u00A0')
+            {
+                pendingSpace = sb.Length > 0;
+                continue;
+            }
+            if (pendingSpace)
+            {
+                sb.Append(' ');
+                pendingSpace = false;
+            }
+            sb.Append(ch);
+        }
+        return sb.ToString();
+    }
 
     /// <summary>Turns a unit name into a stable lowercase slug ("C'tan Shard of the Deceiver" → "ctan-shard-of-the-deceiver").</summary>
     private static string Slug(string name) => Slugger.Slug(name);

@@ -64,6 +64,16 @@ public class CatalogueProviderTests
         Assert.Equal(escalated, sheet.PointsOptions.Single(o => o.Models == models).EscalatedPoints);
     }
 
+    [Theory]
+    // Crypteks (Orikan/Chronomancer/…) may co-lead a unit that already has a Royal Warden or Noble — their
+    // seed text uses non-breaking spaces ("been\u00A0attached"), so the flag must survive whitespace quirks.
+    [InlineData("orikan-the-diviner", true)]
+    [InlineData("chronomancer", true)]
+    [InlineData("royal-warden", false)]
+    [InlineData("overlord", false)]
+    public void Real_seed_derives_co_leader_from_leader_text(string id, bool allowsCoLeader) =>
+        Assert.Equal(allowsCoLeader, Get(id).AllowsCoLeader);
+
     [Fact]
     public void Overlord_is_a_warlord_eligible_leader()
     {
