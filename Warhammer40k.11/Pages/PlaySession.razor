@@ -266,6 +266,7 @@ else
 					var collapsed = IsCollapsed(unit);
 					var reanimate = MyCommandPhase && NeedsReanimation(unit);
 					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
+					var alwaysAbilities = unit.CombinedAbilities.Where(a => a.IsAlwaysAvailable).ToList();
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -289,11 +290,23 @@ else
 											}
 											@foreach (var fnp in unit.FeelNoPains)
 											{
-												<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
-													FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
-												</span>
-											}
-											@if (reanimate)
+													<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
+														FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
+													</span>
+												}
+												@if (!dead)
+												{
+													@foreach (var a in alwaysAbilities)
+													{
+														<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — tap to read its rules")"
+															  @onclick="() => OpenAbilityCard(a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
+												}
+												@if (reanimate)
 											{
 												<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
 											}
@@ -324,9 +337,6 @@ else
 							var activeAbilities = unit.CombinedAbilities
 								.Where(a => BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
 								.ToList();
-							var alwaysAbilities = unit.CombinedAbilities
-								.Where(a => a.IsAlwaysAvailable)
-								.ToList();
 						}
 						@if (!dead && activeAbilities.Count > 0)
 						{
@@ -340,37 +350,6 @@ else
 											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
 												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 												<span class="ua-name">@a.Ability.Name</span>
-												@if (a.IsEnhancement)
-												{
-													<span class="a-tag enh">Enhancement</span>
-												}
-												@if (unit.Parts.Count > 1)
-												{
-													<span class="a-src">@a.Source</span>
-												}
-											</button>
-											@if (open)
-											{
-												<p class="a-text">@Clean(a.Ability.Text)</p>
-											}
-										</li>
-									}
-								</ul>
-							</div>
-						}
-
-						@if (!dead && alwaysAbilities.Count > 0)
-						{
-							<div class="u-always" aria-label="Abilities always available">
-								<span class="ua-head muted">Always available</span>
-								<ul class="ua-list">
-									@foreach (var a in alwaysAbilities)
-									{
-										var open = IsAbilityOpen(unit, a);
-										<li class="al-item @(open ? "open" : "")" @key="a.Ability.Name">
-											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
-												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
-												<span class="al-name">@a.Ability.Name</span>
 												@if (a.IsEnhancement)
 												{
 													<span class="a-tag enh">Enhancement</span>
@@ -710,6 +689,19 @@ else
 	}
 </Sheet>
 
+	<Sheet Open="_abilityCard is not null"
+		   Eyebrow="@(_abilityCard?.IsEnhancement == true ? "Enhancement" : "Always available")"
+		   Title="@_abilityCard?.Ability.Name" OnCloseRequested="CloseAbilityCard">
+		@if (_abilityCard is { } ac)
+		{
+			@if (!string.IsNullOrWhiteSpace(ac.Source) && !string.Equals(ac.Source, ac.Ability.Name, StringComparison.OrdinalIgnoreCase))
+			{
+				<p class="a-src">@ac.Source</p>
+			}
+			<p class="a-text">@Clean(ac.Ability.Text)</p>
+		}
+	</Sheet>
+
 <Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army &amp; detachment rules" OnCloseRequested="CloseRules">
 	@if (ArmyRules.Count > 0)
 	{
@@ -787,6 +779,8 @@ else
 	// Per-unit selected detachment weapon-ability for the current Shooting phase (e.g. "Anti-INFANTRY 3+").
 	private readonly Dictionary<string, string> _shootingChoice = new(StringComparer.Ordinal);
 	private BattleUnit? _detail;
+	// The always-available ability whose rules text is shown in a popup (tapped from its head chip). Null = closed.
+	private BattleAbility? _abilityCard;
 
 	// Single-cell highlight on a weapon stat ("Rng", "A", "BS"…) so you can mark the exact spot you're on while
 	// resolving an attack. Only the one cell you clicked lights up; click it again to clear.
@@ -1189,6 +1183,17 @@ else
 	private void OpenDetail(BattleUnit unit) => _detail = unit;
 
 	private void CloseDetail() => _detail = null;
+
+	private void OpenAbilityCard(BattleAbility ability) => _abilityCard = ability;
+
+	private void CloseAbilityCard() => _abilityCard = null;
+
+	// Keyboard activation for the always-available ability chips (they are spans, not buttons, to avoid nesting in the card toggle).
+	private void OnAbilityChipKey(KeyboardEventArgs e, BattleAbility ability)
+	{
+		if (e.Key is "Enter" or " " or "Spacebar")
+			_abilityCard = ability;
+	}
 
 	// ---- Swipe deck navigation (one card at a time) ----
 	private int CardCount => _battle?.Units.Count ?? 0;

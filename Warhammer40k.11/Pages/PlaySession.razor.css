@@ -709,6 +709,34 @@ html[data-scroll="up"] .hud.sticky {
     color: #ffd9b0;
 }
 
+/* Always-available ability shown as a tappable chip beside Inv/FNP; tapping opens its rules text in a popup. */
+.chip.ability {
+    cursor: pointer;
+    color: var(--accent-strong);
+    border-color: var(--border-strong);
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.chip.ability:hover,
+.chip.ability:focus-visible {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #eafff5;
+    outline: none;
+}
+
+.chip.ability.enh {
+    color: #e9d8ff;
+    border-color: rgba(155, 109, 255, 0.5);
+}
+
+.chip.ability.enh:hover,
+.chip.ability.enh:focus-visible {
+    background: rgba(155, 109, 255, 0.16);
+    border-color: rgba(155, 109, 255, 0.7);
+    color: #f3ecff;
+}
+
 
 /* Inv / FNP scope: the small "unit" or model-name suffix, and a solid (unit-wide) vs dashed (single model) edge. */
 .chip .scope {
@@ -1328,35 +1356,6 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .ua-item .a-text {
-    margin-top: 0.4rem;
-}
-
-/* ---- "Always available" band: abilities ticked for every phase/turn. Calm, never highlighted. ---- */
-.u-always {
-    margin: 0;
-    padding: 0.5rem 0.7rem 0.6rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-}
-
-.ua-head.muted {
-    color: var(--text-faint);
-}
-
-.al-item {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-2);
-    padding: 0.45rem 0.6rem;
-}
-
-.al-name {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--text);
-}
-
-.al-item .a-text {
     margin-top: 0.4rem;
 }
 
