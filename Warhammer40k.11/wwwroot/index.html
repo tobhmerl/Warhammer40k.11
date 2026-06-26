@@ -128,6 +128,31 @@
                     }
                     this._el = null; this._onStart = null; this._onEnd = null;
                 }
+            },
+
+            // Auto-save safety net: persist pending roster edits when the tab is hidden or the page is being
+            // unloaded (mobile browsers fire 'pagehide'/'visibilitychange' rather than a reliable 'beforeunload').
+            _flushRef: null,
+            _onHide: null,
+            flushOnHide: function (dotNetRef) {
+                this.cancelFlushOnHide();
+                this._flushRef = dotNetRef;
+                const self = this;
+                this._onHide = function () {
+                    if (document.visibilityState === 'hidden' && self._flushRef) {
+                        self._flushRef.invokeMethodAsync('FlushSave');
+                    }
+                };
+                document.addEventListener('visibilitychange', this._onHide);
+                window.addEventListener('pagehide', this._onHide);
+            },
+            cancelFlushOnHide: function () {
+                if (this._onHide) {
+                    document.removeEventListener('visibilitychange', this._onHide);
+                    window.removeEventListener('pagehide', this._onHide);
+                }
+                this._onHide = null;
+                this._flushRef = null;
             }
         };
     </script>

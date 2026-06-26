@@ -4,8 +4,10 @@
 @using Warhammer40k.Core.Play
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k.Core.Rosters.Validation
+@implements IAsyncDisposable
 @inject IApiClient Api
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>TombWorld — @(_roster?.Name ?? "Roster")</PageTitle>
 
@@ -473,6 +475,12 @@ else
 	private bool _panelOpen;
 	private string? _error;
 
+	// ---- Auto-save (debounced): a save fires ~2s after the last change, plus a flush on navigation/tab-hide. ----
+	private const int AutoSaveDelayMs = 2000;
+	private CancellationTokenSource? _autoSaveCts;
+	private DotNetObjectReference<RosterEditor>? _selfRef;
+	private bool _flushHookInstalled;
+
 	// Sheet state (markup added alongside the editor body).
 	private bool _picking;
 	private string _pickQuery = "";
@@ -482,12 +490,49 @@ else
 	private bool _detachInfoOpen;
 	private bool _showDatasheet;
 
+	protected override void OnInitialized()
+	{
+		// Flush any pending changes before an in-app navigation away from the editor.
+		Nav.LocationChanged += OnLocationChanged;
+	}
+
 	protected override async Task OnParametersSetAsync()
 	{
 		if (_loadedId == Id)
 			return;
 		_loadedId = Id;
 		await LoadAsync();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender && !_flushHookInstalled)
+		{
+			_flushHookInstalled = true;
+			_selfRef ??= DotNetObjectReference.Create(this);
+			try
+			{
+				// Save pending changes when the tab is hidden / closed (visibilitychange + pagehide).
+				await JS.InvokeVoidAsync("tombworld.flushOnHide", _selfRef);
+			}
+			catch (JSException) { }
+			catch (InvalidOperationException) { }
+		}
+	}
+
+	private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+	{
+		if (_dirty)
+			_ = SaveAsync();
+	}
+
+	/// <summary>Invoked from JS when the tab is hidden or closing — persist pending changes immediately.</summary>
+	[JSInvokable]
+	public async Task FlushSave()
+	{
+		_autoSaveCts?.Cancel();
+		if (_dirty)
+			await SaveAsync();
 	}
 
 	private async Task LoadAsync()
@@ -534,6 +579,34 @@ else
 	{
 		Recompute();
 		_dirty = true;
+		ScheduleAutoSave();
+	}
+
+	// Restart the debounce timer: the actual save fires AutoSaveDelayMs after the most recent change, so a
+	// burst of edits (e.g. ticking several checkboxes) results in a single save once you pause.
+	private void ScheduleAutoSave()
+	{
+		_autoSaveCts?.Cancel();
+		_autoSaveCts?.Dispose();
+		var cts = new CancellationTokenSource();
+		_autoSaveCts = cts;
+		_ = AutoSaveAfterDelayAsync(cts.Token);
+	}
+
+	private async Task AutoSaveAfterDelayAsync(CancellationToken token)
+	{
+		try
+		{
+			await Task.Delay(AutoSaveDelayMs, token);
+		}
+		catch (TaskCanceledException)
+		{
+			return; // a newer change rescheduled the save
+		}
+		if (token.IsCancellationRequested)
+			return;
+		await SaveAsync();
+		StateHasChanged();
 	}
 
 	// ---- Detachments (11th edition: one or more within the Detachment-Points budget) ----
@@ -582,11 +655,13 @@ else
 
 	private async Task SaveAsync()
 	{
-		if (_roster is null)
+		if (_roster is null || _saving || !_dirty)
 			return;
 
 		_saving = true;
 		_error = null;
+		// Clear the flag up front so edits made during the save mark the roster dirty again (and reschedule).
+		_dirty = false;
 		try
 		{
 			var saved = await Api.SaveRosterAsync(_roster);
@@ -594,11 +669,11 @@ else
 			_roster.Id = saved.Id;
 			_roster.CreatedUtc = saved.CreatedUtc;
 			_roster.ModifiedUtc = saved.ModifiedUtc;
-			_dirty = false;
 		}
 		catch (Exception)
 		{
-			_error = "Could not save the roster. Please try again.";
+			_error = "Could not save the roster. Auto-save will retry on the next change.";
+			_dirty = true; // keep it dirty so the next change (or manual Save) retries
 		}
 		finally
 		{
@@ -1022,4 +1097,24 @@ else
 	private sealed record PickerGroup(string Role, IReadOnlyList<UnitEntry> Units);
 	private sealed record UnitEntryResolved(RosterUnit Unit, Datasheet? Sheet);
 	private sealed record UnitGroup(string Role, IReadOnlyList<(RosterUnit Unit, Datasheet Sheet)> Units);
+
+	public async ValueTask DisposeAsync()
+	{
+		Nav.LocationChanged -= OnLocationChanged;
+		_autoSaveCts?.Cancel();
+		_autoSaveCts?.Dispose();
+
+		// Best-effort final flush + JS listener teardown (skipped if the circuit is already gone).
+		if (_dirty)
+		{
+			try { await SaveAsync(); } catch { }
+		}
+		if (_flushHookInstalled)
+		{
+			try { await JS.InvokeVoidAsync("tombworld.cancelFlushOnHide"); }
+			catch (JSException) { }
+			catch (InvalidOperationException) { }
+		}
+		_selfRef?.Dispose();
+	}
 }
