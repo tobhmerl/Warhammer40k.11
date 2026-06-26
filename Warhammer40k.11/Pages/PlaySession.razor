@@ -593,7 +593,7 @@ else
 				</div>
 				@if (ordered.Count > 1)
 				{
-					<div class="deck-dots" role="tablist" aria-label="Jump to unit — long-press a pill to drag and reorder" @ref="_dotsRef">
+					<div class="deck-dots" role="tablist" aria-label="Jump to unit — drag a pill sideways to reorder" @ref="_dotsRef">
 						@for (var i = 0; i < ordered.Count; i++)
 						{
 							var index = i;
