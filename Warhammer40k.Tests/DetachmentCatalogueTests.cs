@@ -283,4 +283,25 @@ public class DetachmentCatalogueTests
         foreach (var id in new[] { "annihilation-legion", "awakened-dynasty", "canoptek-court", "hypercrypt-legion", "obeisance-phalanx", "skyshroud-spearhead", "the-phaerons-armoury" })
             Assert.False(DetachmentCatalogue.FindById(id)!.Enabled);
     }
+
+    [Fact]
+    public void Starshatter_Arsenal_is_3DP_enabled_with_Relentless_Onslaught_and_a_non_Titanic_Assault_grant()
+    {
+        var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal");
+
+        Assert.NotNull(starshatter);
+        Assert.True(starshatter!.Enabled);
+        Assert.Equal(3, starshatter.DetachmentPoints);
+
+        var rule = Assert.Single(starshatter.Rules);
+        Assert.Equal("Relentless Onslaught", rule.Name);
+
+        var grant = Assert.Single(starshatter.WeaponGrants);
+        Assert.Equal(GrantScope.Model, grant.Scope);
+        Assert.Equal(DetachmentWeaponClass.Ranged, grant.WeaponClass);
+        Assert.Contains("Vehicle", grant.Keywords);
+        Assert.Contains("Mounted", grant.Keywords);
+        Assert.Contains("Titanic", grant.ExcludedKeywords);
+        Assert.Contains("Assault", grant.Abilities);
+    }
 }

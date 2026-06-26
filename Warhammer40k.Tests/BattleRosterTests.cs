@@ -381,6 +381,45 @@ public class BattleRosterTests
         Assert.Empty(battle.GrantedWeaponAbilities(loneLokhust, loneLokhust.Primary, ranged: true));
     }
 
+    [Fact]
+    public void Starshatter_Arsenal_grants_Assault_to_non_Titanic_vehicles_only()
+    {
+        var barge = Sheet("annihilation-barge", "Annihilation Barge",
+            weapons: [new WeaponProfile { Name = "Tesla cannon", Type = "Ranged" }]);
+        barge.Keywords = ["Vehicle", "Annihilation Barge"];
+        var monolith = Sheet("monolith", "Monolith",
+            weapons: [new WeaponProfile { Name = "Death ray", Type = "Ranged" }]);
+        monolith.Keywords = ["Vehicle", "Titanic", "Monolith"]; // TITANIC is excluded
+        var warriors = Sheet("necron-warriors", "Necron Warriors",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged" }]);
+        warriors.Keywords = ["Infantry", "Necron Warriors"]; // not Vehicle/Mounted
+
+        var roster = new Roster
+        {
+            DetachmentId = "starshatter-arsenal",
+            Units =
+            [
+                Unit("b", "annihilation-barge"),
+                Unit("m", "monolith"),
+                Unit("w", "necron-warriors", models: 10),
+            ],
+        };
+
+        var battle = BattleRoster.Build(roster, Catalogue(barge, monolith, warriors));
+        var bargeUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "annihilation-barge");
+        var monolithUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "monolith");
+        var warriorsUnit = battle.Units.Single(u => u.Primary.Datasheet.Id == "necron-warriors");
+
+        // A non-TITANIC VEHICLE gains [ASSAULT] on its ranged weapons.
+        Assert.Contains("Assault", battle.GrantedWeaponAbilities(bargeUnit, bargeUnit.Primary, ranged: true), StringComparer.OrdinalIgnoreCase);
+        // A TITANIC VEHICLE is excluded.
+        Assert.Empty(battle.GrantedWeaponAbilities(monolithUnit, monolithUnit.Primary, ranged: true));
+        // Infantry (neither VEHICLE nor MOUNTED) gets nothing.
+        Assert.Empty(battle.GrantedWeaponAbilities(warriorsUnit, warriorsUnit.Primary, ranged: true));
+        // The grant is ranged-only.
+        Assert.Empty(battle.GrantedWeaponAbilities(bargeUnit, bargeUnit.Primary, ranged: false));
+    }
+
     // ---------- Leader-conferred effects (weapon abilities / unit abilities / stat buffs) ----------
 
     private static Datasheet LeaderSheet(string id, string name, string wounds, params ConferredEffect[] conferrals)

@@ -173,8 +173,8 @@ public sealed class BattleRoster
                     continue;
 
                 var applies = grant.Scope == GrantScope.Unit
-                    ? unit.Parts.Any(p => MatchesAny(p, grant.Keywords))
-                    : MatchesAny(part, grant.Keywords);
+                    ? unit.Parts.Any(p => MatchesAny(p, grant.Keywords) && !HasAnyKeyword(p, grant.ExcludedKeywords))
+                    : MatchesAny(part, grant.Keywords) && !HasAnyKeyword(part, grant.ExcludedKeywords);
                 if (!applies)
                     continue;
 
@@ -357,6 +357,12 @@ public sealed class BattleRoster
     private static bool MatchesAny(BattlePart part, IReadOnlyList<string> keywords) =>
         keywords.Count == 0
         || keywords.Any(k => part.Datasheet.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase));
+
+    // Like MatchesAny but an empty list matches NOTHING — used for excluded-keyword checks (e.g. TITANIC),
+    // where "no exclusions authored" must mean "exclude nobody" rather than "exclude everybody".
+    private static bool HasAnyKeyword(BattlePart part, IReadOnlyList<string> keywords) =>
+        keywords.Count > 0
+        && keywords.Any(k => part.Datasheet.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase));
 
     private static bool ClassMatches(DetachmentWeaponClass weaponClass, bool ranged) =>
         weaponClass == DetachmentWeaponClass.Any

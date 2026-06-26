@@ -256,6 +256,12 @@ public sealed class WeaponAbilityGrant
     /// <summary>Trigger keywords (any one matches), e.g. ["Cryptek"] or ["Immortals", "Necron Warriors"]. Empty = every model.</summary>
     public List<string> Keywords { get; set; } = [];
 
+    /// <summary>
+    /// Keywords that disqualify a match even when <see cref="Keywords"/> matches, e.g. ["Titanic"] for a grant
+    /// to "VEHICLE and MOUNTED models excluding TITANIC". A model/unit carrying any of these is skipped.
+    /// </summary>
+    public List<string> ExcludedKeywords { get; set; } = [];
+
     /// <summary>Model-scoped (only the matching model) or unit-scoped (every model in a matching unit).</summary>
     public GrantScope Scope { get; set; } = GrantScope.Model;
 

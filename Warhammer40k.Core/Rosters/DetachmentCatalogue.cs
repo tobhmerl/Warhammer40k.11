@@ -29,11 +29,7 @@ public static class DetachmentCatalogue
         Make("The Phaeron's Armoury", 1,
             ("Mortality Shroud", 10),
             ("Prelocational Optimiser", 25)),
-        Make("Starshatter Arsenal", 3,
-            ("Chrono-impedance Fields", 25),
-            ("Demanding Leader", 10),
-            ("Dread Majesty", 30),
-            ("Miniaturised Nebuloscope", 15)),
+        StarshatterArsenal(),
         Cryptek(),
         Make("Cursed Legion", 2,
             ("Cursed Circlet", 25),
@@ -156,6 +152,46 @@ public static class DetachmentCatalogue
                 When = "Your opponent's Shooting phase, when an enemy unit that targeted a friendly IMMORTALS/NECRON WARRIORS unit has shot.",
                 Target = "That IMMORTALS/NECRON WARRIORS unit.",
                 Effect = "Your unit shoots using snap shooting, but while doing so your unit can only target that enemy unit.",
+            },
+        ];
+        return d;
+    }
+
+    // Starshatter Arsenal (3 DP, Priority Assets) — "Relentless Onslaught".
+    private static Detachment StarshatterArsenal()
+    {
+        // Enhancement points are authored; their text/eligibility and the stratagems follow (§10/§11).
+        var d = Make("Starshatter Arsenal", 3,
+            ("Chrono-impedance Fields", 25),
+            ("Demanding Leader", 10),
+            ("Dread Majesty", 30),
+            ("Miniaturised Nebuloscope", 15));
+        d.Enabled = true;
+
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Relentless Onslaught",
+                Text =
+                    "Each time a NECRONS model (excluding MONSTER models) from your army makes an attack that " +
+                    "targets a unit within range of one or more objective markers, add 1 to the Hit roll.\n" +
+                    "In addition, ranged weapons equipped by NECRONS VEHICLE and NECRONS MOUNTED models " +
+                    "(excluding TITANIC models) from your army have the [ASSAULT] ability.",
+            },
+        ];
+
+        // The always-on half is data-driven: VEHICLE/MOUNTED (not TITANIC) models' ranged weapons gain [ASSAULT].
+        // The objective-conditional +1 Hit depends on live battlefield state, so it stays as reference text above.
+        d.WeaponGrants =
+        [
+            new WeaponAbilityGrant
+            {
+                Keywords = ["Vehicle", "Mounted"],
+                ExcludedKeywords = ["Titanic"],
+                Scope = GrantScope.Model,
+                WeaponClass = DetachmentWeaponClass.Ranged,
+                Abilities = ["Assault"],
             },
         ];
         return d;
