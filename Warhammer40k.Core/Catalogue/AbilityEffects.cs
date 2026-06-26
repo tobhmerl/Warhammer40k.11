@@ -53,21 +53,34 @@ public sealed class StatModifier
     /// <summary>The signed amount to change the characteristic by (e.g. <c>+1</c>).</summary>
     [JsonPropertyName("delta")] public int Delta { get; set; }
 
+    /// <summary>
+    /// An <b>absolute</b> value that overrides the characteristic entirely (e.g. <c>"3+"</c> Save, <c>"8\""</c>
+    /// Move), used by self-affecting abilities that state a fixed characteristic ("has a Save characteristic of
+    /// 3+"). When set, it wins over any <see cref="Delta"/> for the same target. <c>null</c> = delta mode.
+    /// </summary>
+    [JsonPropertyName("setValue")] public string? SetValue { get; set; }
+
     /// <summary>For weapon-characteristic targets, which weapons are affected. Ignored for unit-statline targets.</summary>
     [JsonPropertyName("weaponClass")] public WeaponClass WeaponClass { get; set; } = WeaponClass.Any;
 
     /// <summary>Optional override for the short display label; <see cref="Describe"/> computes a default when empty.</summary>
     [JsonPropertyName("label")] public string Label { get; set; } = "";
 
+    /// <summary>True when this is an absolute set (vs. a signed delta).</summary>
+    [JsonIgnore]
+    public bool IsSet => SetValue is not null;
+
     /// <summary>True when this modifier targets a weapon characteristic (vs. the unit statline).</summary>
     [JsonIgnore]
     public bool IsWeaponStat => Target is StatTarget.Attacks or StatTarget.Skill or StatTarget.Strength or StatTarget.Damage or StatTarget.Range;
 
-    /// <summary>A short human label such as <c>"+1 to Hit"</c> or <c>"+1 Move"</c>.</summary>
+    /// <summary>A short human label such as <c>"+1 to Hit"</c>, <c>"+1 Move"</c>, or <c>"Save 3+"</c>.</summary>
     public string Describe()
     {
         if (!string.IsNullOrWhiteSpace(Label))
             return Label;
+        if (SetValue is not null)
+            return $"{Name(Target)} {SetValue}";
         var sign = Delta >= 0 ? "+" : "−";
         return $"{sign}{Math.Abs(Delta)} {Name(Target)}";
     }

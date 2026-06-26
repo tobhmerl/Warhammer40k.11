@@ -72,4 +72,12 @@ public sealed class Datasheet
     /// weapon abilities / stat buffs instead of showing the raw ability text.
     /// </summary>
     [JsonPropertyName("leaderConferrals")] public List<ConferredEffect> LeaderConferrals { get; set; } = [];
+
+    /// <summary>
+    /// Permanent effects a model's own abilities have on itself, parsed once at load by
+    /// <see cref="SelfAbilityParser"/> (e.g. Tomb Blades' Shieldvanes sets Save 3+ / Move 8", Nebuloscope
+    /// grants its ranged weapons [IGNORES COVER]). Play Mode applies these to the bearer's statline / weapon
+    /// chips and hides the now-redundant ability text.
+    /// </summary>
+    [JsonPropertyName("selfEffects")] public List<ConferredEffect> SelfEffects { get; set; } = [];
 }

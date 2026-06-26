@@ -80,4 +80,33 @@ public class StatMathTests
         Assert.False(StatMath.Changes("2+", plusOne)); // already clamped — no visible change
         Assert.False(StatMath.Changes("4+", Array.Empty<StatModifier>()));
     }
+
+    [Fact]
+    public void Absolute_set_overrides_the_value()
+    {
+        var setSave = new[] { new StatModifier { Target = StatTarget.Save, SetValue = "3+" } };
+        Assert.Equal("3+", StatMath.ApplyAll("4+", setSave));
+
+        var setMove = new[] { new StatModifier { Target = StatTarget.Move, SetValue = "8\"" } };
+        Assert.Equal("8\"", StatMath.ApplyAll("12\"", setMove));
+    }
+
+    [Fact]
+    public void Absolute_set_wins_over_deltas_regardless_of_order()
+    {
+        var mods = new[]
+        {
+            new StatModifier { Target = StatTarget.Save, Delta = -1 },        // would worsen 4+ to 5+
+            new StatModifier { Target = StatTarget.Save, SetValue = "3+" },   // but the set wins
+        };
+        Assert.Equal("3+", StatMath.ApplyAll("4+", mods));
+    }
+
+    [Fact]
+    public void Absolute_set_is_reported_as_a_change()
+    {
+        var setSave = new[] { new StatModifier { Target = StatTarget.Save, SetValue = "3+" } };
+        Assert.True(StatMath.Changes("4+", setSave));
+        Assert.False(StatMath.Changes("3+", setSave)); // already 3+ — no visible change
+    }
 }

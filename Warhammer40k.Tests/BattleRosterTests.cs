@@ -420,7 +420,35 @@ public class BattleRosterTests
         Assert.Empty(battle.GrantedWeaponAbilities(bargeUnit, bargeUnit.Primary, ranged: false));
     }
 
-    // ---------- Leader-conferred effects (weapon abilities / unit abilities / stat buffs) ----------
+    // ---------- Self-affecting datasheet abilities (own statline / own weapon chips) ----------
+
+    [Fact]
+    public void Real_seed_Tomb_Blades_apply_Shieldvanes_stats_and_Nebuloscope_weapon_chip()
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var tombBlades = catalogue.Datasheets.Single(d => d.Name == "Tomb Blades");
+
+        var roster = new Roster { Units = [Unit("t", tombBlades.Id, models: 3)] };
+        var battle = BattleRoster.Build(roster, catalogue);
+        var unit = Assert.Single(battle.Units);
+        var part = unit.Primary;
+
+        // Shieldvanes sets the bearer's own statline: Save 4+ → 3+, Move 12" → 8".
+        var uMods = battle.UnitStatModifiers(unit, part);
+        Assert.Equal("3+", StatMath.ApplyAll(part.Datasheet.StatProfiles[0].Save, uMods.Where(m => m.Target == StatTarget.Save)));
+        Assert.Equal("8\"", StatMath.ApplyAll(part.Datasheet.StatProfiles[0].Move, uMods.Where(m => m.Target == StatTarget.Move)));
+
+        // Nebuloscope grants the bearer's ranged weapons [IGNORES COVER] (a chip, not text); not melee.
+        Assert.Contains("Ignores Cover", battle.GrantedWeaponAbilities(unit, part, ranged: true), StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Ignores Cover", battle.GrantedWeaponAbilities(unit, part, ranged: false), StringComparer.OrdinalIgnoreCase);
+
+        // Their text is absorbed → no longer listed as abilities; Shadowloom (a plain unit ability) remains.
+        var abilityNames = unit.CombinedAbilities.Select(a => a.Ability.Name).ToList();
+        Assert.DoesNotContain("Shieldvanes", abilityNames);
+        Assert.DoesNotContain("Nebuloscope", abilityNames);
+        Assert.Contains("Shadowloom", abilityNames);
+    }
+
 
     private static Datasheet LeaderSheet(string id, string name, string wounds, params ConferredEffect[] conferrals)
     {

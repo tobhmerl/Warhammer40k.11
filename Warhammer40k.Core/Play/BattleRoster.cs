@@ -204,6 +204,17 @@ public sealed class BattleRoster
             }
         }
 
+        // A model's own permanent self-effects (e.g. Tomb Blades' Nebuloscope → ranged [IGNORES COVER]) apply
+        // to its own weapons of the matching class only.
+        foreach (var effect in part.Datasheet.SelfEffects)
+        {
+            if (!ClassMatches(effect.WeaponClass, ranged))
+                continue;
+            foreach (var ability in effect.WeaponAbilities)
+                if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                    result.Add(ability);
+        }
+
         return result;
     }
 
@@ -262,6 +273,13 @@ public sealed class BattleRoster
         foreach (var mod in EnhancementStatModifiers(unit, part))
             if (!mod.IsWeaponStat)
                 result.Add(mod);
+
+        // A model's own permanent self-effects (e.g. Tomb Blades' Shieldvanes → Save 3+ / Move 8") rewrite
+        // its own statline only — never an attached leader's or the rest of the group.
+        foreach (var effect in part.Datasheet.SelfEffects)
+            foreach (var mod in effect.StatModifiers)
+                if (!mod.IsWeaponStat)
+                    result.Add(mod);
 
         return result;
     }
@@ -499,7 +517,7 @@ public sealed class BattleUnit
             foreach (var part in Parts)
             {
                 foreach (var ability in part.Datasheet.Abilities)
-                    if (!HiddenInPlay(ability) && seen.Add(ability.Name))
+                    if (!HiddenInPlay(ability) && !AbsorbedBySelfEffect(part.Datasheet, ability) && seen.Add(ability.Name))
                     {
                         var key = AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name);
                         var schedule = _roster.FindSchedule(key);
@@ -567,6 +585,12 @@ public sealed class BattleUnit
     private static bool HiddenInPlay(Ability ability) =>
         string.Equals(ability.Name, "Leader", StringComparison.OrdinalIgnoreCase)
         || PhaseClassifier.IsOwnSaveRule(ability);
+
+    // An ability whose permanent self-effect is now reflected in the bearer's statline / weapon chips (parsed
+    // into SelfEffects) is redundant as prose, so it is dropped from the listed abilities.
+    private static bool AbsorbedBySelfEffect(Datasheet datasheet, Ability ability) =>
+        datasheet.SelfEffects.Any(e =>
+            string.Equals(e.SourceAbility, ability.Name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// True when an ability is "usable now": its manual schedule has a window ticked for <paramref name="phase"/>

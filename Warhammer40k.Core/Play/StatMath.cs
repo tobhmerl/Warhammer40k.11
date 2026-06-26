@@ -58,13 +58,22 @@ public static class StatMath
     }
 
     /// <summary>
-    /// Applies all of <paramref name="modifiers"/> to <paramref name="raw"/> (their deltas are summed, then
-    /// applied once). The caller is expected to pass only modifiers that target this characteristic.
+    /// Applies all of <paramref name="modifiers"/> to <paramref name="raw"/>. If any modifier is an absolute
+    /// set (<see cref="StatModifier.SetValue"/>), the last such value wins and deltas are ignored; otherwise
+    /// the deltas are summed and applied once. The caller is expected to pass only modifiers that target this
+    /// characteristic.
     /// </summary>
     public static string ApplyAll(string raw, IEnumerable<StatModifier> modifiers)
     {
         ArgumentNullException.ThrowIfNull(modifiers);
-        var delta = modifiers.Sum(m => m.Delta);
+        var list = modifiers as IReadOnlyList<StatModifier> ?? modifiers.ToList();
+
+        // An absolute set overrides everything (e.g. "Save characteristic of 3+"); the last set wins.
+        var set = list.LastOrDefault(m => m.IsSet);
+        if (set?.SetValue is { } value)
+            return value.Trim();
+
+        var delta = list.Sum(m => m.Delta);
         return Apply(raw, delta);
     }
 
