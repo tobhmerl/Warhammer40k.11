@@ -81,4 +81,12 @@ public interface IApiClient
 
     /// <summary>Restores the signed-in user's data from a bundle, replacing existing rosters/catalogue/settings.</summary>
     Task RestoreBackupAsync(BackupBundle bundle, CancellationToken cancellationToken = default);
+
+    // ---- Rules Assistant (removable feature — see docs/rules-assistant-REMOVE.md) ----
+
+    /// <summary>
+    /// Searches the Core-Rules corpus (<c>POST /api/rules/search</c>) and returns the best-matching rules
+    /// verbatim with citations, or <c>null</c> when the API is unreachable.
+    /// </summary>
+    Task<RulesAssistant.RulesAnswer?> SearchRulesAsync(string query, CancellationToken cancellationToken = default);
 }

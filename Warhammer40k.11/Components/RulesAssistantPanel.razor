@@ -1,0 +1,105 @@
+@namespace Warhammer40k._11.Components
+@using Warhammer40k.Core
+@using Warhammer40k.Core.RulesAssistant
+@inject IApiClient Api
+
+@* Rules Assistant panel (removable feature — see docs/rules-assistant-REMOVE.md).
+   Shows Core-Rules cards verbatim from the embedded corpus; no language model, no paraphrasing. *@
+<div class="rules-assistant">
+	<form class="ra-search" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+		<input class="ra-input" @bind="_query" @bind:event="oninput"
+			   placeholder="Ask a rules question, e.g. can [BLAST] hit a unit in engagement range?"
+			   aria-label="Rules question" />
+		<button class="ra-go" type="submit" disabled="@(_busy || string.IsNullOrWhiteSpace(_query))">
+			@(_busy ? "…" : "Search")
+		</button>
+	</form>
+
+	@if (_offline)
+	{
+		<p class="ra-note">The rules service is unreachable. Reconnect and try again.</p>
+	}
+	else if (_answer is { CorpusEmpty: true })
+	{
+		<p class="ra-note">No rules have been loaded yet.</p>
+	}
+	else if (_answer is { } answer && _searched)
+	{
+		@if (answer.Matches.Count == 0)
+		{
+			<p class="ra-note">No matching rule found for &ldquo;@answer.Query&rdquo;. Try different wording or a rule id (e.g. 11.02).</p>
+		}
+		else
+		{
+			<div class="ra-results">
+				@foreach (var match in answer.Matches)
+				{
+					<article class="ra-card" @key="match.Card.Id">
+						<header class="ra-card-head">
+							<span class="ra-title">@match.Card.Title</span>
+							<span class="ra-ref">@match.Card.Id · p@(match.Card.Page)</span>
+						</header>
+						@if (!string.IsNullOrWhiteSpace(match.Card.Category))
+						{
+							<span class="ra-cat">@match.Card.Category</span>
+						}
+						<p class="ra-text">@match.Card.Text</p>
+					</article>
+				}
+
+				@if (answer.Related.Count > 0)
+				{
+					<div class="ra-related">
+						<span class="ra-related-label">Related</span>
+						@foreach (var card in answer.Related)
+						{
+							<details class="ra-rel" @key="card.Id">
+								<summary>@card.Title <span class="ra-ref">@card.Id · p@(card.Page)</span></summary>
+								<p class="ra-text">@card.Text</p>
+							</details>
+						}
+					</div>
+				}
+
+				@if (answer.Sources.Count > 0)
+				{
+					<p class="ra-sources">
+						<strong>Sources:</strong>
+						@string.Join(", ", answer.Sources.Select(s => $"{s.Title} {s.Id} (p{s.Page})"))
+					</p>
+				}
+			</div>
+		}
+	}
+	else
+	{
+		<p class="ra-hint">Type a question and search — answers come straight from the Core Rules, word for word, with citations.</p>
+	}
+</div>
+
+@code {
+	private string _query = "";
+	private bool _busy;
+	private bool _searched;
+	private bool _offline;
+	private RulesAnswer? _answer;
+
+	private async Task SearchAsync()
+	{
+		if (string.IsNullOrWhiteSpace(_query) || _busy)
+			return;
+
+		_busy = true;
+		_offline = false;
+		try
+		{
+			_answer = await Api.SearchRulesAsync(_query.Trim());
+			_offline = _answer is null;
+			_searched = true;
+		}
+		finally
+		{
+			_busy = false;
+		}
+	}
+}

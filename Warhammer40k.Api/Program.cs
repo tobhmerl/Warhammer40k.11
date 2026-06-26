@@ -28,4 +28,7 @@ builder.Services.AddSingleton<ISettingsRepository, TableSettingsRepository>();
 // Catalogue: read-only reference data parsed and enriched once from the embedded seed.
 builder.Services.AddSingleton<CatalogueProvider>();
 
+// Rules Assistant (removable feature — see docs/rules-assistant-REMOVE.md): Core-Rules corpus, loaded once.
+builder.Services.AddSingleton<Warhammer40k.Api.Rules.RulesProvider>();
+
 builder.Build().Run();

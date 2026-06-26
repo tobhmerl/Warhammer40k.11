@@ -29,6 +29,9 @@
     <!-- The catalogue seed ships inside the assembly so CatalogueProvider can load it without
          a file dependency at runtime (and the Tests project can read the same resource). -->
     <EmbeddedResource Include="Seed\necron-catalogue-seed.json" />
+    <!-- Rules Assistant (removable feature — see docs/rules-assistant-REMOVE.md): the Core Rules
+         corpus the deterministic search reads. Starts empty ([]) until the rules JSON is provided. -->
+    <EmbeddedResource Include="Seed\core-rules.json" />
   </ItemGroup>
 
 </Project>

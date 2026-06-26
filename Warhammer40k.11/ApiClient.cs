@@ -4,6 +4,7 @@ using Warhammer40k.Core;
 using Warhammer40k.Core.Catalogue;
 using Warhammer40k.Core.Rosters;
 using Warhammer40k.Core.Rosters.Validation;
+using Warhammer40k.Core.RulesAssistant;
 
 namespace Warhammer40k._11;
 
@@ -270,5 +271,29 @@ internal sealed class ApiClient(HttpClient http) : IApiClient
     {
         using var response = await http.PostAsJsonAsync("api/restore", bundle, cancellationToken);
         response.EnsureSuccessStatusCode();
+    }
+
+    // ---- Rules Assistant (removable feature — see docs/rules-assistant-REMOVE.md) ----
+
+    public async Task<RulesAnswer?> SearchRulesAsync(string query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await http.PostAsJsonAsync("api/rules/search", new { query }, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<RulesAnswer>(cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return null; // API unreachable — the panel shows an offline note.
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

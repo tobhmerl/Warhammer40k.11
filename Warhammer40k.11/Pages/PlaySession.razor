@@ -52,6 +52,7 @@ else
 				{
 					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
 				}
+				<button class="btn small ghost" type="button" @onclick="OpenRulebook" title="Core Rules lookup">Rulebook</button>
 				<button class="btn small ghost" type="button" @onclick="OpenVp" title="Victory points">VPs</button>
 				<button class="btn small ghost reset" type="button" @onclick="RequestReset" title="Reset CP, VP and models">Reset</button>
 			</div>
@@ -643,6 +644,10 @@ else
 		</div>
 	}
 
+	<Sheet Open="_rulebookOpen" Eyebrow="Core Rules" Title="Rules lookup" OnCloseRequested="CloseRulebook">
+		<RulesAssistantPanel />
+	</Sheet>
+
 	<Sheet Open="_vpOpen" Eyebrow="Score" Title="Victory points" OnCloseRequested="CloseVp">
 		<div class="vp" aria-label="Victory points">
 			<div class="vp-grid">
@@ -913,9 +918,15 @@ else
 
 	private void CloseRules() => _rulesOpen = false;
 
+	// Core Rules lookup (removable feature — see docs/rules-assistant-REMOVE.md).
+	private bool _rulebookOpen;
+
+	private void OpenRulebook() => _rulebookOpen = true;
+
+	private void CloseRulebook() => _rulebookOpen = false;
+
 	// Victory points panel (opened from the top bar; the scores persist until an explicit Reset).
 	private bool _vpOpen;
-
 	private void OpenVp() => _vpOpen = true;
 
 	private void CloseVp() => _vpOpen = false;
