@@ -304,4 +304,24 @@ public class DetachmentCatalogueTests
         Assert.Contains("Titanic", grant.ExcludedKeywords);
         Assert.Contains("Assault", grant.Abilities);
     }
+
+    [Fact]
+    public void Starshatter_Arsenal_enhancements_carry_text_and_eligibility()
+    {
+        var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal")!;
+
+        // Dread Majesty is OVERLORD-or-CATACOMB-COMMAND-BARGE only (any-of keywords).
+        var dread = starshatter.FindEnhancement("dread-majesty")!;
+        Assert.False(string.IsNullOrWhiteSpace(dread.Text));
+        Assert.Contains("Overlord", dread.Eligibility.AnyOfKeywords);
+        Assert.Contains("Catacomb Command Barge", dread.Eligibility.AnyOfKeywords);
+
+        // The other three are NECRONS-unconstrained but carry their rules text.
+        foreach (var id in new[] { "miniaturised-nebuloscope", "demanding-leader", "chrono-impedance-fields" })
+        {
+            var enh = starshatter.FindEnhancement(id)!;
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+            Assert.True(enh.Eligibility.IsUnconstrained);
+        }
+    }
 }

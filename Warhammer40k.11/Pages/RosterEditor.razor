@@ -738,6 +738,8 @@ else
 		var parts = new List<string>();
 		if (enhancement.Eligibility.RequiredKeywords.Count > 0)
 			parts.Add("requires " + string.Join(", ", enhancement.Eligibility.RequiredKeywords));
+		if (enhancement.Eligibility.AnyOfKeywords.Count > 0)
+			parts.Add("requires " + string.Join(" or ", enhancement.Eligibility.AnyOfKeywords));
 		if (enhancement.Eligibility.ExcludedKeywords.Count > 0)
 			parts.Add("not for " + string.Join(", ", enhancement.Eligibility.ExcludedKeywords));
 		return string.Join(" · ", parts);

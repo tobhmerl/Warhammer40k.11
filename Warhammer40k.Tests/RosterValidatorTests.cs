@@ -301,6 +301,22 @@ public class RosterValidatorTests
         Assert.True(unconstrained.Eligibility.IsUnconstrained);
     }
 
+    [Fact]
+    public void Enhancement_IsAvailableTo_respects_any_of_keywords()
+    {
+        var overlord = Sheet("o", "Overlord", configure: d => d.Keywords = ["Faction: Necrons", "Character", "Overlord"]);
+        var ccb = Sheet("ccb", "Catacomb Command Barge", configure: d => d.Keywords = ["Faction: Necrons", "Vehicle", "Catacomb Command Barge"]);
+        var warden = Sheet("w", "Royal Warden", configure: d => d.Keywords = ["Faction: Necrons", "Character", "Royal Warden"]);
+
+        // "OVERLORD or CATACOMB COMMAND BARGE model only" — at least one of the listed keywords.
+        var dreadMajesty = new Enhancement { Eligibility = new EnhancementEligibility { AnyOfKeywords = ["Overlord", "Catacomb Command Barge"] } };
+
+        Assert.True(dreadMajesty.IsAvailableTo(overlord));
+        Assert.True(dreadMajesty.IsAvailableTo(ccb));
+        Assert.False(dreadMajesty.IsAvailableTo(warden));
+        Assert.False(dreadMajesty.Eligibility.IsUnconstrained);
+    }
+
     private static List<Detachment> CryptekOnly() =>
     [
         new()

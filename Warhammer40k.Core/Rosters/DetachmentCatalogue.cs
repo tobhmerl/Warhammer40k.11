@@ -194,6 +194,27 @@ public static class DetachmentCatalogue
                 Abilities = ["Assault"],
             },
         ];
+
+        // Enhancement display text (bearer's Play card) + R6 eligibility. Three are conditional (aura / command-
+        // phase selection) so they stay as schedulable reference text; Dread Majesty is OVERLORD-or-CCB only.
+        Author(d, "miniaturised-nebuloscope",
+            "NECRONS model only. Ranged weapons equipped by models in the bearer's unit have the [IGNORES COVER] " +
+            "ability.");
+        Author(d, "demanding-leader",
+            "NECRONS model only. In your Command phase, select one friendly NECRONS VEHICLE or NECRONS MOUNTED " +
+            "unit (excluding TITANIC units) within 6\" of the bearer. Until the start of your next Command phase, " +
+            "that unit is eligible to shoot in a turn in which it Fell Back.");
+        Author(d, "chrono-impedance-fields",
+            "NECRONS model only. In your Command phase, select one friendly NECRONS VEHICLE or NECRONS MOUNTED " +
+            "unit (excluding TITANIC units) within 6\" of the bearer. Until the start of your next Command phase, " +
+            "each time an attack is allocated to a model in that unit, subtract 1 from the Damage characteristic " +
+            "of that attack.");
+        Author(d, "dread-majesty",
+            "OVERLORD or CATACOMB COMMAND BARGE model only. Aura. While a friendly NECRONS unit (excluding " +
+            "MONSTER and TITANIC units) is within 6\" of the bearer, each time a model in that unit makes an " +
+            "attack, re-roll a Hit roll of 1 and re-roll a Wound roll of 1.");
+        d.FindEnhancement("dread-majesty")!.Eligibility.AnyOfKeywords = ["Overlord", "Catacomb Command Barge"];
+
         return d;
     }
 

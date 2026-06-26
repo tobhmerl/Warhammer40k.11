@@ -136,18 +136,26 @@ public enum EnhancementScope
 
 /// <summary>
 /// Structured per-enhancement eligibility (§10/§11): the target model must carry every keyword in
-/// <see cref="RequiredKeywords"/> and none in <see cref="ExcludedKeywords"/>. Empty lists impose no constraint.
+/// <see cref="RequiredKeywords"/>, at least one in <see cref="AnyOfKeywords"/> (when set), and none in
+/// <see cref="ExcludedKeywords"/>. Empty lists impose no constraint.
 /// </summary>
 public sealed class EnhancementEligibility
 {
     /// <summary>Keywords the model must have (all of them), e.g. "Cryptek".</summary>
     public List<string> RequiredKeywords { get; set; } = [];
 
+    /// <summary>
+    /// Keywords of which the model must have at least one (OR), e.g. ["Overlord", "Catacomb Command Barge"]
+    /// for "OVERLORD or CATACOMB COMMAND BARGE model only". Empty = no any-of constraint.
+    /// </summary>
+    public List<string> AnyOfKeywords { get; set; } = [];
+
     /// <summary>Keywords the model must not have (none of them).</summary>
     public List<string> ExcludedKeywords { get; set; } = [];
 
     /// <summary>True when no constraints are set.</summary>
-    public bool IsUnconstrained => RequiredKeywords.Count == 0 && ExcludedKeywords.Count == 0;
+    public bool IsUnconstrained =>
+        RequiredKeywords.Count == 0 && AnyOfKeywords.Count == 0 && ExcludedKeywords.Count == 0;
 
     /// <summary>Evaluates the keyword constraints against a datasheet's keywords.</summary>
     public bool IsSatisfiedBy(Datasheet datasheet)
@@ -156,6 +164,12 @@ public sealed class EnhancementEligibility
         {
             if (!datasheet.Keywords.Contains(required, StringComparer.OrdinalIgnoreCase))
                 return false;
+        }
+
+        if (AnyOfKeywords.Count > 0
+            && !AnyOfKeywords.Any(k => datasheet.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase)))
+        {
+            return false;
         }
 
         foreach (var excluded in ExcludedKeywords)
