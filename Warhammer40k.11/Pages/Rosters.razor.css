@@ -443,6 +443,70 @@
     box-shadow: var(--glow-sm);
 }
 
+/* DP-budgeted multi-select rows (mirror the editor's picker) */
+.detachments:has(.detachment.dp) {
+    grid-template-columns: 1fr;
+}
+
+.detachment.dp {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.detachment.dp.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.detachment.dp.disabled:hover {
+    color: var(--text-dim);
+    border-color: var(--border-strong);
+}
+
+.dp-check {
+    flex: none;
+    width: 1.2rem;
+    height: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    color: #04130d;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.detachment.dp.on .dp-check {
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+}
+
+.dp-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.dp-cost {
+    flex: none;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.dp-budget {
+    margin-left: 0.4rem;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+.dp-budget.over {
+    color: var(--danger);
+}
+
 .wizard-actions {
     display: flex;
     gap: 0.6rem;

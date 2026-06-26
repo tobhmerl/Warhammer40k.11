@@ -108,12 +108,20 @@
 		</div>
 
 		<div class="field">
-			<span>Detachment</span>
+			<span>Detachment <span class="dp-budget @(DpSpent > DpBudget ? "over" : "")">@DpSpent/@DpBudget DP · @DpRemaining left</span></span>
 			<div class="detachments">
 				@foreach (var d in DetachmentCatalogue.Selectable)
 				{
-					<button type="button" class="detachment @(_draft.DetachmentId == d.Id ? "on" : "")"
-							@onclick="() => _draft.DetachmentId = d.Id">@d.Name</button>
+					var selected = IsDraftDetachmentSelected(d);
+					var disabled = !CanToggleDraftDetachment(d);
+					<button type="button"
+							class="detachment dp @(selected ? "on" : "") @(disabled ? "disabled" : "")"
+							disabled="@disabled"
+							@onclick="() => ToggleDraftDetachment(d)">
+						<span class="dp-check" aria-hidden="true">@(selected ? "✓" : "")</span>
+						<span class="dp-name">@d.Name</span>
+						<span class="dp-cost">@d.DetachmentPoints DP</span>
+					</button>
 				}
 			</div>
 		</div>
@@ -194,6 +202,44 @@
 
 	private void CloseWizard() => _wizardOpen = false;
 
+	// ---- Detachment DP-budget multi-select (mirrors the editor's picker) ----
+	private int DpBudget => DetachmentCatalogue.Budget(_draft.PointsLimit);
+
+	private int DpSpent => _draft.DetachmentIds
+		.Select(DetachmentCatalogue.FindById)
+		.Where(d => d is not null)
+		.Sum(d => d!.DetachmentPoints);
+
+	private int DpRemaining => Math.Max(0, DpBudget - DpSpent);
+
+	private bool IsDraftDetachmentSelected(Detachment d) =>
+		_draft.DetachmentIds.Contains(d.Id, StringComparer.OrdinalIgnoreCase);
+
+	// A detachment that shares an exclusivity tag (e.g. DYNASTY) with an already-selected one can't be added.
+	private bool DraftClashes(Detachment d) =>
+		d.Tags.Count > 0 && _draft.DetachmentIds
+			.Where(id => !string.Equals(id, d.Id, StringComparison.OrdinalIgnoreCase))
+			.Select(DetachmentCatalogue.FindById)
+			.Where(s => s is not null)
+			.Any(s => s!.Tags.Any(t => d.Tags.Contains(t, StringComparer.OrdinalIgnoreCase)));
+
+	// You can always deselect; you can only add one that fits the remaining DP and clashes with nothing.
+	private bool CanToggleDraftDetachment(Detachment d) =>
+		IsDraftDetachmentSelected(d) || (d.DetachmentPoints <= DpRemaining && !DraftClashes(d));
+
+	private void ToggleDraftDetachment(Detachment d)
+	{
+		var ids = _draft.DetachmentIds;
+		if (ids.RemoveAll(id => string.Equals(id, d.Id, StringComparison.OrdinalIgnoreCase)) == 0)
+		{
+			if (d.DetachmentPoints > DpRemaining || DraftClashes(d))
+				return;
+			ids.Add(d.Id);
+		}
+		_draft.DetachmentId = ids.FirstOrDefault() ?? "";
+		_wizardError = null;
+	}
+
 	private async Task CreateAsync()
 	{
 		if (string.IsNullOrWhiteSpace(_draft.Name))
@@ -201,9 +247,9 @@
 			_wizardError = "Give your roster a name.";
 			return;
 		}
-		if (string.IsNullOrWhiteSpace(_draft.DetachmentId))
+		if (_draft.DetachmentIds.Count == 0)
 		{
-			_wizardError = "Choose a detachment.";
+			_wizardError = "Choose at least one detachment.";
 			return;
 		}
 
@@ -213,7 +259,8 @@
 		{
 			var saved = await Api.SaveRosterAsync(_draft);
 			_wizardOpen = false;
-			Nav.NavigateTo($"rosters/{saved.Id}");
+			// Land straight on the add-units flow (the editor opens its unit picker on arrival).
+			Nav.NavigateTo($"rosters/{saved.Id}?add=1");
 		}
 		catch (Exception)
 		{

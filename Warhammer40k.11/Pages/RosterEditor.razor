@@ -148,13 +148,10 @@ else
 			}
 
 			<div class="editor-actions">
+				<button class="btn primary add-unit" type="button" @onclick="OpenPicker">+ Add unit</button>
 				<button class="btn ghost" type="button" @onclick="OpenTiming">Play timing</button>
 				<button class="btn ghost" type="button" @onclick="OpenSummary">Summary &amp; export</button>
 			</div>
-
-			<button class="fab" type="button" aria-label="Add unit" @onclick="OpenPicker">
-				<span aria-hidden="true">+</span>
-			</button>
 		}
 
 		@if (_error is not null)
@@ -507,6 +504,16 @@ else
 			return;
 		_loadedId = Id;
 		await LoadAsync();
+
+		// Arriving from the New-Roster wizard (rosters/{id}?add=1) → open the unit picker straight away.
+		if (_roster is not null && WantsAddOnArrival())
+			OpenPicker();
+	}
+
+	private bool WantsAddOnArrival()
+	{
+		var query = new Uri(Nav.Uri).Query;
+		return query.Contains("add=1", StringComparison.OrdinalIgnoreCase);
 	}
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
