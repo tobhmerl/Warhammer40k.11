@@ -324,4 +324,55 @@ public class DetachmentCatalogueTests
             Assert.True(enh.Eligibility.IsUnconstrained);
         }
     }
+
+    [Fact]
+    public void Starshatter_Arsenal_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal")!;
+        Assert.Equal(6, starshatter.Stratagems.Count);
+        Assert.All(starshatter.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(starshatter.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Merciless Reclamation: 2CP, your Shooting OR Fight phase, no keyword gate.
+        var merciless = starshatter.Stratagems.Single(s => s.Name == "Merciless Reclamation");
+        Assert.Equal(2, merciless.CpCost);
+        Assert.True(merciless.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(merciless.AppliesInPhase(BattlePhase.Fight));
+        Assert.False(merciless.AppliesInPhase(BattlePhase.Movement));
+        Assert.True(merciless.AppliesInTurn(BattleTurn.Player));
+        Assert.False(merciless.AppliesInTurn(BattleTurn.Opponent));
+        Assert.Empty(merciless.RequiredUnitKeywords);
+
+        // Unyielding Forms: 2CP, opponent's Shooting OR Fight phase, VEHICLE/MOUNTED only.
+        var unyielding = starshatter.Stratagems.Single(s => s.Name == "Unyielding Forms");
+        Assert.Equal(2, unyielding.CpCost);
+        Assert.True(unyielding.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(unyielding.AppliesInTurn(BattleTurn.Player));
+        Assert.Equal(["Vehicle", "Mounted"], unyielding.RequiredUnitKeywords);
+
+        // Movement-phase Strategic Ploys are VEHICLE/MOUNTED-gated.
+        foreach (var name in new[] { "Chronoshift", "Dimensional Tunnel" })
+        {
+            var s = starshatter.Stratagems.Single(x => x.Name == name);
+            Assert.Equal(1, s.CpCost);
+            Assert.True(s.AppliesInPhase(BattlePhase.Movement));
+            Assert.True(s.AppliesInTurn(BattleTurn.Player));
+            Assert.Equal(["Vehicle", "Mounted"], s.RequiredUnitKeywords);
+        }
+
+        // Endless Servitude: 1CP, your Fight phase, any NECRONS unit (no keyword gate).
+        var endless = starshatter.Stratagems.Single(s => s.Name == "Endless Servitude");
+        Assert.Equal(1, endless.CpCost);
+        Assert.True(endless.AppliesInPhase(BattlePhase.Fight));
+        Assert.True(endless.AppliesInTurn(BattleTurn.Player));
+        Assert.Empty(endless.RequiredUnitKeywords);
+
+        // Reactive Reposition: 1CP, opponent's Shooting phase, any NECRONS unit.
+        var reactive = starshatter.Stratagems.Single(s => s.Name == "Reactive Reposition");
+        Assert.Equal(1, reactive.CpCost);
+        Assert.True(reactive.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(reactive.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(reactive.AppliesInTurn(BattleTurn.Player));
+        Assert.Empty(reactive.RequiredUnitKeywords);
+    }
 }

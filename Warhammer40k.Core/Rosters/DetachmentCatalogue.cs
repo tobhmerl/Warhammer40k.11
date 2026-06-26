@@ -215,6 +215,61 @@ public static class DetachmentCatalogue
             "attack, re-roll a Hit roll of 1 and re-roll a Wound roll of 1.");
         d.FindEnhancement("dread-majesty")!.Eligibility.AnyOfKeywords = ["Overlord", "Catacomb Command Barge"];
 
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "merciless-reclamation", Name = "Merciless Reclamation", Type = "Battle Tactic", CpCost = 2,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase.",
+                Target = "One NECRONS unit (excluding MONSTER and TITANIC units) from your army that has not been selected to shoot or fight this phase.",
+                Effect = "Until the end of the phase, each time a model in your unit makes an attack, if the target of that attack is within range of one or more objective markers, add 1 to the Wound roll.",
+            },
+            new Stratagem
+            {
+                Id = "unyielding-forms", Name = "Unyielding Forms", Type = "Battle Tactic", CpCost = 2,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Vehicle", "Mounted"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One NECRONS VEHICLE or NECRONS MOUNTED unit (excluding TITANIC units) from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, each time an attack targets a model in your unit, if the Strength characteristic of that attack is greater than the Toughness characteristic of that unit, subtract 1 from the Wound roll.",
+            },
+            new Stratagem
+            {
+                Id = "chronoshift", Name = "Chronoshift", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                RequiredUnitKeywords = ["Vehicle", "Mounted"],
+                When = "Your Movement phase.",
+                Target = "One NECRONS VEHICLE or NECRONS MOUNTED unit (excluding TITANIC units) from your army that has not been selected to move this phase.",
+                Effect = "Until the end of the phase, if your unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in your unit.",
+            },
+            new Stratagem
+            {
+                Id = "dimensional-tunnel", Name = "Dimensional Tunnel", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                RequiredUnitKeywords = ["Vehicle", "Mounted"],
+                When = "Your Movement phase.",
+                Target = "One NECRONS VEHICLE or NECRONS MOUNTED unit (excluding TITANIC units) from your army.",
+                Effect = "Until the end of the phase, models in your unit can move horizontally through models and terrain features.",
+            },
+            new Stratagem
+            {
+                Id = "endless-servitude", Name = "Endless Servitude", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Fight],
+                When = "End of your Fight phase.",
+                Target = "One NECRONS unit (excluding MONSTER and TITANIC units) from your army that is within range of one or more objective markers you control.",
+                Effect = "Your unit's Reanimation Protocols activate.",
+            },
+            new Stratagem
+            {
+                Id = "reactive-reposition", Name = "Reactive Reposition", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                When = "Your opponent's Shooting phase, just after an enemy unit has shot.",
+                Target = "One NECRONS unit from your army (excluding MONSTER and TITANIC units) that was the target of one or more of the attacking unit's attacks.",
+                Effect = "Your unit can make a Normal move of up to D6\".",
+            },
+        ];
+
         return d;
     }
 
