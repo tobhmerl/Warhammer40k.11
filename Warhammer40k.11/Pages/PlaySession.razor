@@ -40,24 +40,6 @@ else if (_notFound || _roster is null || _battle is null)
 else
 {
 	<div class="play">
-		<div class="topbar">
-			<div class="topbar-actions">
-				@if (!_cardSwipe)
-				{
-					<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
-						@(AllCollapsed ? "Expand all" : "Collapse all")
-					</button>
-				}
-				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
-				{
-					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
-				}
-				<button class="btn small ghost" type="button" @onclick="OpenRulebook" title="Core Rules lookup">Rulebook</button>
-				<button class="btn small ghost" type="button" @onclick="OpenVp" title="Victory points">VPs</button>
-				<button class="btn small ghost reset" type="button" @onclick="RequestReset" title="Reset CP, VP and models">Reset</button>
-			</div>
-		</div>
-
 		<div class="play-rail">
 			@if (!_cardSwipe)
 			{
@@ -227,39 +209,6 @@ else
 		}
 		else
 		{
-			@if (_cardSwipe)
-			{
-				var ordered = OrderedUnits;
-				var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
-				<div class="deck-bar" role="group" aria-label="Unit cards">
-					<button type="button" class="deck-nav" @onclick="PrevCard" disabled="@(_activeCard <= 0)" aria-label="Previous unit">‹</button>
-					<span class="deck-pos">
-						<span class="deck-name">@ordered[activeIdx].Name</span>
-						<span class="deck-count">@(activeIdx + 1) / @ordered.Count</span>
-					</span>
-					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= ordered.Count - 1)" aria-label="Next unit">›</button>
-				</div>
-				@if (ordered.Count > 1)
-				{
-					<div class="deck-dots" role="tablist" aria-label="Jump to unit — long-press a pill to drag and reorder" @ref="_dotsRef">
-						@for (var i = 0; i < ordered.Count; i++)
-						{
-							var index = i;
-							var u = ordered[index];
-							var dUsable = IsDead(u) ? 0 : u.ActiveAbilityCount(_phase, _turn);
-							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
-									role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
-									title="@($"{u.Name}{(dUsable > 0 ? $" · {dUsable} usable now" : "")}")" @onclick="() => SelectCard(index)">
-								<span class="dd-label">@DeckLabel(u)</span>
-								@if (dUsable > 0)
-								{
-									<span class="dd-badge" aria-hidden="true">@dUsable</span>
-								}
-							</button>
-						}
-					</div>
-				}
-			}
 			<div class="@(_cardSwipe ? "deck" : null)" @ref="_deckRef" @onkeydown="OnDeckKeyDown" tabindex="@(_cardSwipe ? 0 : -1)">
 			<ul class="unit-list">
 				@foreach (var unit in UnitsToRender)
@@ -630,7 +579,57 @@ else
 				}
 			</ul>
 			</div>
+			@if (_cardSwipe)
+			{
+				var ordered = OrderedUnits;
+				var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
+				<div class="deck-bar" role="group" aria-label="Unit cards">
+					<button type="button" class="deck-nav" @onclick="PrevCard" disabled="@(_activeCard <= 0)" aria-label="Previous unit">‹</button>
+					<span class="deck-pos">
+						<span class="deck-name">@ordered[activeIdx].Name</span>
+						<span class="deck-count">@(activeIdx + 1) / @ordered.Count</span>
+					</span>
+					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= ordered.Count - 1)" aria-label="Next unit">›</button>
+				</div>
+				@if (ordered.Count > 1)
+				{
+					<div class="deck-dots" role="tablist" aria-label="Jump to unit — long-press a pill to drag and reorder" @ref="_dotsRef">
+						@for (var i = 0; i < ordered.Count; i++)
+						{
+							var index = i;
+							var u = ordered[index];
+							var dUsable = IsDead(u) ? 0 : u.ActiveAbilityCount(_phase, _turn);
+							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
+									role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
+									title="@($"{u.Name}{(dUsable > 0 ? $" · {dUsable} usable now" : "")}")" @onclick="() => SelectCard(index)">
+								<span class="dd-label">@DeckLabel(u)</span>
+								@if (dUsable > 0)
+								{
+									<span class="dd-badge" aria-hidden="true">@dUsable</span>
+								}
+							</button>
+						}
+					</div>
+				}
+			}
 		}
+		<div class="topbar">
+			<div class="topbar-actions">
+				@if (!_cardSwipe)
+				{
+					<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
+						@(AllCollapsed ? "Expand all" : "Collapse all")
+					</button>
+				}
+				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
+				{
+					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">Rules</button>
+				}
+				<button class="btn small ghost" type="button" @onclick="OpenRulebook" title="Core Rules lookup">Rulebook</button>
+				<button class="btn small ghost" type="button" @onclick="OpenVp" title="Victory points">VPs</button>
+				<button class="btn small ghost reset" type="button" @onclick="RequestReset" title="Reset CP, VP and models">Reset</button>
+			</div>
+		</div>
 			<a class="back" href="play">&larr; Play</a>
 		</div>
 	}
