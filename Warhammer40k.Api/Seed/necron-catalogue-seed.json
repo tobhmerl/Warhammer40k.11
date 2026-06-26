@@ -4462,24 +4462,7 @@
           "escalatedPoints": 220
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "166f-78e9-3ef-63a0::ebdd-e4b1-1d7e-94c3",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "doomsday-cannon",
-              "name": "Doomsday cannon"
-            },
-            {
-              "id": "gauss-flayer-array",
-              "name": "Gauss flayer array"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Monolith",
