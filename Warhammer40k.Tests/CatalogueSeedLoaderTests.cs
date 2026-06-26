@@ -192,4 +192,43 @@ public class CatalogueSeedLoaderTests
         Assert.Equal("Singularity Matrix", binding!.Name);
         Assert.Equal(55, binding.Points);
     }
+
+    [Fact]
+    public void Deserializes_per_copy_escalation_fields()
+    {
+        const string json = """
+        {
+          "faction": "Necrons",
+          "datasheets": [
+            {
+              "name": "Lokhust Destroyers", "points": 40, "primaryRole": "Infantry",
+              "isEpicHero": false, "isBattleline": false, "isDedicatedTransport": false, "isCharacter": false,
+              "keywords": ["Faction: Necrons","Lokhust Destroyers"],
+              "escalationRank": 3,
+              "pointsOptions": [
+                { "models": 1, "points": 40, "escalatedPoints": 50 },
+                { "models": 6, "points": 160, "escalatedPoints": 170 }
+              ]
+            }
+          ]
+        }
+        """;
+
+        var sheet = CatalogueSeedLoader.Load(json).Datasheets.Single();
+
+        Assert.Equal(3, sheet.EscalationRank);
+        var small = sheet.PointsOptions.Single(o => o.Models == 1);
+        Assert.Equal(40, small.Points);
+        Assert.Equal(50, small.EscalatedPoints);
+        Assert.Equal(170, sheet.PointsOptions.Single(o => o.Models == 6).EscalatedPoints);
+    }
+
+    [Fact]
+    public void Flat_priced_datasheets_have_no_escalation()
+    {
+        var cat = Load();
+        var immortals = Get(cat, "Immortals");
+        Assert.Equal(0, immortals.EscalationRank);
+        Assert.All(immortals.PointsOptions, o => Assert.Null(o.EscalatedPoints));
+    }
 }

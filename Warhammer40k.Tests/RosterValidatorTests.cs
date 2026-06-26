@@ -233,9 +233,9 @@ public class RosterValidatorTests
     [Fact]
     public void R6_stays_permissive_when_detachment_has_no_authored_enhancements()
     {
-        // Skyshroud Spearhead has no authored enhancements yet, so R6 stays permissive (no membership check).
+        // Pantheon of Woe has no authored enhancements (it uses Necrodermal Bindings), so R6 stays permissive.
         var cat = Cat(Sheet("overlord", "Overlord", configure: Character));
-        var roster = Roster("skyshroud-spearhead", 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "placeholder"));
+        var roster = Roster("pantheon-of-woe", 2000, Unit("overlord", configure: u => u.AssignedEnhancementId = "placeholder"));
 
         Assert.Empty(Run(new EnhancementRule(), roster, cat));
     }

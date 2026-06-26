@@ -25,6 +25,13 @@ public sealed class Datasheet
     [JsonPropertyName("pointsOptions")] public List<PointsOption> PointsOptions { get; set; } = [];
 
     /// <summary>
+    /// 1-based copy rank at which this datasheet's <see cref="PointsOption.EscalatedPoints"/> takes over
+    /// (e.g. <c>2</c> = "your 2nd+ unit costs more", <c>3</c> = "your 3rd+ unit costs more"). <c>0</c> means
+    /// the price never escalates and every copy pays <see cref="PointsOption.Points"/>.
+    /// </summary>
+    [JsonPropertyName("escalationRank")] public int EscalationRank { get; set; }
+
+    /// <summary>
     /// Authored wargear option-groups (§12: empty-but-present until authored in the Catalogue editor).
     /// A unit's selections (<see cref="Warhammer40k.Core.Rosters.RosterUnit.Wargear"/>) are validated against these by rule R8.
     /// </summary>

@@ -40,6 +40,13 @@ public sealed class PointsOption
 {
     [JsonPropertyName("models")] public int Models { get; set; }
     [JsonPropertyName("points")] public int Points { get; set; }
+
+    /// <summary>
+    /// Escalated cost for this size when the unit's copy rank reaches the datasheet's
+    /// <see cref="Datasheet.EscalationRank"/> (e.g. "your 3rd+ unit costs more"). <c>null</c> when the
+    /// datasheet has no per-copy escalation, in which case <see cref="Points"/> always applies.
+    /// </summary>
+    [JsonPropertyName("escalatedPoints")] public int? EscalatedPoints { get; set; }
 }
 
 /// <summary>

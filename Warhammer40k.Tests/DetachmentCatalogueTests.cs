@@ -244,4 +244,43 @@ public class DetachmentCatalogueTests
         Assert.Contains("Anti-MONSTER 5+", atomic.ShootingAbilityOptions);
         Assert.Contains("Anti-VEHICLE 5+", atomic.ShootingAbilityOptions);
     }
+
+    [Theory]
+    [InlineData("annihilation-legion", 2)]
+    [InlineData("awakened-dynasty", 3)]
+    [InlineData("canoptek-court", 3)]
+    [InlineData("hypercrypt-legion", 2)]
+    [InlineData("obeisance-phalanx", 2)]
+    [InlineData("skyshroud-spearhead", 1)]
+    [InlineData("the-phaerons-armoury", 1)]
+    [InlineData("starshatter-arsenal", 3)]
+    [InlineData("cursed-legion", 2)]
+    public void All_twelve_detachments_carry_their_detachment_points(string id, int dp)
+    {
+        var d = DetachmentCatalogue.FindById(id);
+        Assert.NotNull(d);
+        Assert.Equal(dp, d!.DetachmentPoints);
+    }
+
+    [Theory]
+    [InlineData("annihilation-legion", "soulless-reaper", 15)]
+    [InlineData("awakened-dynasty", "phasal-subjugator", 35)]
+    [InlineData("canoptek-court", "metalodermal-tesla-weave", 10)]
+    [InlineData("hypercrypt-legion", "arisen-tyrant", 25)]
+    [InlineData("obeisance-phalanx", "eternal-conqueror", 25)]
+    [InlineData("skyshroud-spearhead", "recursive-reanimation", 5)]
+    [InlineData("the-phaerons-armoury", "prelocational-optimiser", 25)]
+    public void Newly_costed_detachments_carry_their_enhancement_points(string detachmentId, string enhancementId, int points)
+    {
+        var enhancement = DetachmentCatalogue.FindById(detachmentId)!.FindEnhancement(enhancementId);
+        Assert.NotNull(enhancement);
+        Assert.Equal(points, enhancement!.Points);
+    }
+
+    [Fact]
+    public void Points_only_detachments_stay_disabled_until_rules_are_authored()
+    {
+        foreach (var id in new[] { "annihilation-legion", "awakened-dynasty", "canoptek-court", "hypercrypt-legion", "obeisance-phalanx", "skyshroud-spearhead", "the-phaerons-armoury" })
+            Assert.False(DetachmentCatalogue.FindById(id)!.Enabled);
+    }
 }

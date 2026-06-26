@@ -40,6 +40,30 @@ public class CatalogueProviderTests
     public void Derives_copy_caps_on_real_units(string id, int expected) =>
         Assert.Equal(expected, Get(id).MaxCopies);
 
+    [Theory]
+    [InlineData("overlord", 1, 90)]            // flat single model
+    [InlineData("necron-warriors", 10, 80)]    // flat, 10-model size
+    [InlineData("necron-warriors", 20, 190)]   // flat, 20-model size
+    [InlineData("lokhust-destroyers", 1, 40)]  // tiered base price
+    [InlineData("monolith", 1, 420)]           // tiered base price
+    public void Real_seed_carries_11th_edition_base_points(string id, int models, int points)
+    {
+        var option = Get(id).PointsOptions.Single(o => o.Models == models);
+        Assert.Equal(points, option.Points);
+    }
+
+    [Theory]
+    [InlineData("lokhust-destroyers", 3, 1, 50)]   // your 3rd+ unit: 40 -> 50
+    [InlineData("monolith", 2, 1, 440)]            // your 2nd+ unit: 420 -> 440
+    [InlineData("canoptek-wraiths", 2, 3, 115)]    // your 2nd+ unit: 95 -> 115
+    [InlineData("doomsday-ark", 3, 1, 220)]        // your 3rd+ unit: 200 -> 220
+    public void Real_seed_carries_per_copy_escalation(string id, int rank, int models, int escalated)
+    {
+        var sheet = Get(id);
+        Assert.Equal(rank, sheet.EscalationRank);
+        Assert.Equal(escalated, sheet.PointsOptions.Single(o => o.Models == models).EscalatedPoints);
+    }
+
     [Fact]
     public void Overlord_is_a_warlord_eligible_leader()
     {
@@ -76,7 +100,7 @@ public class CatalogueProviderTests
     }
 
     [Theory]
-    [InlineData("C'tan Shard of the Deceiver", "Singularity Matrix", 55)]
+    [InlineData("C'tan Shard of the Deceiver", "Singularity Matrix", 45)]
     [InlineData("C'tan Shard of the Void Dragon", "Animus Damper", 35)]
     public void Resolves_pantheon_binding_details(string unit, string bindingName, int points)
     {

@@ -45,8 +45,8 @@ public class RosterWorkedExampleTests
 
         var result = new RosterValidator().Validate(roster, Catalogue);
 
-        // Overlord 85 + Warriors 90 + Warriors 90 + Nightbringer 340 + Enlivened Sentinels 20 = 625.
-        Assert.Equal(625, result.TotalPoints);
+        // Overlord 90 + Warriors 80 + Warriors 80 + Nightbringer 360 + Enlivened Sentinels 20 = 630.
+        Assert.Equal(630, result.TotalPoints);
         Assert.True(result.TotalPoints <= roster.PointsLimit);
         Assert.Single(roster.Units, u => u.IsWarlord);                             // exactly one Warlord
         Assert.True(roster.Units.Count(u => !string.IsNullOrEmpty(u.AssignedEnhancementId)) <= 3); // ≤3 enhancements

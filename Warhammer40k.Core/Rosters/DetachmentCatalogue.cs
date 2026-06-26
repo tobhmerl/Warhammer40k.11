@@ -5,36 +5,67 @@ using Warhammer40k.Core.Text;
 namespace Warhammer40k.Core.Rosters;
 
 /// <summary>
-/// The built-in set of the seven Necron detachments (§2) with their known 10th-MFM enhancement points (§8).
+/// The built-in set of Necron detachments (§2) with their known 11th-edition Detachment-Points cost and
+/// enhancement points (§8).
 /// </summary>
 /// <remarks>
 /// The validation machinery (R6 enhancement eligibility, stratagem reference) is finalized; what's still
-/// missing is <i>content</i> — the 11th-edition enhancement points/eligibility and stratagems. The three
-/// detachments without published points (Hand of the Dynasty, Skyshroud Spearhead, The Phaeron's Armoury)
-/// keep empty enhancement lists, so R6 stays permissive for them until those entries are filled in here.
-/// Per-enhancement <c>Eligibility</c> and per-detachment <c>Stratagems</c> are empty pending §10/§11 — add
-/// keyword constraints / stratagem entries below to activate them (no engine change required).
+/// missing for most detachments is <i>content</i> — the 11th-edition enhancement eligibility and stratagems.
+/// Detachments authored only with points (Skyshroud Spearhead, The Phaeron's Armoury, Starshatter Arsenal,
+/// Cursed Legion, Annihilation Legion, Awakened Dynasty, Canoptek Court, Hypercrypt Legion, Obeisance Phalanx)
+/// stay <see cref="Detachment.Enabled"/> = false until their rules are filled in here; R6 stays permissive for
+/// them meanwhile. Per-enhancement <c>Eligibility</c> and per-detachment <c>Stratagems</c> are empty pending
+/// §10/§11 — add keyword constraints / stratagem entries below to activate them (no engine change required).
 /// </remarks>
 public static class DetachmentCatalogue
 {
-    /// <summary>The seven detachments offered by the New-Roster wizard (§2), in line-up order.</summary>
+    /// <summary>The twelve detachments offered by the New-Roster wizard (§2), in line-up order.</summary>
     public static IReadOnlyList<Detachment> BuiltIn { get; } =
     [
         HandOfTheDynasty(),
-        Make("Skyshroud Spearhead"),
-        Make("The Phaeron's Armoury"),
-        Make("Starshatter Arsenal",
+        Make("Skyshroud Spearhead", 1,
+            ("Deepening Madness", 20),
+            ("Recursive Reanimation", 5)),
+        Make("The Phaeron's Armoury", 1,
+            ("Mortality Shroud", 10),
+            ("Prelocational Optimiser", 25)),
+        Make("Starshatter Arsenal", 3,
             ("Chrono-impedance Fields", 25),
             ("Demanding Leader", 10),
             ("Dread Majesty", 30),
             ("Miniaturised Nebuloscope", 15)),
         Cryptek(),
-        Make("Cursed Legion",
+        Make("Cursed Legion", 2,
             ("Cursed Circlet", 25),
             ("Destroyer Ankh", 20),
             ("Mark of the Nekrosor", 20),
             ("Murdermind", 15)),
         MakePantheon("Pantheon of Woe"),
+        Make("Annihilation Legion", 2,
+            ("Eldritch Nightmare", 10),
+            ("Eternal Madness", 20),
+            ("Ingrained Superiority", 5),
+            ("Soulless Reaper", 15)),
+        Make("Awakened Dynasty", 3,
+            ("Enaegic Dermal Bond", 30),
+            ("Nether-realm Casket", 20),
+            ("Phasal Subjugator", 35),
+            ("Veil of Darkness", 20)),
+        Make("Canoptek Court", 3,
+            ("Autodivinator", 15),
+            ("Dimensional Sanctum", 20),
+            ("Hyperphasic Fulcrum", 15),
+            ("Metalodermal Tesla Weave", 10)),
+        Make("Hypercrypt Legion", 2,
+            ("Arisen Tyrant", 25),
+            ("Dimensional Overseer", 25),
+            ("Hyperspatial Transfer Node", 15),
+            ("Osteoclave Fulcrum", 20)),
+        Make("Obeisance Phalanx", 2,
+            ("Eternal Conqueror", 25),
+            ("Honourable Combatant", 10),
+            ("Unflinching Will", 20),
+            ("Warrior Noble", 15)),
     ];
 
     /// <summary>Finds a built-in detachment by its derived id, or <c>null</c>.</summary>
@@ -274,6 +305,18 @@ public static class DetachmentCatalogue
             .Select(e => new Enhancement { Id = Slugger.Slug(e.Name), Name = e.Name, Points = e.Points })
             .ToList(),
     };
+
+    /// <summary>
+    /// Builds a detachment with its Detachment-Points cost and enhancement list. These entries carry points
+    /// only (DP + enhancement costs) and stay <see cref="Detachment.Enabled"/> = false until their 11th-edition
+    /// rules/stratagems/eligibility (§10/§11) are authored.
+    /// </summary>
+    private static Detachment Make(string name, int detachmentPoints, params (string Name, int Points)[] enhancements)
+    {
+        var d = Make(name, enhancements);
+        d.DetachmentPoints = detachmentPoints;
+        return d;
+    }
 
     /// <summary>
     /// Sets a built-in enhancement's Play-Mode display <see cref="Enhancement.Text"/> and, when keywords are

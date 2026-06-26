@@ -208,7 +208,7 @@ else
 						@foreach (var o in sheet.PointsOptions)
 						{
 							<button type="button" class="size @(u.ModelCount == o.Models ? "on" : "")" @onclick="() => SetSize(u, o.Models)">
-								@o.Models @(o.Models == 1 ? "model" : "models") · @o.Points pts
+								@o.Models @(o.Models == 1 ? "model" : "models") · @OptionPoints(u, sheet, o) pts
 							</button>
 						}
 					</div>
@@ -937,7 +937,20 @@ else
 
 	private Datasheet? SheetFor(RosterUnit unit) => _catalogue.FindById(unit.DatasheetId);
 
-	private int UnitPoints(RosterUnit unit) => RosterCalculator.UnitPoints(unit, SheetFor(unit));
+	private int UnitPoints(RosterUnit unit)
+	{
+		var rank = _roster is null ? 1 : RosterCalculator.CopyRank(_roster, unit);
+		return RosterCalculator.UnitPoints(unit, SheetFor(unit), rank);
+	}
+
+	// Price for a specific size option at this unit's copy rank (so escalated copies show their real cost).
+	private int OptionPoints(RosterUnit unit, Datasheet sheet, PointsOption option)
+	{
+		var rank = _roster is null ? 1 : RosterCalculator.CopyRank(_roster, unit);
+		if (sheet.EscalationRank > 0 && rank >= sheet.EscalationRank && option.EscalatedPoints is { } escalated)
+			return escalated;
+		return option.Points;
+	}
 
 	private int Remaining(Datasheet sheet)
 	{

@@ -9,13 +9,27 @@ namespace Warhammer40k.Core.Rosters.Validation;
 public static class RosterCalculator
 {
     /// <summary>Points for a unit's chosen size: the datasheet <see cref="PointsOption"/> whose Models == ModelCount.</summary>
-    public static int UnitPoints(RosterUnit unit, Datasheet? datasheet)
+    public static int UnitPoints(RosterUnit unit, Datasheet? datasheet) =>
+        UnitPoints(unit, datasheet, copyRank: 1);
+
+    /// <summary>
+    /// Points for a unit's chosen size at a given 1-based copy rank. When the datasheet escalates
+    /// (<see cref="Datasheet.EscalationRank"/> &gt; 0) and this copy's rank reaches it, the option's
+    /// <see cref="PointsOption.EscalatedPoints"/> is used; otherwise the base <see cref="PointsOption.Points"/>.
+    /// </summary>
+    public static int UnitPoints(RosterUnit unit, Datasheet? datasheet, int copyRank)
     {
         if (datasheet is null)
             return 0;
 
         var option = datasheet.PointsOptions.FirstOrDefault(o => o.Models == unit.ModelCount);
-        return option?.Points ?? 0;
+        if (option is null)
+            return 0;
+
+        if (datasheet.EscalationRank > 0 && copyRank >= datasheet.EscalationRank && option.EscalatedPoints is { } escalated)
+            return escalated;
+
+        return option.Points;
     }
 
     /// <summary>Points for a unit's assigned enhancement, resolved against the selected detachment (0 if unknown).</summary>
@@ -45,13 +59,36 @@ public static class RosterCalculator
     public static int TotalPoints(Roster roster, CatalogueData catalogue, IReadOnlyList<Detachment> detachments)
     {
         var total = 0;
+        var seen = new Dictionary<string, int>();
         foreach (var unit in roster.Units)
         {
-            total += UnitPoints(unit, catalogue.FindById(unit.DatasheetId));
+            seen.TryGetValue(unit.DatasheetId, out var prior);
+            var rank = prior + 1;
+            seen[unit.DatasheetId] = rank;
+
+            total += UnitPoints(unit, catalogue.FindById(unit.DatasheetId), rank);
             total += EnhancementPoints(unit, detachments);
             total += unit.BindingSurcharge;
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// The 1-based copy rank of <paramref name="unit"/> among same-datasheet units in roster order
+    /// (its 1st copy = 1, 2nd = 2, …). Drives per-copy escalated pricing in the editor display.
+    /// </summary>
+    public static int CopyRank(Roster roster, RosterUnit unit)
+    {
+        var rank = 0;
+        foreach (var u in roster.Units)
+        {
+            if (u.DatasheetId == unit.DatasheetId)
+                rank++;
+            if (ReferenceEquals(u, unit))
+                return rank;
+        }
+
+        return rank == 0 ? 1 : rank;
     }
 }
