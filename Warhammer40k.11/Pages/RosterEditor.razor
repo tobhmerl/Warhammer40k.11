@@ -349,7 +349,7 @@ else
 	@if (_roster is not null)
 	{
 		<div class="config">
-			<p class="cfg-note">Tick the phase + turn each army rule and stratagem can be used in. Nothing appears in Play Mode until you tick it.</p>
+			<p class="cfg-note">Tick the phase + turn each army rule and stratagem can be used in. Nothing appears in Play Mode until you tick it. Tap a name to read its rules.</p>
 
 			@{ var armyRules = ArmyRuleCatalogue.ForFaction(_roster.Faction); }
 			@if (armyRules.Count > 0)
@@ -372,11 +372,19 @@ else
 				@foreach (var s in CoreStratagemCatalogue.All)
 				{
 					var key = AbilityScheduleKeys.ForCoreStratagem(s.Id);
+					var textOpen = _openSchedText.Contains(key);
 					<div class="sched" @key="key">
 						<div class="sched-head">
-							<span class="sched-name">@s.Name</span>
+							<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this stratagem's rules text">
+								<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
+								<span class="sched-name">@s.Name</span>
+							</button>
 							<span class="sched-src">@s.Cost CP</span>
 						</div>
+						@if (textOpen)
+						{
+							@StratRef(s.Flavour, s.When, s.Target, s.Effect, s.Restrictions)
+						}
 						@ScheduleGrid(key)
 					</div>
 				}
@@ -391,11 +399,19 @@ else
 						@foreach (var s in det.Stratagems)
 						{
 							var key = AbilityScheduleKeys.ForDetachmentStratagem(det.Id, s.Id);
+							var textOpen = _openSchedText.Contains(key);
 							<div class="sched" @key="key">
 								<div class="sched-head">
-									<span class="sched-name">@s.Name</span>
+									<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this stratagem's rules text">
+										<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
+										<span class="sched-name">@s.Name</span>
+									</button>
 									<span class="sched-src">@s.CpCost CP</span>
 								</div>
+								@if (textOpen)
+								{
+									@StratRef(null, s.When, s.Target, s.Effect, null)
+								}
 								@ScheduleGrid(key)
 							</div>
 						}
@@ -849,13 +865,13 @@ else
 	/// <summary>A datasheet ability (or assigned enhancement) that gets a schedule grid: its key, name, rules text, and conferred-effect summary.</summary>
 	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary);
 
-	// Ability names whose rules text the user expanded in the scheduler (collapsed by default).
+	// Ability names (and stratagem schedule keys) whose rules text the user expanded in the scheduler (collapsed by default).
 	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
 
-	private void ToggleSchedText(string abilityName)
+	private void ToggleSchedText(string id)
 	{
-		if (!_openSchedText.Remove(abilityName))
-			_openSchedText.Add(abilityName);
+		if (!_openSchedText.Remove(id))
+			_openSchedText.Add(id);
 	}
 
 	// Strips the seed's markdown/bullet artefacts so the rules text reads cleanly (mirrors Play Mode).
@@ -959,6 +975,38 @@ else
 				</label>
 			}
 		</div>
+	};
+
+	// The expandable reference shown when a stratagem name is tapped — its clauses formatted like Play Mode,
+	// so the rules can be read straight from setup (mirrors the ability expander's reveal interaction).
+	private RenderFragment StratRef(string? flavour, string when, string target, string effect, string? restrictions) => __builder =>
+	{
+		@if (!string.IsNullOrWhiteSpace(flavour))
+		{
+			<p class="strat-flavour">@CleanText(flavour)</p>
+		}
+		<dl class="strat-ref">
+			@if (!string.IsNullOrWhiteSpace(when))
+			{
+				<dt>When</dt>
+				<dd>@CleanText(when)</dd>
+			}
+			@if (!string.IsNullOrWhiteSpace(target))
+			{
+				<dt>Target</dt>
+				<dd>@CleanText(target)</dd>
+			}
+			@if (!string.IsNullOrWhiteSpace(effect))
+			{
+				<dt>Effect</dt>
+				<dd>@CleanText(effect)</dd>
+			}
+			@if (!string.IsNullOrWhiteSpace(restrictions))
+			{
+				<dt>Restrictions</dt>
+				<dd>@CleanText(restrictions)</dd>
+			}
+		</dl>
 	};
 
 	// ---- View helpers ----
