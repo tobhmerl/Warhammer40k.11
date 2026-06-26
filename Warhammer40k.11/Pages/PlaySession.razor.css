@@ -487,6 +487,7 @@ html[data-scroll="up"] .hud.sticky {
 
 /* Quick unit selectors: a wrapping row of numbered chips to jump straight to any card. */
 .deck-dots {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
@@ -513,6 +514,10 @@ html[data-scroll="up"] .hud.sticky {
     line-height: 1;
     white-space: nowrap;
     cursor: pointer;
+    /* Long-press drag-to-reorder: let the page pan vertically, but suppress the iOS long-press callout/
+       selection so a held pill can be dragged. */
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
     transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
@@ -564,6 +569,40 @@ html[data-scroll="up"] .hud.sticky {
 
 .deck-dot.dead.on {
     opacity: 0.7;
+}
+
+/* ---- Long-press drag-to-reorder ---- */
+/* The picked-up pill lifts and follows the finger (JS sets its translateX). */
+.deck-dot.dragging {
+    position: relative;
+    z-index: 5;
+    border-color: var(--accent);
+    color: var(--accent-strong);
+    background: var(--surface-3);
+    box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.7), var(--glow-sm);
+    opacity: 0.92;
+    cursor: grabbing;
+    transition: none;
+}
+
+.deck-dots.reordering {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grabbing;
+}
+
+/* Insertion marker shown at the target slot while dragging (JS positions it via transform + height). */
+.deck-drop-caret {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: var(--accent-strong);
+    box-shadow: var(--glow-sm);
+    pointer-events: none;
+    z-index: 4;
 }
 
 /* The deck wrapper takes focus for arrow-key paging without showing an outline box. */

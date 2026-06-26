@@ -229,24 +229,26 @@ else
 		{
 			@if (_cardSwipe)
 			{
+				var ordered = OrderedUnits;
+				var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
 				<div class="deck-bar" role="group" aria-label="Unit cards">
 					<button type="button" class="deck-nav" @onclick="PrevCard" disabled="@(_activeCard <= 0)" aria-label="Previous unit">‹</button>
 					<span class="deck-pos">
-						<span class="deck-name">@_battle.Units[Math.Clamp(_activeCard, 0, _battle.Units.Count - 1)].Name</span>
-						<span class="deck-count">@(Math.Clamp(_activeCard, 0, _battle.Units.Count - 1) + 1) / @_battle.Units.Count</span>
+						<span class="deck-name">@ordered[activeIdx].Name</span>
+						<span class="deck-count">@(activeIdx + 1) / @ordered.Count</span>
 					</span>
-					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= _battle.Units.Count - 1)" aria-label="Next unit">›</button>
+					<button type="button" class="deck-nav" @onclick="NextCard" disabled="@(_activeCard >= ordered.Count - 1)" aria-label="Next unit">›</button>
 				</div>
-				@if (_battle.Units.Count > 1)
+				@if (ordered.Count > 1)
 				{
-					<div class="deck-dots" role="tablist" aria-label="Jump to unit">
-						@for (var i = 0; i < _battle.Units.Count; i++)
+					<div class="deck-dots" role="tablist" aria-label="Jump to unit — long-press a pill to drag and reorder" @ref="_dotsRef">
+						@for (var i = 0; i < ordered.Count; i++)
 						{
 							var index = i;
-							var u = _battle.Units[index];
+							var u = ordered[index];
 							var dUsable = IsDead(u) ? 0 : u.ActiveAbilityCount(_phase, _turn);
 							<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "")"
-									role="tab" aria-selected="@(index == _activeCard)"
+									role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
 									title="@($"{u.Name}{(dUsable > 0 ? $" · {dUsable} usable now" : "")}")" @onclick="() => SelectCard(index)">
 								<span class="dd-label">@DeckLabel(u)</span>
 								@if (dUsable > 0)
@@ -804,8 +806,19 @@ else
 	private bool _cardSwipe;
 	private int _activeCard;
 	private ElementReference _deckRef;
+	private ElementReference _dotsRef;
 	private DotNetObjectReference<PlaySession>? _deckSelf;
 	private bool _deckBound;
+	private bool _reorderBound;
+
+	// Display order of the unit cards + their deck pills, by BattleUnit.Id (== RosterUnit.Id). Reordered by
+	// long-press drag on the pills, mirrored into roster.Units, and persisted. _byId resolves an id to its
+	// tracker-stable BattleUnit; _ordered is the cached materialised view rebuilt whenever _order changes.
+	private readonly List<string> _order = [];
+	private readonly List<BattleUnit> _ordered = [];
+	private Dictionary<string, BattleUnit> _byId = new(StringComparer.Ordinal);
+	private CancellationTokenSource? _saveCts;
+	private bool _orderDirty;
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -827,6 +840,14 @@ else
 			_deckSelf ??= DotNetObjectReference.Create(this);
 			await JS.InvokeVoidAsync("tombworld.deck.attach", _deckRef, _deckSelf);
 		}
+
+		// Bind long-press drag-to-reorder once the deck pills exist (swipe mode, more than one unit).
+		if (_cardSwipe && _ordered.Count > 1 && !_reorderBound)
+		{
+			_reorderBound = true;
+			_deckSelf ??= DotNetObjectReference.Create(this);
+			await JS.InvokeVoidAsync("tombworld.reorder.attach", _dotsRef, _deckSelf);
+		}
 	}
 
 	[JSInvokable]
@@ -841,6 +862,85 @@ else
 	{
 		if (GoToCard(_activeCard - 1))
 			StateHasChanged();
+	}
+
+	// Invoked from the long-press drag helper when a deck pill is dropped at a new slot. Moves the unit in the
+	// display order (cards follow), keeps the unit you were viewing in view, mirrors the order into the roster,
+	// and persists it.
+	[JSInvokable]
+	public void ReorderUnit(int from, int to)
+	{
+		if (_battle is null || from < 0 || from >= _order.Count)
+			return;
+		to = Math.Clamp(to, 0, _order.Count - 1);
+		if (from == to)
+			return;
+
+		// Remember the unit currently on screen so it stays visible after the move.
+		var activeId = _activeCard >= 0 && _activeCard < _ordered.Count ? _ordered[_activeCard].Id : null;
+
+		var moved = _order[from];
+		_order.RemoveAt(from);
+		_order.Insert(to, moved);
+		RebuildOrdered();
+
+		if (activeId is not null)
+		{
+			var idx = _order.IndexOf(activeId);
+			if (idx >= 0)
+				_activeCard = idx;
+		}
+
+		MirrorOrderIntoRoster();
+		ScheduleSave();
+		StateHasChanged();
+	}
+
+	// Reorders roster.Units to match the displayed order so the choice persists with the roster. Units present
+	// in the deck follow _order; any others (e.g. a unit whose datasheet is missing) keep their relative order
+	// after them. OrderBy is stable, so equal-rank items preserve their original sequence.
+	private void MirrorOrderIntoRoster()
+	{
+		if (_roster is null)
+			return;
+		var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+		for (var i = 0; i < _order.Count; i++)
+			rank[_order[i]] = i;
+		_roster.Units = _roster.Units
+			.OrderBy(u => rank.TryGetValue(u.Id, out var r) ? r : int.MaxValue)
+			.ToList();
+	}
+
+	// Persists the reordered roster after a short debounce so a flurry of drags coalesces into a single save.
+	// The new order applies in-session immediately regardless; this just remembers it for next time.
+	private void ScheduleSave()
+	{
+		_orderDirty = true;
+		_saveCts?.Cancel();
+		_saveCts?.Dispose();
+		_saveCts = new CancellationTokenSource();
+		_ = SaveOrderAsync(_saveCts.Token);
+	}
+
+	private async Task SaveOrderAsync(CancellationToken token)
+	{
+		try
+		{
+			await Task.Delay(700, token);
+			if (_roster is not null)
+			{
+				await Api.SaveRosterAsync(_roster, token);
+				_orderDirty = false;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Superseded by a newer reorder or the page is going away; a later save (or dispose flush) covers it.
+		}
+		catch (Exception)
+		{
+			// Best-effort persistence — the order still applies for this session.
+		}
 	}
 
 	private async Task LoadAsync()
@@ -868,6 +968,10 @@ else
 			{
 				_roster = roster;
 				_battle = BattleRoster.Build(roster, _catalogue);
+				_byId = _battle.Units.ToDictionary(u => u.Id, StringComparer.Ordinal);
+				_order.Clear();
+				_order.AddRange(_battle.Units.Select(u => u.Id));
+				RebuildOrdered();
 				ResetTrackers();
 			}
 		}
@@ -1080,10 +1184,10 @@ else
 				_track[part.Unit.Id] = part.TrackMax;
 		}
 		// In swipe mode you view one card at a time, so start the visible (first) card expanded.
-		if (_cardSwipe && _battle.Units.Count > 0)
+		if (_cardSwipe && _ordered.Count > 0)
 		{
 			_activeCard = 0;
-			_collapsed.Remove(_battle.Units[0].Id);
+			_collapsed.Remove(_ordered[0].Id);
 		}
 	}
 
@@ -1196,19 +1300,31 @@ else
 	}
 
 	// ---- Swipe deck navigation (one card at a time) ----
-	private int CardCount => _battle?.Units.Count ?? 0;
+	private int CardCount => _ordered.Count;
+
+	// The units in the player's chosen display order — drives both the deck pills and the card list.
+	private IReadOnlyList<BattleUnit> OrderedUnits => _ordered;
+
+	// Rebuilds the cached ordered view from _order (skipping any id no longer present).
+	private void RebuildOrdered()
+	{
+		_ordered.Clear();
+		foreach (var id in _order)
+			if (_byId.TryGetValue(id, out var u))
+				_ordered.Add(u);
+	}
 
 	// In swipe mode only the active card is rendered (one at a time); otherwise the whole list.
 	private IEnumerable<BattleUnit> UnitsToRender
 	{
 		get
 		{
-			if (_battle is null)
+			if (_battle is null || _ordered.Count == 0)
 				return [];
 			if (!_cardSwipe)
-				return _battle.Units;
-			var index = Math.Clamp(_activeCard, 0, _battle.Units.Count - 1);
-			return [_battle.Units[index]];
+				return _ordered;
+			var index = Math.Clamp(_activeCard, 0, _ordered.Count - 1);
+			return [_ordered[index]];
 		}
 	}
 
@@ -1222,8 +1338,8 @@ else
 			return false;
 		_activeCard = clamped;
 		// Each card is shown expanded in the deck, so make sure the active unit isn't collapsed.
-		if (_battle is not null)
-			_collapsed.Remove(_battle.Units[_activeCard].Id);
+		if (_activeCard < _ordered.Count)
+			_collapsed.Remove(_ordered[_activeCard].Id);
 		return true;
 	}
 
@@ -1295,11 +1411,14 @@ else
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_deckBound)
+		if (_deckBound || _reorderBound)
 		{
 			try
 			{
-				await JS.InvokeVoidAsync("tombworld.deck.detach");
+				if (_deckBound)
+					await JS.InvokeVoidAsync("tombworld.deck.detach");
+				if (_reorderBound)
+					await JS.InvokeVoidAsync("tombworld.reorder.detach");
 			}
 			catch (JSDisconnectedException)
 			{
@@ -1308,6 +1427,19 @@ else
 			catch (InvalidOperationException)
 			{
 				// Prerendering / no JS runtime — safe to ignore.
+			}
+		}
+		_saveCts?.Cancel();
+		_saveCts?.Dispose();
+		if (_orderDirty && _roster is not null)
+		{
+			try
+			{
+				await Api.SaveRosterAsync(_roster);
+			}
+			catch (Exception)
+			{
+				// Best-effort persistence on teardown.
 			}
 		}
 		_deckSelf?.Dispose();

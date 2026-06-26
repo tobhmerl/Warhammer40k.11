@@ -130,6 +130,141 @@
                 }
             },
 
+            // Long-press drag to reorder the Play-Mode deck pills. A deliberate hold (~350 ms) "picks up" a pill;
+            // it then follows the finger with a drop caret marking the target slot. On release it reports the
+            // move (from -> to) to .NET, which performs the actual reorder. Tap (no hold) still navigates.
+            reorder: {
+                _el: null, _ref: null, _timer: null, _caret: null,
+                _onDown: null, _onMove: null, _onUp: null, _onCancel: null, _onClick: null,
+                _dragging: false, _suppressClick: false, _pill: null, _startIndex: -1, _to: -1,
+                _startX: 0, _startY: 0, _lastX: 0, _lastY: 0,
+                attach: function (el, dotNetRef) {
+                    if (!el) return;
+                    this.detach();
+                    const self = this;
+                    this._el = el;
+                    this._ref = dotNetRef;
+                    const clearTimer = function () {
+                        if (self._timer) { clearTimeout(self._timer); self._timer = null; }
+                    };
+                    const beginDrag = function () {
+                        self._dragging = true;
+                        self._to = self._startIndex;
+                        self._pill.classList.add('dragging');
+                        el.classList.add('reordering');
+                        const caret = document.createElement('div');
+                        caret.className = 'deck-drop-caret';
+                        el.appendChild(caret);
+                        self._caret = caret;
+                        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) { } }
+                        self.updateTarget(self._lastX, self._lastY);
+                    };
+                    const onDown = function (e) {
+                        if (!e.isPrimary) return;
+                        if (e.pointerType === 'mouse' && e.button !== 0) return;
+                        const pill = e.target.closest ? e.target.closest('.deck-dot') : null;
+                        if (!pill || !el.contains(pill)) return;
+                        self._pill = pill;
+                        self._startIndex = parseInt(pill.dataset.reorderIndex, 10);
+                        self._startX = self._lastX = e.clientX;
+                        self._startY = self._lastY = e.clientY;
+                        self._dragging = false;
+                        clearTimer();
+                        self._timer = setTimeout(function () {
+                            self._timer = null;
+                            try { pill.setPointerCapture(e.pointerId); } catch (_) { }
+                            beginDrag();
+                        }, 350);
+                    };
+                    const onMove = function (e) {
+                        self._lastX = e.clientX; self._lastY = e.clientY;
+                        if (!self._dragging) {
+                            if (self._timer) {
+                                const dx = Math.abs(e.clientX - self._startX);
+                                const dy = Math.abs(e.clientY - self._startY);
+                                if (dx > 10 || dy > 10) clearTimer();
+                            }
+                            return;
+                        }
+                        e.preventDefault();
+                        self._pill.style.transform = 'translateX(' + (e.clientX - self._startX) + 'px)';
+                        self.updateTarget(e.clientX, e.clientY);
+                    };
+                    const finish = function (commit) {
+                        clearTimer();
+                        if (self._dragging) {
+                            const from = self._startIndex, to = self._to;
+                            self.cleanupDrag();
+                            self._suppressClick = true;
+                            if (commit && to !== from && to >= 0 && self._ref) {
+                                self._ref.invokeMethodAsync('ReorderUnit', from, to);
+                            }
+                        }
+                        self._pill = null; self._startIndex = -1;
+                    };
+                    const onUp = function () { finish(true); };
+                    const onCancel = function () { finish(false); };
+                    const onClick = function (e) {
+                        if (self._suppressClick) {
+                            self._suppressClick = false;
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    };
+                    el.addEventListener('pointerdown', onDown);
+                    el.addEventListener('pointermove', onMove);
+                    el.addEventListener('pointerup', onUp);
+                    el.addEventListener('pointercancel', onCancel);
+                    el.addEventListener('click', onClick, true);
+                    this._onDown = onDown; this._onMove = onMove; this._onUp = onUp;
+                    this._onCancel = onCancel; this._onClick = onClick;
+                },
+                // Picks the insertion slot nearest the finger (works across wrapped rows) and moves the caret there.
+                updateTarget: function (px, py) {
+                    const el = this._el;
+                    if (!el || !this._pill) return;
+                    const pills = Array.prototype.slice.call(el.querySelectorAll('.deck-dot'));
+                    let nearest = null, best = Infinity;
+                    for (let i = 0; i < pills.length; i++) {
+                        const r = pills[i].getBoundingClientRect();
+                        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                        const d = (px - cx) * (px - cx) + (py - cy) * (py - cy);
+                        if (d < best) { best = d; nearest = { r: r, idx: parseInt(pills[i].dataset.reorderIndex, 10), cx: cx }; }
+                    }
+                    if (!nearest) return;
+                    const insertIdx = px < nearest.cx ? nearest.idx : nearest.idx + 1;
+                    let to = insertIdx > this._startIndex ? insertIdx - 1 : insertIdx;
+                    to = Math.max(0, Math.min(to, pills.length - 1));
+                    this._to = to;
+                    if (this._caret) {
+                        const cr = el.getBoundingClientRect();
+                        const left = (px < nearest.cx ? nearest.r.left : nearest.r.right) - cr.left;
+                        this._caret.style.transform = 'translate(' + left + 'px,' + (nearest.r.top - cr.top) + 'px)';
+                        this._caret.style.height = nearest.r.height + 'px';
+                    }
+                },
+                cleanupDrag: function () {
+                    if (this._pill) { this._pill.classList.remove('dragging'); this._pill.style.transform = ''; }
+                    if (this._el) this._el.classList.remove('reordering');
+                    if (this._caret) { this._caret.remove(); this._caret = null; }
+                    this._dragging = false;
+                },
+                detach: function () {
+                    const el = this._el;
+                    if (el) {
+                        el.removeEventListener('pointerdown', this._onDown);
+                        el.removeEventListener('pointermove', this._onMove);
+                        el.removeEventListener('pointerup', this._onUp);
+                        el.removeEventListener('pointercancel', this._onCancel);
+                        el.removeEventListener('click', this._onClick, true);
+                    }
+                    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+                    this.cleanupDrag();
+                    this._el = null; this._ref = null; this._pill = null; this._startIndex = -1;
+                    this._onDown = this._onMove = this._onUp = this._onCancel = this._onClick = null;
+                }
+            },
+
             // Auto-save safety net: persist pending roster edits when the tab is hidden or the page is being
             // unloaded (mobile browsers fire 'pagehide'/'visibilitychange' rather than a reliable 'beforeunload').
             _flushRef: null,
