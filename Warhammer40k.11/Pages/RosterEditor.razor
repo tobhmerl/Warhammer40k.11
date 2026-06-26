@@ -99,6 +99,11 @@ else
 		}
 		else
 		{
+			<div class="editor-actions">
+				<button class="btn primary add-unit" type="button" @onclick="OpenPicker">+ Add unit</button>
+				<button class="btn ghost" type="button" @onclick="OpenTiming">Stratagems</button>
+			</div>
+
 			@foreach (var group in UnitGroups())
 			{
 				<section class="role-group" @key="group.Role">
@@ -146,12 +151,6 @@ else
 					</ul>
 				</section>
 			}
-
-			<div class="editor-actions">
-				<button class="btn primary add-unit" type="button" @onclick="OpenPicker">+ Add unit</button>
-				<button class="btn ghost" type="button" @onclick="OpenTiming">Play timing</button>
-				<button class="btn ghost" type="button" @onclick="OpenSummary">Summary &amp; export</button>
-			</div>
 		}
 
 		@if (_error is not null)
@@ -285,7 +284,7 @@ else
 				</div>
 			}
 
-			@{ var schedAbilities = ScheduleAbilities(sheet); }
+			@{ var schedAbilities = ScheduleAbilities(sheet, u); }
 			@if (schedAbilities.Count > 0)
 			{
 				<div class="cfg-block">
@@ -293,7 +292,7 @@ else
 					<p class="cfg-hint">Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it. Tap a name to read its rules.</p>
 					@foreach (var ab in schedAbilities)
 					{
-						var key = AbilityScheduleKeys.ForUnitAbility(sheet.Id, ab.Name);
+						var key = ab.Key;
 						var textOpen = _openSchedText.Contains(ab.Name);
 						var hasText = !string.IsNullOrWhiteSpace(ab.Text);
 						<div class="sched" @key="key">
@@ -346,14 +345,7 @@ else
 	}
 </Sheet>
 
-<Sheet Open="_summaryOpen" Eyebrow="Summary" Title="@(_roster?.Name)" OnCloseRequested="CloseSummary">
-	<div class="summary">
-		<textarea class="summary-text" readonly rows="16">@BuildSummary()</textarea>
-		<p class="cfg-note">Select all and copy to export this list as text.</p>
-	</div>
-</Sheet>
-
-<Sheet Open="_timingOpen" Eyebrow="Play Mode" Title="Play timing" OnCloseRequested="CloseTiming">
+<Sheet Open="_timingOpen" Eyebrow="Play Mode" Title="Stratagems" OnCloseRequested="CloseTiming">
 	@if (_roster is not null)
 	{
 		<div class="config">
@@ -487,7 +479,6 @@ else
 	private bool _picking;
 	private string _pickQuery = "";
 	private RosterUnit? _configuring;
-	private bool _summaryOpen;
 	private bool _timingOpen;
 	private bool _detachInfoOpen;
 	private bool _showDatasheet;
@@ -728,10 +719,6 @@ else
 
 	private void CloseConfig() => _configuring = null;
 
-	private void OpenSummary() => _summaryOpen = true;
-
-	private void CloseSummary() => _summaryOpen = false;
-
 	private void OpenTiming() => _timingOpen = true;
 
 	private void CloseTiming() => _timingOpen = false;
@@ -859,8 +846,8 @@ else
 
 	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
 
-	/// <summary>A datasheet ability that gets a schedule grid: its name, rules text, and conferred-effect summary.</summary>
-	private sealed record SchedAbility(string Name, string Text, string? Summary);
+	/// <summary>A datasheet ability (or assigned enhancement) that gets a schedule grid: its key, name, rules text, and conferred-effect summary.</summary>
+	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary);
 
 	// Ability names whose rules text the user expanded in the scheduler (collapsed by default).
 	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
@@ -881,8 +868,9 @@ else
 	// The datasheet abilities shown in the scheduler: every printed ability except the setup-only "Leader"
 	// entry and a model's / unit's own always-on save rule (that is a chip in Play, not a schedulable ability).
 	// Each carries the short summary of any effect it can apply (a leader conferral, or a save a conditional
-	// ability confers) so it can offer an "Apply to unit" toggle.
-	private static List<SchedAbility> ScheduleAbilities(Datasheet sheet)
+	// ability confers) so it can offer an "Apply to unit" toggle. The unit's assigned Enhancement is appended
+	// the same way (keyed by ForEnhancement) so it can be scheduled / read just like a printed ability.
+	private List<SchedAbility> ScheduleAbilities(Datasheet sheet, RosterUnit unit)
 	{
 		var result = new List<SchedAbility>();
 		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -894,8 +882,22 @@ else
 				continue;
 			if (!seen.Add(ability.Name))
 				continue;
-			result.Add(new SchedAbility(ability.Name, ability.Text ?? "", ApplySummary(sheet, ability)));
+			result.Add(new SchedAbility(
+				AbilityScheduleKeys.ForUnitAbility(sheet.Id, ability.Name),
+				ability.Name, ability.Text ?? "", ApplySummary(sheet, ability)));
 		}
+
+		// Append the unit's assigned Enhancement so it is schedulable + readable alongside printed abilities.
+		if (!string.IsNullOrEmpty(unit.AssignedEnhancementId)
+			&& _detachments.Select(d => d.FindEnhancement(unit.AssignedEnhancementId)).FirstOrDefault(e => e is not null) is { } enh
+			&& seen.Add(enh.Name))
+		{
+			var summary = string.IsNullOrWhiteSpace(enh.EffectSummary) ? null : enh.EffectSummary;
+			result.Add(new SchedAbility(
+				AbilityScheduleKeys.ForEnhancement(enh.Id),
+				enh.Name, enh.Text ?? "", summary));
+		}
+
 		return result;
 	}
 
@@ -1076,41 +1078,6 @@ else
 		_validation.Messages
 			.OrderByDescending(m => m.Severity)
 			.ThenBy(m => m.RuleId, StringComparer.Ordinal);
-
-	private string BuildSummary()
-	{
-		if (_roster is null)
-			return "";
-
-		var sb = new System.Text.StringBuilder();
-		sb.AppendLine(_roster.Name);
-		var detNames = _detachments.Count == 0 ? "No detachment" : string.Join(", ", _detachments.Select(d => d.Name));
-		sb.AppendLine($"{detNames} · {_validation.TotalPoints}/{_roster.PointsLimit} pts · {(_validation.IsReady ? "Ready" : $"{ErrorCount} issue(s)")}");
-
-		foreach (var group in UnitGroups())
-		{
-			sb.AppendLine();
-			sb.AppendLine(group.Role);
-			foreach (var (unit, sheet) in group.Units)
-			{
-				var bits = new List<string>();
-				if (unit.IsWarlord)
-					bits.Add("Warlord");
-				if (AttachedToName(unit) is { } target)
-					bits.Add($"→ {target}");
-				if (EnhancementName(unit) is { } enh)
-					bits.Add(enh);
-				if (unit.AppliedBindingId is { } binding)
-					bits.Add($"{binding} +{unit.BindingSurcharge}");
-
-				var size = unit.ModelCount > 1 ? $" ×{unit.ModelCount}" : "";
-				var suffix = bits.Count > 0 ? $" [{string.Join(", ", bits)}]" : "";
-				sb.AppendLine($"  - {sheet.Name}{size} — {UnitPoints(unit)} pts{suffix}");
-			}
-		}
-
-		return sb.ToString().TrimEnd();
-	}
 
 	private static bool Matches(Datasheet d, string q)
 	{
