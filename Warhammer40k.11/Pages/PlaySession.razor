@@ -105,13 +105,8 @@ else
 			<nav class="phases" aria-label="Battle phases">
 				@foreach (var phase in BattlePhases.Ordered)
 				{
-					var usable = PhaseAbilityCount(phase);
 					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)" title="@BattlePhases.Label(phase)">
 						<span class="ph-name">@BattlePhases.ShortLabel(phase)</span>
-						@if (usable > 0)
-						{
-							<span class="ph-badge" title="@($"{usable} usable {(usable == 1 ? "ability" : "abilities")} this phase")">@usable</span>
-						}
 					</button>
 				}
 			</nav>
@@ -1278,12 +1273,6 @@ else
 	}
 
 	private int AliveCount => _battle is null ? 0 : _battle.Units.Count(u => !IsDead(u));
-
-	// Across all living groups, the number of text abilities usable in a phase — drives the phase-tab markers.
-	// Stat abilities (leader conferrals, detachment buffs, stat-changing enhancements) are excluded: they are
-	// always-on and shown via the live stat cells, not as "usable now" prompts.
-	private int PhaseAbilityCount(BattlePhase phase) =>
-		_battle is null ? 0 : _battle.Units.Where(u => !IsDead(u)).Sum(u => u.ActiveAbilityCount(phase, _turn));
 
 	// ---- Collapse ----
 	private bool IsCollapsed(BattleUnit unit) => _collapsed.Contains(unit.Id);

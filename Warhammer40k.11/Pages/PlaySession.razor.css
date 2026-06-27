@@ -399,34 +399,11 @@ html[data-scroll="up"] .hud.sticky {
     text-overflow: ellipsis;
 }
 
-/* Count of text abilities usable in a phase � so you can see at a glance where you have abilities to use. */
-.ph-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.05rem;
-    height: 1.05rem;
-    padding: 0 0.3rem;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-line);
-    color: var(--accent-strong);
-    font-size: 0.66rem;
-    font-weight: 800;
-    line-height: 1;
-}
-
-/* On the active phase the badge becomes a solid accent chip — the one element meant to pop. */
-.phase.on .ph-badge {
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
-    border-color: transparent;
-    color: #04130d;
-}
-
 /* ---- Swipe deck: one card at a time, paged left/right ---- */
 .deck-bar {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.6rem;
     margin-bottom: 0.75rem;
 }
@@ -478,24 +455,25 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--text);
 }
 
-/* Quick unit selectors: a wrapping row of numbered chips to jump straight to any card. */
+/* Quick unit selectors: a single non-wrapping, centered row that squeezes every pill onto one line. */
 .deck-dots {
     position: relative;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 0.25rem;
     margin: -0.4rem 0 0.85rem;
 }
 
 .deck-dot {
-    flex: none;
-    min-width: 2.4rem;
+    flex: 0 1 auto;
+    min-width: 0;
     height: 2rem;
-    padding: 0 0.45rem;
+    padding: 0 0.4rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     background: var(--surface-2);
@@ -506,12 +484,20 @@ html[data-scroll="up"] .hud.sticky {
     letter-spacing: 0.04em;
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
     cursor: pointer;
     /* Long-press drag-to-reorder: let the page pan vertically, but suppress the iOS long-press callout/
        selection so a held pill can be dragged. */
     touch-action: pan-y;
     -webkit-touch-callout: none;
     transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+/* The 2-3 letter label shrinks (and ellipsises in extremis) so the row never wraps to a second line. */
+.dd-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Count of abilities usable right now for this unit — mirrors the phase-button badge at the bottom. */
