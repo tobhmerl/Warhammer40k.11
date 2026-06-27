@@ -580,6 +580,23 @@
     transform: translateY(-1px);
 }
 
+/* Attached leaders/support nested under their host bodyguard, so the group reads as one unit. */
+.attached-list {
+    list-style: none;
+    margin: 0.4rem 0 0 0.9rem;
+    padding-left: 1.1rem;
+    border-left: 2px solid var(--border-strong);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.unit-card.attached {
+    background: var(--surface);
+    border-style: dashed;
+    padding: 0.6rem 0.85rem;
+}
+
 .u-main {
     display: flex;
     flex-direction: column;
@@ -1047,6 +1064,19 @@
     font-weight: 700;
     font-size: 0.92rem;
     color: var(--accent-strong);
+}
+
+/* The model a combined ability belongs to (shown only when a unit has attached leaders/support). */
+.sched-member {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    color: var(--text-faint);
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 /* Clickable ability name: reveals the rules text so you can remind yourself what it does. */

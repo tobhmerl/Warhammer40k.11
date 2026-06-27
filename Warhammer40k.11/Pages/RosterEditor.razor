@@ -112,40 +112,19 @@ else
 						@foreach (var entry in group.Units)
 						{
 							<li @key="entry.Unit.Id">
-								<button class="unit-card" type="button" @onclick="() => OpenConfig(entry.Unit)">
-									<span class="u-main">
-										<span class="u-name">
-											@entry.Sheet.Name
-											@if (entry.Unit.ModelCount > 1)
-											{
-												<span class="u-size">×@entry.Unit.ModelCount</span>
-											}
-										</span>
-										<span class="u-chips">
-											@if (entry.Unit.IsWarlord)
-											{
-												<span class="chip warlord">Warlord</span>
-											}
-											@if (AttachedToName(entry.Unit) is { } target)
-											{
-												<span class="chip">→ @target</span>
-											}
-											@if (EnhancementName(entry.Unit) is { } enh)
-											{
-												<span class="chip enh">@enh</span>
-											}
-											@if (entry.Unit.AppliedBindingId is { } binding)
-											{
-												<span class="chip binding">@binding +@entry.Unit.BindingSurcharge</span>
-											}
-											@foreach (var wargear in WargearNames(entry.Unit))
-											{
-												<span class="chip wargear" @key="wargear">@wargear</span>
-											}
-										</span>
-									</span>
-									<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
-								</button>
+								@UnitCard(entry, false)
+								@{ var attachedLeaders = AttachedLeaders(entry.Unit); }
+								@if (attachedLeaders.Count > 0)
+								{
+									<ul class="attached-list">
+										@foreach (var leader in attachedLeaders)
+										{
+											<li @key="leader.Unit.Id">
+												@UnitCard(leader, true)
+											</li>
+										}
+									</ul>
+								}
 							</li>
 						}
 					</ul>
@@ -284,12 +263,15 @@ else
 				</div>
 			}
 
-			@{ var schedAbilities = ScheduleAbilities(sheet, u); }
+			@{
+				var schedAbilities = CombinedScheduleAbilities(u);
+				var schedMulti = GroupMembers(u).Count > 1;
+			}
 			@if (schedAbilities.Count > 0)
 			{
 				<div class="cfg-block">
 					<span class="cfg-label">Abilities — when usable in Play Mode</span>
-					<p class="cfg-hint">Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it. Tap a name to read its rules.</p>
+					<p class="cfg-hint">@(schedMulti ? "All abilities of this unit and its attached leaders, combined. " : "")Tick the phase + turn each ability is usable in. Nothing shows in Play until you tick it. Tap a name to read its rules.</p>
 					@foreach (var ab in schedAbilities)
 					{
 						var key = ab.Key;
@@ -307,6 +289,10 @@ else
 								else
 								{
 									<span class="sched-name">@ab.Name</span>
+								}
+								@if (schedMulti)
+								{
+									<span class="sched-member">@ab.Source</span>
 								}
 								@if (ab.Summary is { } sum)
 								{
@@ -874,7 +860,7 @@ else
 	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
 
 	/// <summary>A datasheet ability (or assigned enhancement) that gets a schedule grid: its key, name, rules text, and conferred-effect summary.</summary>
-	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary);
+	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary, string Source);
 
 	// Ability names (and stratagem schedule keys) whose rules text the user expanded in the scheduler (collapsed by default).
 	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
@@ -915,7 +901,7 @@ else
 				continue;
 			result.Add(new SchedAbility(
 				AbilityScheduleKeys.ForUnitAbility(sheet.Id, ability.Name),
-				ability.Name, ability.Text ?? "", ApplySummary(sheet, ability)));
+				ability.Name, ability.Text ?? "", ApplySummary(sheet, ability), sheet.Name));
 		}
 
 		// Append the unit's assigned Enhancement so it is schedulable + readable alongside printed abilities.
@@ -926,9 +912,23 @@ else
 			var summary = string.IsNullOrWhiteSpace(enh.EffectSummary) ? null : enh.EffectSummary;
 			result.Add(new SchedAbility(
 				AbilityScheduleKeys.ForEnhancement(enh.Id),
-				enh.Name, enh.Text ?? "", summary));
+				enh.Name, enh.Text ?? "", summary, sheet.Name));
 		}
 
+		return result;
+	}
+
+	// All schedulable abilities of a unit's whole attachment group (bodyguard + attached leaders/support),
+	// deduped by name (host wins) — the same merge Play Mode does, so the player configures the combined unit
+	// from one scheduler. Each ability keeps its own datasheet's schedule key, so Play Mode reads them as-is.
+	private List<SchedAbility> CombinedScheduleAbilities(RosterUnit unit)
+	{
+		var result = new List<SchedAbility>();
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (memberUnit, memberSheet) in GroupMembers(unit))
+			foreach (var ability in ScheduleAbilities(memberSheet, memberUnit))
+				if (seen.Add(ability.Name))
+					result.Add(ability);
 		return result;
 	}
 
@@ -1102,6 +1102,81 @@ else
 		return target is null ? null : SheetFor(target)?.Name;
 	}
 
+	// True when this unit is a leader/support attached to a host that still exists (a dangling attachment is
+	// treated as standalone, mirroring Play Mode). Such units are nested under their host in the list.
+	private bool IsAttachedLeader(RosterUnit unit) =>
+		!string.IsNullOrEmpty(unit.AttachedToRosterUnitId)
+		&& _roster is not null
+		&& _roster.FindUnit(unit.AttachedToRosterUnitId) is not null;
+
+	// The leaders/support attached to a host bodyguard, in roster order (each with its resolved datasheet).
+	private List<(RosterUnit Unit, Datasheet Sheet)> AttachedLeaders(RosterUnit host)
+	{
+		var result = new List<(RosterUnit, Datasheet)>();
+		if (_roster is null)
+			return result;
+		foreach (var other in _roster.Units)
+			if (other.AttachedToRosterUnitId == host.Id && SheetFor(other) is { } sheet)
+				result.Add((other, sheet));
+		return result;
+	}
+
+	// The attachment group a unit belongs to: the host bodyguard first, then its attached leaders — exactly the
+	// members Play Mode merges into one card. A standalone unit (or one whose host is gone) returns just itself.
+	private List<(RosterUnit Unit, Datasheet Sheet)> GroupMembers(RosterUnit unit)
+	{
+		var result = new List<(RosterUnit, Datasheet)>();
+		if (_roster is null)
+			return result;
+		var host = unit;
+		if (!string.IsNullOrEmpty(unit.AttachedToRosterUnitId)
+			&& _roster.FindUnit(unit.AttachedToRosterUnitId) is { } resolvedHost)
+			host = resolvedHost;
+		if (SheetFor(host) is { } hostSheet)
+			result.Add((host, hostSheet));
+		result.AddRange(AttachedLeaders(host));
+		return result;
+	}
+
+	// One unit card (host or, when attached, a nested leader/support). Tapping it opens that unit's config.
+	private RenderFragment UnitCard((RosterUnit Unit, Datasheet Sheet) entry, bool attached) => __builder =>
+	{
+		<button class="unit-card@(attached ? " attached" : "")" type="button" @onclick="() => OpenConfig(entry.Unit)">
+			<span class="u-main">
+				<span class="u-name">
+					@entry.Sheet.Name
+					@if (entry.Unit.ModelCount > 1)
+					{
+						<span class="u-size">×@entry.Unit.ModelCount</span>
+					}
+				</span>
+				<span class="u-chips">
+					@if (entry.Unit.IsWarlord)
+					{
+						<span class="chip warlord">Warlord</span>
+					}
+					@if (!attached && AttachedToName(entry.Unit) is { } target)
+					{
+						<span class="chip">→ @target</span>
+					}
+					@if (EnhancementName(entry.Unit) is { } enh)
+					{
+						<span class="chip enh">@enh</span>
+					}
+					@if (entry.Unit.AppliedBindingId is { } binding)
+					{
+						<span class="chip binding">@binding +@entry.Unit.BindingSurcharge</span>
+					}
+					@foreach (var wargear in WargearNames(entry.Unit))
+					{
+						<span class="chip wargear" @key="wargear">@wargear</span>
+					}
+				</span>
+			</span>
+			<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
+		</button>
+	};
+
 	private string? EnhancementName(RosterUnit unit)
 	{
 		if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
@@ -1170,6 +1245,7 @@ else
 		return _roster.Units
 			.Select(u => new UnitEntryResolved(u, SheetFor(u)))
 			.Where(e => e.Sheet is not null)
+			.Where(e => !IsAttachedLeader(e.Unit)) // attached leaders are nested under their host instead
 			.GroupBy(e => string.IsNullOrWhiteSpace(e.Sheet!.PrimaryRole) ? "Other" : e.Sheet!.PrimaryRole)
 			.OrderBy(g => RoleRank(g.Key))
 			.ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
