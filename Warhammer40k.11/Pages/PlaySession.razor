@@ -4,6 +4,7 @@
 @using Warhammer40k.Core.Play
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k._11.Components
+@using System.Text.RegularExpressions
 @implements IAsyncDisposable
 @inject IApiClient Api
 @inject IJSRuntime JS
@@ -47,7 +48,6 @@ else
 			<div class="deck-bar" role="group" aria-label="Current unit">
 				<span class="deck-pos">
 					<span class="deck-name">@ordered[activeIdx].Name</span>
-					<span class="deck-count">@(activeIdx + 1) / @ordered.Count</span>
 				</span>
 			</div>
 			@if (ordered.Count > 1)
@@ -159,10 +159,14 @@ else
 								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
 									<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 									<span class="s-name">@s.Name</span>
-									<span class="s-id">@s.Source</span>
-									@if (!string.IsNullOrEmpty(s.Type))
+									@{ var tk = TargetKeywords(s.Target); }
+									@foreach (var kw in tk.Include)
 									{
-										<span class="s-type">@s.Type</span>
+										<span class="s-kw">@kw</span>
+									}
+									@if (tk.Exclude.Count > 0)
+									{
+										<span class="s-kw excl">excl. @string.Join(", ", tk.Exclude)</span>
 									}
 								</button>
 								<span class="s-cp">@s.Cost CP</span>
@@ -1078,6 +1082,36 @@ else
 	// second" by phase + whose turn it is. You can hold stratagems from more than one detachment.
 	private sealed record StratView(string Id, string Name, string Source, string Type, int Cost,
 		string Flavour, string When, string Target, string Effect, string? Restrictions);
+
+	// A run of ALL-CAPS keyword words, possibly joined by spaces or "/" (e.g. CRYPTEK, MONSTER/VEHICLE,
+	// IMMORTALS/NECRON WARRIORS, NECRONS VEHICLE). Title-case words like "One"/"That" never match.
+	private static readonly Regex KeywordRun = new(@"[A-Z][A-Z'\u2019]+(?:[ /][A-Z][A-Z'\u2019]+)*", RegexOptions.Compiled);
+	// A "(excluding …)" qualifier in a Target clause; the captured group holds the excluded keywords.
+	private static readonly Regex ExcludeClause = new(@"\((?:excluding|excludes|except|but not)\s+([^)]*)\)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+	// Pulls the unit keywords a stratagem can affect from its "Target" clause: the ALL-CAPS keyword phrases it
+	// targets, plus any "(excluding …)" keywords — so the row shows at a glance whether it's for a vehicle,
+	// infantry, a Cryptek, etc., and which units are carved out.
+	private static (IReadOnlyList<string> Include, IReadOnlyList<string> Exclude) TargetKeywords(string? target)
+	{
+		if (string.IsNullOrWhiteSpace(target))
+			return ([], []);
+		var exclude = new List<string>();
+		foreach (Match m in ExcludeClause.Matches(target))
+			foreach (Match k in KeywordRun.Matches(m.Groups[1].Value))
+				AddKeyword(exclude, k.Value);
+		var remainder = ExcludeClause.Replace(target, " ");
+		var include = new List<string>();
+		foreach (Match k in KeywordRun.Matches(remainder))
+			AddKeyword(include, k.Value);
+		return (include, exclude);
+	}
+
+	private static void AddKeyword(List<string> list, string value)
+	{
+		if (!list.Contains(value, StringComparer.OrdinalIgnoreCase))
+			list.Add(value);
+	}
 
 	private IReadOnlyList<StratView> UsableStratagems
 	{

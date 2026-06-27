@@ -478,13 +478,6 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--text);
 }
 
-.deck-count {
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: var(--text-dim);
-    font-variant-numeric: tabular-nums;
-}
-
 /* Quick unit selectors: a wrapping row of numbered chips to jump straight to any card. */
 .deck-dots {
     position: relative;
@@ -1853,7 +1846,8 @@ html[data-scroll="up"] .hud.sticky {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.5rem;
     padding: 0;
     background: none;
     border: none;
@@ -1872,23 +1866,25 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--accent-strong);
 }
 
-.s-id {
-    font-size: 0.72rem;
-    color: var(--accent);
-    font-weight: 600;
-    letter-spacing: 0.02em;
+/* The unit keyword(s) a stratagem targets (pulled from its "Target" clause), so you can tell at a glance who
+   it's for — and any "(excluding …)" carve-out, shown muted and dashed. */
+.s-kw {
+    padding: 0.03rem 0.38rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent-line);
+    color: var(--text);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
 }
 
-.s-type {
-    padding: 0.05rem 0.4rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface-3);
-    color: var(--text-dim);
-    font-size: 0.66rem;
+.s-kw.excl {
+    border-color: var(--border);
+    border-style: dashed;
+    color: var(--text-faint);
     font-weight: 600;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
+    letter-spacing: 0.02em;
 }
 
 .s-cp {
