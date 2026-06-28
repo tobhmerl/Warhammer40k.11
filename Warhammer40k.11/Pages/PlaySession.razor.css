@@ -474,16 +474,29 @@ html[data-scroll="up"] .hud.sticky {
     position: relative;
     display: flex;
     flex-wrap: nowrap;
-    justify-content: center;
+    justify-content: safe center;
     gap: 0.25rem;
     margin: -0.4rem 0 0.85rem;
+    /* The pills carry full unit names, so the strip scrolls sideways instead of shrinking them. A plain
+       horizontal swipe pans it; a held pill (long-press) is picked up for reorder (see .reordering). */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+}
+
+.deck-dots::-webkit-scrollbar {
+    display: none;
 }
 
 .deck-dot {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
+    max-width: 11rem;
     height: 2rem;
-    padding: 0 0.4rem;
+    padding: 0 0.55rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -500,14 +513,14 @@ html[data-scroll="up"] .hud.sticky {
     white-space: nowrap;
     overflow: hidden;
     cursor: pointer;
-    /* Long-press drag-to-reorder: let the page pan vertically, but suppress the iOS long-press callout/
-       selection so a held pill can be dragged. */
-    touch-action: pan-y;
+    /* Long-press drag-to-reorder: let the page pan vertically and the strip pan horizontally, but suppress the
+       iOS long-press callout/selection so a held pill can be dragged. */
+    touch-action: pan-x pan-y;
     -webkit-touch-callout: none;
     transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
-/* The 2-3 letter label shrinks (and ellipsises in extremis) so the row never wraps to a second line. */
+/* Full unit name; only ellipsises if it exceeds the pill's generous max-width. */
 .dd-label {
     min-width: 0;
     overflow: hidden;
@@ -582,6 +595,9 @@ html[data-scroll="up"] .hud.sticky {
     -webkit-user-select: none;
     user-select: none;
     cursor: grabbing;
+    /* Once a pill is picked up, stop the strip from scrolling so the drag owns the gesture. */
+    touch-action: none;
+    overflow-x: hidden;
 }
 
 /* Insertion marker shown at the target slot while dragging (JS positions it via transform + height). */

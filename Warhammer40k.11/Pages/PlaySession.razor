@@ -56,7 +56,7 @@ else
 			</div>
 			@if (ordered.Count > 1)
 			{
-				<div class="deck-dots" role="tablist" aria-label="Jump to unit — drag a pill sideways to reorder" @ref="_dotsRef">
+				<div class="deck-dots" role="tablist" aria-label="Jump to unit — swipe to scroll, hold a pill to reorder" @ref="_dotsRef">
 					@for (var i = 0; i < ordered.Count; i++)
 					{
 						var index = i;
@@ -884,6 +884,8 @@ else
 	private DotNetObjectReference<PlaySession>? _deckSelf;
 	private bool _deckBound;
 	private bool _reorderBound;
+	// Set when the active card changes so OnAfterRenderAsync re-centres the active pill in the scrollable strip.
+	private bool _centerActivePill;
 
 	// Display order of the unit cards + their deck pills, by BattleUnit.Id (== RosterUnit.Id). Reordered by
 	// long-press drag on the pills, mirrored into roster.Units, and persisted. _byId resolves an id to its
@@ -921,6 +923,13 @@ else
 			_reorderBound = true;
 			_deckSelf ??= DotNetObjectReference.Create(this);
 			await JS.InvokeVoidAsync("tombworld.reorder.attach", _dotsRef, _deckSelf);
+		}
+
+		// Keep the active unit's pill in view as you page through cards.
+		if (_centerActivePill && _cardSwipe && _ordered.Count > 1)
+		{
+			_centerActivePill = false;
+			await JS.InvokeVoidAsync("tombworld.deck.center", _dotsRef);
 		}
 	}
 
@@ -1577,6 +1586,7 @@ else
 		if (clamped == _activeCard)
 			return false;
 		_activeCard = clamped;
+		_centerActivePill = true;
 		// Each card is shown expanded in the deck, so make sure the active unit isn't collapsed.
 		if (_activeCard < _ordered.Count)
 			_collapsed.Remove(_ordered[_activeCard].Id);
@@ -1601,42 +1611,13 @@ else
 			StateHasChanged();
 	}
 
-	// Words ignored when abbreviating a unit name, so "Imotekh the Stormlord" reads as "IS", not "ITS".
-	private static readonly string[] DeckNoiseWords = ["the", "of", "and", "a", "an"];
-
-	// A short, leader-first label for a unit's deck button. A single model uses word-initials for a multi-word
-	// name (e.g. "Necron Warriors" → "NW") or the first three letters of a single-word name ("Lychguard" → "LYC").
-	// A led unit shows each model's first initial, leader first ("Imotekh + Lychguard" → "I+L").
+	// The deck button's label: the unit's full name. For an attached (led) unit we use the bodyguard's name —
+	// the part the leader joined — so the button reads as the unit you recognise on the table, not the character.
 	private static string DeckLabel(BattleUnit unit)
 	{
-		var parts = unit.Parts.OrderByDescending(p => p.IsLeader).ToList(); // leaders first, then the bodyguard
-		if (parts.Count == 1)
-			return AbbreviateName(parts[0].Datasheet.Name);
-		return string.Join("+", parts.Select(p => FirstInitial(p.Datasheet.Name)));
-	}
-
-	private static IEnumerable<string> SignificantWords(string? name) =>
-		(name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			.Where(w => !DeckNoiseWords.Contains(w, StringComparer.OrdinalIgnoreCase));
-
-	private static string AbbreviateName(string name)
-	{
-		var words = SignificantWords(name).ToList();
-		if (words.Count >= 2)
-		{
-			var initials = string.Concat(words.Take(3).Select(w => char.ToUpperInvariant(w[0])));
-			return initials;
-		}
-		var word = words.FirstOrDefault() ?? (name ?? "").Trim();
-		if (word.Length == 0)
-			return "?";
-		return (word.Length <= 3 ? word : word[..3]).ToUpperInvariant();
-	}
-
-	private static string FirstInitial(string name)
-	{
-		var word = SignificantWords(name).FirstOrDefault();
-		return string.IsNullOrEmpty(word) ? "?" : char.ToUpperInvariant(word[0]).ToString();
+		var bodyguard = unit.Parts.FirstOrDefault(p => !p.IsLeader) ?? unit.Parts.FirstOrDefault();
+		var name = bodyguard?.Datasheet.Name;
+		return string.IsNullOrWhiteSpace(name) ? unit.Name : name;
 	}
 
 	private void OnDeckKeyDown(KeyboardEventArgs e)

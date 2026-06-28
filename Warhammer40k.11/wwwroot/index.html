@@ -127,18 +127,32 @@
                         this._el.removeEventListener('touchend', this._onEnd);
                     }
                     this._el = null; this._onStart = null; this._onEnd = null;
+                },
+                // Scroll the active pill (.deck-dot.on) into the centre of the scrollable strip so the selected
+                // unit is always visible as you page through cards. No-op when the strip isn't scrollable.
+                center: function (strip) {
+                    if (!strip) return;
+                    const on = strip.querySelector('.deck-dot.on');
+                    if (!on) return;
+                    const target = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
+                    const max = strip.scrollWidth - strip.clientWidth;
+                    strip.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
                 }
             },
 
-            // Drag-to-reorder the Play-Mode deck pills. Press a pill and slide it sideways to pick it up (no
-            // long-press needed); it follows the finger with a drop caret marking the target slot, and on release
-            // it reports the move (from -> to) to .NET. A vertical swipe still scrolls the page; a tap still
-            // navigates. State machine: 'idle' -> 'pending' (pressed) -> 'dragging' (slid far enough sideways).
+            // Drag-to-reorder the Play-Mode deck pills. The strip scrolls horizontally on a plain swipe; press and
+            // HOLD a pill (long-press) to pick it up, then slide it to a new slot with a drop caret marking the
+            // target, and on release it reports the move (from -> to) to .NET. A tap still navigates. State machine:
+            // 'idle' -> 'pending' (pressed, hold timer running) -> 'dragging' (hold fired) | back to 'idle' on a swipe.
             reorder: {
                 _el: null, _ref: null, _caret: null,
                 _onDown: null, _onMove: null, _onUp: null, _onCancel: null, _onClick: null,
                 _state: 'idle', _suppressClick: false, _pill: null, _pointerId: -1,
                 _startIndex: -1, _to: -1, _startX: 0, _startY: 0, _threshold: 6,
+                _holdTimer: null, _holdMs: 350,
+                _clearHold: function () {
+                    if (this._holdTimer) { clearTimeout(this._holdTimer); this._holdTimer = null; }
+                },
                 attach: function (el, dotNetRef) {
                     if (!el) return;
                     this.detach();
@@ -167,29 +181,34 @@
                         self._startX = e.clientX;
                         self._startY = e.clientY;
                         self._state = 'pending';
+                        // Hold the pill still for _holdMs to pick it up; moving first lets the strip scroll instead.
+                        self._clearHold();
+                        self._holdTimer = setTimeout(function () {
+                            self._holdTimer = null;
+                            if (self._state === 'pending') {
+                                try { self._pill.setPointerCapture(self._pointerId); } catch (_) { }
+                                begin();
+                            }
+                        }, self._holdMs);
                     };
                     const onMove = function (e) {
                         if (self._state === 'idle' || e.pointerId !== self._pointerId) return;
                         const dx = e.clientX - self._startX;
                         const dy = e.clientY - self._startY;
                         if (self._state === 'pending') {
-                            const adx = Math.abs(dx), ady = Math.abs(dy);
-                            if (adx < self._threshold && ady < self._threshold) return;
-                            if (adx >= ady) {
-                                // Sideways intent: take over the gesture and pick the pill up.
-                                try { self._pill.setPointerCapture(self._pointerId); } catch (_) { }
-                                begin();
-                            } else {
-                                // Mostly-vertical: leave it to the browser to scroll the page.
+                            // Movement before the hold fires = a swipe: cancel the pick-up and let the strip scroll.
+                            if (Math.abs(dx) >= self._threshold || Math.abs(dy) >= self._threshold) {
+                                self._clearHold();
                                 self._state = 'idle';
-                                return;
                             }
+                            return;
                         }
                         e.preventDefault();
                         self._pill.style.transform = 'translateX(' + dx + 'px)';
                         self.updateTarget(e.clientX, e.clientY);
                     };
                     const finish = function (commit) {
+                        self._clearHold();
                         if (self._state === 'dragging') {
                             const from = self._startIndex, to = self._to;
                             self.cleanupDrag();
@@ -262,6 +281,7 @@
                         el.removeEventListener('click', this._onClick, true);
                     }
                     this.cleanupDrag();
+                    this._clearHold();
                     this._el = null; this._ref = null; this._pill = null;
                     this._state = 'idle'; this._pointerId = -1; this._startIndex = -1;
                     this._onDown = this._onMove = this._onUp = this._onCancel = this._onClick = null;
