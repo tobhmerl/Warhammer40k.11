@@ -253,11 +253,13 @@ else
 					var effectAbilities = unit.CombinedAbilities.Where(HasEffectKeywords).ToList();
 					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
+					var usableAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn)).ToList();
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
 					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0)) || reanimate || battleShock;
 					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
+					var hasUsableLine = !dead && usableAbilities.Count > 0;
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
@@ -330,7 +332,22 @@ else
 													}
 												</span>
 											}
-											@* Line 3 — all other always-available abilities and keywords *@
+											@* Line 3 — abilities usable in the current phase + turn, highlighted bright green *@
+											@if (hasUsableLine)
+											{
+												<span class="chip-line">
+													@foreach (var a in usableAbilities)
+													{
+														<span class="chip ability now" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — usable now; tap to read its rules")"
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
+												</span>
+											}
+											@* Line 4 — all other always-available abilities and keywords *@
 											@if (hasAbilityLine)
 											{
 												<span class="chip-line">
@@ -381,42 +398,6 @@ else
 								</span>
 							}
 						</div>
-
-						@{
-							var activeAbilities = unit.CombinedAbilities
-								.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
-								.ToList();
-						}
-						@if (!dead && activeAbilities.Count > 0)
-						{
-							<div class="u-active" aria-label="Abilities usable now">
-								<span class="ua-head">Usable now</span>
-								<ul class="ua-list">
-									@foreach (var a in activeAbilities)
-									{
-										var open = IsAbilityOpen(unit, a);
-										<li class="ua-item @(open ? "open" : "")" @key="a.Ability.Name">
-											<button type="button" class="ua-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
-												<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
-												<span class="ua-name">@a.Ability.Name</span>
-												@if (a.IsEnhancement)
-												{
-													<span class="a-tag enh">Enhancement</span>
-												}
-												@if (unit.Parts.Count > 1)
-												{
-													<span class="a-src">@a.Source</span>
-												}
-											</button>
-											@if (open)
-											{
-												<p class="a-text">@Clean(a.Ability.Text)</p>
-											}
-										</li>
-									}
-								</ul>
-							</div>
-						}
 
 						@if (!collapsed)
 						{
@@ -756,7 +737,7 @@ else
 </Sheet>
 
 	<Sheet Open="_abilityCard is not null"
-		   Eyebrow="@(_abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : "Always available")"
+		   Eyebrow="@(_abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : _abilityCard is { } e1 && BattleUnit.IsAbilityActiveInPhase(e1, _phase, _turn) ? "Usable now" : "Always available")"
 		   Title="@_abilityCard?.Ability.Name" OnCloseRequested="CloseAbilityCard">
 		@if (_abilityCard is { } ac)
 		{

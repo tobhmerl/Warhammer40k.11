@@ -797,6 +797,21 @@ html[data-scroll="up"] .hud.sticky {
     outline: none;
 }
 
+/* An ability usable in the current phase + turn: filled bright green so it reads as actionable right now. */
+.chip.ability.now {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+    box-shadow: var(--glow-sm);
+}
+
+.chip.ability.now:hover,
+.chip.ability.now:focus-visible {
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+}
+
 
 /* Conditional weapon-effect toggle (e.g. an ability granting [DEVASTATING WOUNDS] under a condition): dashed
    while off; tap to open its rules and switch it on, which stamps the keyword onto this unit's weapons. */
@@ -1374,75 +1389,6 @@ html[data-scroll="up"] .hud.sticky {
 
 .ds-link:hover {
     color: var(--accent-strong);
-}
-
-/* ---- "Usable now" band: active abilities pulled to the top of the card (shown even when collapsed) ---- */
-.u-active {
-    margin: 0;
-    padding: 0.5rem 0.7rem 0.6rem;
-    border-bottom: 1px solid var(--border);
-    background:
-        linear-gradient(180deg, rgba(var(--accent-rgb), 0.12), transparent 80%),
-        var(--surface-2);
-}
-
-.ua-head {
-    display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent-strong);
-}
-
-.ua-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.ua-item {
-    border: 1px solid var(--accent-line);
-    border-radius: var(--radius-sm);
-    background:
-        linear-gradient(180deg, rgba(var(--accent-rgb), 0.10), transparent 70%),
-        var(--surface);
-    box-shadow: var(--glow-sm);
-    padding: 0.45rem 0.6rem;
-}
-
-.ua-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background: none;
-    border: none;
-    text-align: left;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.ua-toggle .chev {
-    flex: none;
-    color: var(--accent);
-    font-size: 0.7rem;
-}
-
-.ua-name {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--accent-strong);
-}
-
-.ua-item .a-text {
-    margin-top: 0.4rem;
 }
 
 /* ---- Army-rules "usable now" band (sits above the unit cards) ---- */
