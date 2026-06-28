@@ -280,15 +280,6 @@ else
 													}
 													@if (!dead)
 													{
-														@foreach (var a in effectAbilities)
-														{
-															<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-																  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-																  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-																  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-																@a.Ability.Name
-															</span>
-														}
 														@foreach (var buff in conditionalBuffs)
 														{
 															<span class="chip effect @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
@@ -296,6 +287,15 @@ else
 																  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
 																  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
 																@buff.Label
+															</span>
+														}
+														@foreach (var a in effectAbilities)
+														{
+															<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+																  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+																  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+																  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+																@a.Ability.Name
 															</span>
 														}
 													}
@@ -1490,12 +1490,22 @@ else
 
 	private static bool UnitMatchesBuff(BattleUnit unit, ConditionalUnitBuff buff)
 	{
-		bool HasKeyword(string kw) => unit.Parts.Any(p => p.Datasheet.Keywords.Contains(kw, StringComparer.OrdinalIgnoreCase));
+		bool HasKeyword(string kw) => unit.Parts.Any(p => p.Datasheet.Keywords.Any(k => KeywordMatches(k, kw)));
 		if (buff.RequiredKeywords.Any(kw => !HasKeyword(kw)))
 			return false;
 		if (buff.ExcludedKeywords.Any(HasKeyword))
 			return false;
 		return true;
+	}
+
+	// A datasheet keyword matches a wanted keyword when it equals it, or when it's the qualified "Prefix: Value"
+	// form and the value matches — the seed stores the faction keyword as "Faction: Necrons", not "Necrons".
+	private static bool KeywordMatches(string datasheetKeyword, string wanted)
+	{
+		if (string.Equals(datasheetKeyword, wanted, StringComparison.OrdinalIgnoreCase))
+			return true;
+		var colon = datasheetKeyword.IndexOf(':');
+		return colon >= 0 && string.Equals(datasheetKeyword[(colon + 1)..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private static string BuffKey(BattleUnit unit, ConditionalUnitBuff buff) => unit.Id + "|buff|" + buff.Label;
