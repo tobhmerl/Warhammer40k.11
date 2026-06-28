@@ -275,10 +275,6 @@ else
 											@if (hasToggleLine)
 											{
 												<span class="chip-line">
-													@if (warlordShown)
-													{
-														<span class="chip warlord">Warlord</span>
-													}
 													@if (!dead)
 													{
 														@foreach (var buff in conditionalBuffs)
@@ -290,6 +286,13 @@ else
 																@buff.Label
 															</span>
 														}
+													}
+													@if (warlordShown)
+													{
+														<span class="chip warlord">Warlord</span>
+													}
+													@if (!dead)
+													{
 														@foreach (var a in effectAbilities)
 														{
 															<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
