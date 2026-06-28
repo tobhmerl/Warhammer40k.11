@@ -454,8 +454,13 @@ public sealed class BattleUnit
     {
         string? unitValue = null;
         var models = new List<SaveBadge>();
+        var partsWithOwnSave = 0;
+        var ownValues = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var part in Parts)
         {
+            string? own = null;
+
             foreach (var ability in part.Datasheet.Abilities)
             {
                 if (parse(ability) is not { } save)
@@ -469,9 +474,9 @@ public sealed class BattleUnit
                     if (unitValue is null || string.CompareOrdinal(save.Value, unitValue) < 0)
                         unitValue = save.Value;
                 }
-                else
+                else if (own is null || string.CompareOrdinal(save.Value, own) < 0)
                 {
-                    models.Add(new SaveBadge(save.Value, UnitWide: false, ModelName: part.Datasheet.Name));
+                    own = save.Value;
                 }
             }
 
@@ -482,10 +487,33 @@ public sealed class BattleUnit
                     if (PhaseClassifier.FeelNoPainFromFactionRule(rule) is { } value)
                     {
                         if (part.IsLeader)
-                            models.Add(new SaveBadge(value, UnitWide: false, ModelName: part.Datasheet.Name));
+                        {
+                            if (own is null || string.CompareOrdinal(value, own) < 0)
+                                own = value;
+                        }
                         else if (unitValue is null || string.CompareOrdinal(value, unitValue) < 0)
+                        {
                             unitValue = value;
+                        }
                     }
+
+            if (own is not null)
+            {
+                partsWithOwnSave++;
+                ownValues.Add(own);
+                models.Add(new SaveBadge(own, UnitWide: false, ModelName: part.Datasheet.Name));
+            }
+        }
+
+        // When every part of an attached group has its own save at the same value, the whole unit shares it —
+        // collapse the separate per-model chips into one unit-wide chip (e.g. Imotekh's own 4+ invuln plus the
+        // Lychguard's Dispersion Shield 4+ → a single "4+ unit" chip instead of two).
+        if (Parts.Count > 1 && partsWithOwnSave == Parts.Count && ownValues.Count == 1)
+        {
+            var combined = ownValues.First();
+            if (unitValue is null || string.CompareOrdinal(combined, unitValue) <= 0)
+                unitValue = combined;
+            models.Clear();
         }
 
         var result = new List<SaveBadge>();

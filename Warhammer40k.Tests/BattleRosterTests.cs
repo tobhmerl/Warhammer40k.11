@@ -871,6 +871,42 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Same_own_invuln_across_every_part_combines_into_one_unit_chip()
+    {
+        // Imotekh's own 4+ invuln plus the Lychguard's Dispersion Shield 4+: every model has 4+, so it reads
+        // as the whole unit's invuln — one "4+ unit" chip rather than two per-model chips.
+        var imotekh = Sheet("imotekh", "Imotekh the Stormlord", wounds: "5", abilities:
+            [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
+        var lychguard = Sheet("lychguard", "Lychguard", wounds: "2", abilities:
+            [new Ability { Name = "Dispersion Shield", Text = "The bearer has a 4+ invulnerable save." }]);
+        var roster = new Roster { Units = [Unit("u1", "imotekh", attachedTo: "u2"), Unit("u2", "lychguard", models: 5)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(imotekh, lychguard)).Units);
+        var inv = Assert.Single(group.InvulnerableSaves);
+
+        Assert.Equal("4+", inv.Value);
+        Assert.True(inv.UnitWide);
+        Assert.Null(inv.ModelName);
+    }
+
+    [Fact]
+    public void Lone_leader_invuln_stays_a_model_chip_when_the_unit_lacks_one()
+    {
+        // Only the attached character has an invuln; the bodyguard does not — so it stays a per-model chip.
+        var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:
+            [new Ability { Name = "Invulnerable Save", Text = "This model has a 4+ invulnerable save." }]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+        var roster = new Roster { Units = [Unit("u1", "overlord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units);
+        var inv = Assert.Single(group.InvulnerableSaves);
+
+        Assert.Equal("4+", inv.Value);
+        Assert.False(inv.UnitWide);
+        Assert.Equal("Overlord", inv.ModelName);
+    }
+
+    [Fact]
     public void Own_feel_no_pain_from_faction_rules_is_a_chip()
     {
         // Illuminor Szeras states Feel No Pain 4+ only in factionRules (no ability text for it).
