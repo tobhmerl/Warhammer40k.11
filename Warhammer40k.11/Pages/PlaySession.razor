@@ -254,6 +254,11 @@ else
 					var effectAbilities = unit.CombinedAbilities.Where(HasEffectKeywords).ToList();
 					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
+					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
+					var warlordShown = !_cardSwipe && unit.IsWarlord;
+					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0)) || reanimate || battleShock;
+					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
+					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -265,33 +270,67 @@ else
 										<span class="u-name">@unit.Name</span>
 									}
 									<span class="u-chips">
-											@if (!_cardSwipe && unit.IsWarlord)
+											@* Line 1 — conditional-effect toggles (e.g. Relentless Onslaught → +1 Hit) *@
+											@if (hasToggleLine)
 											{
-												<span class="chip warlord">Warlord</span>
-											}
-											@foreach (var inv in unit.InvulnerableSaves)
-											{
-												<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
-													@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
+												<span class="chip-line">
+													@if (warlordShown)
+													{
+														<span class="chip warlord">Warlord</span>
+													}
+													@if (!dead)
+													{
+														@foreach (var a in effectAbilities)
+														{
+															<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+																  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+																  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+																  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+																@a.Ability.Name
+															</span>
+														}
+														@foreach (var buff in conditionalBuffs)
+														{
+															<span class="chip effect @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
+																  title="@($"{buff.Label} — tap; switch on to apply {BuffModifierLabel(buff)} ({buff.Effect})")"
+																  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
+																  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
+																@buff.Label
+															</span>
+														}
+													}
+													@if (reanimate)
+													{
+														<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
+													}
+													@if (battleShock)
+													{
+														<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
+													}
 												</span>
 											}
-											@foreach (var fnp in unit.FeelNoPains)
+											@* Line 2 — Invulnerable saves and Feel No Pain *@
+											@if (hasSaveLine)
 											{
-													<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
-														FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
-													</span>
-												}
-												@if (!dead)
-												{
-													@foreach (var a in effectAbilities)
+												<span class="chip-line">
+													@foreach (var inv in unit.InvulnerableSaves)
 													{
-														<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
+														<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
+															@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
 														</span>
 													}
+													@foreach (var fnp in unit.FeelNoPains)
+													{
+														<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
+															FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
+														</span>
+													}
+												</span>
+											}
+											@* Line 3 — all other always-available abilities and keywords *@
+											@if (hasAbilityLine)
+											{
+												<span class="chip-line">
 													@foreach (var a in keywordAbilities)
 													{
 														<span class="chip keyword" role="button" tabindex="0"
@@ -310,14 +349,7 @@ else
 															@a.Ability.Name
 														</span>
 													}
-												}
-												@if (reanimate)
-											{
-												<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
-											}
-											@if (battleShock)
-											{
-												<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
+												</span>
 											}
 										</span>
 								</span>
@@ -447,8 +479,8 @@ else
 											{
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
-														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true);
-														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveEffectKeywords(unit)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true).Concat(ActiveBuffModifiers(unit, ranged: true)).ToList();
+														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
 													}
 													<div class="w-top">
@@ -498,8 +530,8 @@ else
 											{
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
-														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false);
-														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveEffectKeywords(unit)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false).Concat(ActiveBuffModifiers(unit, ranged: false)).ToList();
+														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
@@ -731,6 +763,17 @@ else
 		}
 	</Sheet>
 
+	<Sheet Open="_buffCard is not null" Eyebrow="Detachment" Title="@_buffCard?.Label" OnCloseRequested="CloseBuffCard">
+		@if (_buffCard is { } bc && _buffCardUnit is { } bcu)
+		{
+			<label class="ac-toggle">
+				<input type="checkbox" checked="@IsBuffActive(bcu, bc)" @onchange="e => ToggleBuff(bcu, bc, (bool)e.Value!)" />
+				<span>Active now — apply @BuffModifierLabel(bc) to this unit's weapons</span>
+			</label>
+			<p class="a-text">@bc.Effect</p>
+		}
+	</Sheet>
+
 <Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army &amp; detachment rules" OnCloseRequested="CloseRules">
 	@if (ArmyRules.Count > 0)
 	{
@@ -811,6 +854,9 @@ else
 	// The always-available ability whose rules text is shown in a popup (tapped from its head chip). Null = closed.
 	private BattleAbility? _abilityCard;
 	private BattleUnit? _abilityCardUnit;
+	// The conditional detachment buff whose rule text is shown in a popup (tapped from its toggle chip). Null = closed.
+	private ConditionalUnitBuff? _buffCard;
+	private BattleUnit? _buffCardUnit;
 
 	// Single-cell highlight on a weapon stat ("Rng", "A", "BS"…) so you can mark the exact spot you're on while
 	// resolving an attack. Only the one cell you clicked lights up; click it again to clear.
@@ -1398,9 +1444,100 @@ else
 			_activeEffects.Remove(EffectKey(unit, ability));
 	}
 
-	// The weapon keywords currently switched on for a unit — added to every weapon's granted abilities.
-	private IEnumerable<string> ActiveEffectKeywords(BattleUnit unit) =>
-		unit.CombinedAbilities.Where(a => IsEffectActive(unit, a)).SelectMany(EffectKeywords);
+	// The bracketed keywords from active conditional effects that apply to THIS weapon. An ability that names a
+	// particular weapon in its text (e.g. "its doomsday cannon has [DEVASTATING WOUNDS]") only buffs that weapon;
+	// an ability that doesn't single out one of the unit's weapons buffs them all.
+	private IEnumerable<string> ActiveWeaponEffects(BattleUnit unit, WeaponProfile weapon)
+	{
+		foreach (var a in unit.CombinedAbilities)
+		{
+			if (!IsEffectActive(unit, a))
+				continue;
+			var text = a.Ability.Text ?? "";
+			var named = unit.Parts.SelectMany(p => p.Weapons)
+				.Select(w => w.Name)
+				.Where(n => !string.IsNullOrWhiteSpace(n) && text.Contains(n, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+			if (named.Count == 0 || named.Any(n => string.Equals(n, weapon.Name, StringComparison.OrdinalIgnoreCase)))
+				foreach (var kw in EffectKeywords(a))
+					yield return kw;
+		}
+	}
+
+	// ---- Conditional detachment buffs (player-toggled) ----
+	// Situational detachment-rule buffs the engine can't auto-apply because they depend on board state
+	// (e.g. Relentless Onslaught's "+1 to Hit while targeting a unit on an objective"). Every matching unit
+	// gets a toggle; switching it on injects the buff's modifiers into that unit's weapon stats. Runtime only.
+	private IEnumerable<ConditionalUnitBuff> ConditionalBuffsFor(BattleUnit unit)
+	{
+		if (_battle is null)
+			yield break;
+		foreach (var det in _battle.Detachments)
+			foreach (var rule in det.Rules)
+				foreach (var buff in rule.ConditionalBuffs)
+					if (UnitMatchesBuff(unit, buff))
+						yield return buff;
+	}
+
+	private static bool UnitMatchesBuff(BattleUnit unit, ConditionalUnitBuff buff)
+	{
+		bool HasKeyword(string kw) => unit.Parts.Any(p => p.Datasheet.Keywords.Contains(kw, StringComparer.OrdinalIgnoreCase));
+		if (buff.RequiredKeywords.Any(kw => !HasKeyword(kw)))
+			return false;
+		if (buff.ExcludedKeywords.Any(HasKeyword))
+			return false;
+		return true;
+	}
+
+	private static string BuffKey(BattleUnit unit, ConditionalUnitBuff buff) => unit.Id + "|buff|" + buff.Label;
+
+	private bool IsBuffActive(BattleUnit unit, ConditionalUnitBuff buff) => _activeEffects.Contains(BuffKey(unit, buff));
+
+	private void ToggleBuff(BattleUnit unit, ConditionalUnitBuff buff, bool on)
+	{
+		if (on)
+			_activeEffects.Add(BuffKey(unit, buff));
+		else
+			_activeEffects.Remove(BuffKey(unit, buff));
+	}
+
+	private static string BuffModifierLabel(ConditionalUnitBuff buff) =>
+		string.Join(", ", buff.Modifiers.Select(m => m.Describe()));
+
+	// The stat modifiers from this unit's active conditional buffs that apply to the given weapon class.
+	private IEnumerable<StatModifier> ActiveBuffModifiers(BattleUnit unit, bool ranged)
+	{
+		foreach (var buff in ConditionalBuffsFor(unit))
+		{
+			if (!IsBuffActive(unit, buff))
+				continue;
+			foreach (var mod in buff.Modifiers)
+				if (mod.IsWeaponStat &&
+					(mod.WeaponClass == WeaponClass.Any || mod.WeaponClass == (ranged ? WeaponClass.Ranged : WeaponClass.Melee)))
+					yield return mod;
+		}
+	}
+
+	private void OpenBuffCard(BattleUnit unit, ConditionalUnitBuff buff)
+	{
+		_buffCardUnit = unit;
+		_buffCard = buff;
+	}
+
+	private void CloseBuffCard()
+	{
+		_buffCard = null;
+		_buffCardUnit = null;
+	}
+
+	private void OnBuffChipKey(KeyboardEventArgs e, BattleUnit unit, ConditionalUnitBuff buff)
+	{
+		if (e.Key is "Enter" or " " or "Spacebar")
+		{
+			_buffCardUnit = unit;
+			_buffCard = buff;
+		}
+	}
 
 	// ---- Swipe deck navigation (one card at a time) ----
 	private int CardCount => _ordered.Count;

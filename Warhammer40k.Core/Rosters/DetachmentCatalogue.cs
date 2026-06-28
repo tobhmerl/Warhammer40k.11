@@ -178,6 +178,26 @@ public static class DetachmentCatalogue
                     "targets a unit within range of one or more objective markers, add 1 to the Hit roll.\n" +
                     "In addition, ranged weapons equipped by NECRONS VEHICLE and NECRONS MOUNTED models " +
                     "(excluding TITANIC models) from your army have the [ASSAULT] ability.",
+                ConditionalBuffs =
+                [
+                    new ConditionalUnitBuff
+                    {
+                        Label = "Relentless Onslaught",
+                        Effect = "+1 to Hit while targeting a unit on an objective",
+                        RequiredKeywords = ["Necrons"],
+                        ExcludedKeywords = ["Monster"],
+                        Modifiers =
+                        [
+                            new StatModifier
+                            {
+                                Target = StatTarget.Skill,
+                                Delta = 1,
+                                WeaponClass = WeaponClass.Any,
+                                Label = "+1 Hit",
+                            },
+                        ],
+                    },
+                ],
             },
         ];
 

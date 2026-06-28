@@ -709,6 +709,12 @@ html[data-scroll="up"] .hud.sticky {
 
 .u-chips {
     display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.chip-line {
+    display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
 }

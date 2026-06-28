@@ -247,6 +247,35 @@ public sealed class DetachmentRule
     public string Name { get; set; } = string.Empty;
 
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Situational buffs the rule grants that the engine can't auto-apply (they depend on board state, e.g.
+    /// "+1 to Hit while targeting a unit on an objective"). Surfaced in Play Mode as a toggle on each matching
+    /// unit; switching it on applies the modifiers to that unit's weapons.
+    /// </summary>
+    public List<ConditionalUnitBuff> ConditionalBuffs { get; set; } = [];
+}
+
+/// <summary>
+/// A board-state-dependent unit buff from a detachment rule, surfaced in Play Mode as a per-unit toggle the
+/// player switches on when the condition is met (e.g. the target is on an objective).
+/// </summary>
+public sealed class ConditionalUnitBuff
+{
+    /// <summary>Chip + popup label, e.g. "Relentless Onslaught".</summary>
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>Short effect summary for the toggle, e.g. "+1 to Hit while targeting a unit on an objective".</summary>
+    public string Effect { get; set; } = string.Empty;
+
+    /// <summary>The unit must have all of these keywords to receive the buff.</summary>
+    public List<string> RequiredKeywords { get; set; } = [];
+
+    /// <summary>The unit is excluded if it has any of these keywords.</summary>
+    public List<string> ExcludedKeywords { get; set; } = [];
+
+    /// <summary>The modifiers applied to the unit's weapons while the buff is switched on.</summary>
+    public List<StatModifier> Modifiers { get; set; } = [];
 }
 
 /// <summary>Whether a weapon-ability grant targets the matching <b>model</b>, or the whole <b>unit</b>.</summary>
