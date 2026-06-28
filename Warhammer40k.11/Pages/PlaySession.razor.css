@@ -859,64 +859,6 @@ html[data-scroll="up"] .hud.sticky {
     border-style: dashed;
 }
 
-/* Command-phase cue chips. */
-.chip.reanimate {
-    color: #04130d;
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
-    border-color: transparent;
-    box-shadow: var(--glow-sm);
-}
-
-.chip.shock {
-    color: #ffd9d6;
-    background: var(--danger-soft);
-    border-color: var(--danger);
-}
-
-/* ---- Command-phase cue banner ---- */
-.command-cue {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid var(--accent-line);
-    border-radius: var(--radius-sm);
-    background: var(--accent-soft);
-    box-shadow: var(--glow-sm);
-}
-
-.cue-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent-strong);
-}
-
-.cue {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.18rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    background: var(--surface);
-}
-
-.cue.reanimate {
-    color: var(--accent-strong);
-    border-color: var(--border-strong);
-}
-
-.cue.shock {
-    color: #ffb3ae;
-    border-color: var(--danger);
-    background: var(--danger-soft);
-}
-
 /* ---- Group model summary (in the header) ---- */
 .u-models {
     flex: none;

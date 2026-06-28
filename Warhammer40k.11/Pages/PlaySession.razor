@@ -115,21 +115,6 @@ else
 			</nav>
 		</div>
 
-		@if (MyCommandPhase && (ReanimateCount > 0 || BattleShockCount > 0))
-		{
-			<div class="command-cue" role="status">
-				<span class="cue-title">Your Command phase</span>
-				@if (ReanimateCount > 0)
-				{
-					<span class="cue reanimate">@ReanimateCount to reanimate</span>
-				}
-				@if (BattleShockCount > 0)
-				{
-					<span class="cue shock">@BattleShockCount Battle-shock test@(BattleShockCount == 1 ? "" : "s")</span>
-				}
-			</div>
-		}
-
 		@{
 			var strats = UsableStratagems;
 		}
@@ -257,7 +242,7 @@ else
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
-					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0)) || reanimate || battleShock;
+					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0));
 					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
 					var hasUsableLine = !dead && usableAbilities.Count > 0;
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
@@ -294,26 +279,18 @@ else
 													}
 													@if (!dead)
 													{
-														@foreach (var a in effectAbilities)
-														{
-															<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-																  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-																  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-																  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-																@a.Ability.Name
+																	@foreach (var a in effectAbilities)
+																	{
+																		<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+																			  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+																			  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+																			  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+																			@a.Ability.Name
+																		</span>
+																	}
+																}
 															</span>
 														}
-													}
-													@if (reanimate)
-													{
-														<span class="chip reanimate" title="Lost models - run Reanimation Protocols this phase">Reanimate</span>
-													}
-													@if (battleShock)
-													{
-														<span class="chip shock" title="Below Half-strength - take a Battle-shock test">Battle-shock</span>
-													}
-												</span>
-											}
 											@* Line 2 — Invulnerable saves and Feel No Pain *@
 											@if (hasSaveLine)
 											{
@@ -1137,10 +1114,6 @@ else
 		}
 		return BattleStatus.BelowHalfStrength(unit.ModelCount, GroupModels(unit));
 	}
-
-	private int ReanimateCount => _battle is null ? 0 : _battle.Units.Count(NeedsReanimation);
-
-	private int BattleShockCount => _battle is null ? 0 : _battle.Units.Count(NeedsBattleShock);
 
 	// Core Stratagems usable "in the actual second": filtered by the current phase + whose turn it is.
 	// Core Stratagems (always available) plus the selected detachments' stratagems, filtered "in the actual
