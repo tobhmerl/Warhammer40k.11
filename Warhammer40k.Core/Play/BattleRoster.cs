@@ -436,7 +436,7 @@ public sealed class BattleUnit
     public IReadOnlyList<SaveBadge> InvulnerableSaves => CollectSaves(PhaseClassifier.InvulnerableSaveScoped);
 
     /// <summary>The group's Feel No Pain saves, each tagged unit-wide (incl. a Leader's conferral) or model-only.</summary>
-    public IReadOnlyList<SaveBadge> FeelNoPains => CollectSaves(PhaseClassifier.FeelNoPainScoped);
+    public IReadOnlyList<SaveBadge> FeelNoPains => CollectSaves(PhaseClassifier.FeelNoPainScoped, fromFactionRule: true);
 
     /// <summary>The group's headline invulnerable save value (first badge), or null when none.</summary>
     public string? InvulnerableSave => InvulnerableSaves.Count > 0 ? InvulnerableSaves[0].Value : null;
@@ -448,7 +448,9 @@ public sealed class BattleUnit
     // has a 4+ invulnerable save") is always shown — it is profile data. A save that a *conferring* ability
     // grants (e.g. a Leader's Master Chronomancer) only counts once the player has applied that ability in
     // setup. One unit-wide badge (best/lowest value), plus a model-only badge per part with its own value.
-    private IReadOnlyList<SaveBadge> CollectSaves(Func<Ability, (string Value, SaveScope Scope)?> parse)
+    // When fromFactionRule is set, a part's own Feel No Pain stated in its factionRules (e.g. "Feel No Pain 4+",
+    // the only place some datasheets list it) is also collected: unit-wide for the primary, model-only for a Leader.
+    private IReadOnlyList<SaveBadge> CollectSaves(Func<Ability, (string Value, SaveScope Scope)?> parse, bool fromFactionRule = false)
     {
         string? unitValue = null;
         var models = new List<SaveBadge>();
@@ -472,6 +474,18 @@ public sealed class BattleUnit
                     models.Add(new SaveBadge(save.Value, UnitWide: false, ModelName: part.Datasheet.Name));
                 }
             }
+
+            // A part's own Feel No Pain stated only in its factionRules: the primary's is the unit's save;
+            // an attached Leader's belongs to that single model.
+            if (fromFactionRule)
+                foreach (var rule in part.Datasheet.FactionRules)
+                    if (PhaseClassifier.FeelNoPainFromFactionRule(rule) is { } value)
+                    {
+                        if (part.IsLeader)
+                            models.Add(new SaveBadge(value, UnitWide: false, ModelName: part.Datasheet.Name));
+                        else if (unitValue is null || string.CompareOrdinal(value, unitValue) < 0)
+                            unitValue = value;
+                    }
         }
 
         var result = new List<SaveBadge>();
@@ -552,6 +566,31 @@ public sealed class BattleUnit
             // Plain text abilities first, then abilities applied straight to the card ("Applied: …") — stable
             // so each group keeps its in-roster order.
             return result.OrderBy(a => a.AppliedSummary is null ? 0 : 1).ToList();
+        }
+    }
+
+    /// <summary>
+    /// The unit-level <b>core</b> abilities listed in the group's datasheets' <c>factionRules</c> (e.g.
+    /// "Deep Strike", "Stealth", "Scouts 8\"") that aren't printed as full abilities. They are always-on and
+    /// surfaced as passive chips with a built-in description on tap. Feel No Pain is excluded (it is a save
+    /// chip), as are weapon abilities (already shown on the weapons) and anything already a printed ability.
+    /// De-duplicated across the group by the rule's base name, in datasheet order.
+    /// </summary>
+    public IReadOnlyList<BattleAbility> CoreAbilities
+    {
+        get
+        {
+            var present = new HashSet<string>(CombinedAbilities.Select(a => a.Ability.Name), StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<BattleAbility>();
+            foreach (var part in Parts)
+                foreach (var rule in part.Datasheet.FactionRules)
+                {
+                    if (!PhaseClassifier.IsUnitCoreAbility(rule) || present.Contains(rule) || !seen.Add(rule))
+                        continue;
+                    result.Add(new BattleAbility(new Ability { Name = rule, Text = CoreAbilityGlossary.Describe(rule) }, part.Datasheet.Name));
+                }
+            return result;
         }
     }
 

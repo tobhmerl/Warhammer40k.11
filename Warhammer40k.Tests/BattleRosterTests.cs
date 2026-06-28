@@ -871,6 +871,71 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Own_feel_no_pain_from_faction_rules_is_a_chip()
+    {
+        // Illuminor Szeras states Feel No Pain 4+ only in factionRules (no ability text for it).
+        var szeras = Sheet("illuminor-szeras", "Illuminor Szeras", wounds: "9");
+        szeras.FactionRules = ["Extra Attacks", "Feel No Pain 4+", "Reanimation Protocols"];
+        var roster = new Roster { Units = [Unit("u1", "illuminor-szeras")] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(szeras)).Units);
+        var fnp = Assert.Single(group.FeelNoPains);
+
+        Assert.Equal("4+", fnp.Value);
+        Assert.True(fnp.UnitWide); // a lone model's own save reads as the unit's save
+    }
+
+    [Fact]
+    public void Attached_leader_feel_no_pain_from_faction_rules_is_model_scoped()
+    {
+        var lord = Sheet("lokhust-lord", "Lokhust Lord", wounds: "4");
+        lord.FactionRules = ["Feel No Pain 5+"];
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1");
+        var roster = new Roster { Units = [Unit("u1", "lokhust-lord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(lord, warriors)).Units);
+        var fnp = Assert.Single(group.FeelNoPains);
+
+        Assert.Equal("5+", fnp.Value);
+        Assert.False(fnp.UnitWide); // the leader's own save belongs to that single model
+        Assert.Equal("Lokhust Lord", fnp.ModelName);
+    }
+
+    // ---------- Core abilities from faction rules ----------
+
+    [Fact]
+    public void Unit_core_abilities_from_faction_rules_surface_as_chips()
+    {
+        var deathmarks = Sheet("deathmarks", "Deathmarks", wounds: "1");
+        deathmarks.FactionRules = ["Deep Strike", "Lethal Hits", "Reanimation Protocols"];
+        var roster = new Roster { Units = [Unit("u1", "deathmarks", models: 5)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(deathmarks)).Units);
+
+        // Deep Strike surfaces as a core-ability chip with a description; the weapon ability and the army rule do not.
+        var core = Assert.Single(group.CoreAbilities);
+        Assert.Equal("Deep Strike", core.Ability.Name);
+        Assert.False(string.IsNullOrWhiteSpace(core.Ability.Text));
+        Assert.DoesNotContain(group.CoreAbilities, a => a.Ability.Name == "Lethal Hits");
+        Assert.DoesNotContain(group.CoreAbilities, a => a.Ability.Name == "Reanimation Protocols");
+    }
+
+    [Fact]
+    public void Core_ability_is_not_duplicated_when_already_a_printed_ability()
+    {
+        var flayed = Sheet("flayed-ones", "Flayed Ones", wounds: "1", abilities:
+            [new Ability { Name = "Stealth", Text = "This unit has the Stealth ability." }]);
+        flayed.FactionRules = ["Infiltrators", "Stealth"];
+        var roster = new Roster { Units = [Unit("u1", "flayed-ones", models: 5)] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(flayed)).Units);
+
+        // Stealth is already a printed ability, so it isn't also synthesized; Infiltrators still surfaces.
+        Assert.DoesNotContain(group.CoreAbilities, a => a.Ability.Name == "Stealth");
+        Assert.Contains(group.CoreAbilities, a => a.Ability.Name == "Infiltrators");
+    }
+
+    [Fact]
     public void Play_card_hides_leader_admin_and_own_save_rule_abilities()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4", abilities:

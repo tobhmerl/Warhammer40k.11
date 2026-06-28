@@ -54,6 +54,35 @@ public static class PhaseClassifier
     }
 
     /// <summary>
+    /// Parses a Feel No Pain value (e.g. "4+") from a unit's <c>factionRules</c> token such as
+    /// "Feel No Pain 4+", or null when the token is not a Feel No Pain rule. Faction-rule tokens are the unit's
+    /// own always-on abilities, so scope is decided by the caller (the model that carries it), not the text.
+    /// </summary>
+    public static string? FeelNoPainFromFactionRule(string factionRule)
+    {
+        var match = FeelNoPainRegex.Match(factionRule ?? "");
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    // The unit-level core abilities that live in a datasheet's factionRules and should surface as a unit chip.
+    // Everything else in factionRules is a weapon ability already shown on the weapons (Lethal Hits, Sustained
+    // Hits, Rapid Fire, Devastating Wounds, Blast, …), a save handled separately (Feel No Pain), the army rule
+    // (Reanimation Protocols), or a setup/derived concept (Leader, Extra Attacks).
+    private static readonly string[] UnitCoreAbilityPrefixes =
+    [
+        "Deep Strike", "Deadly Demise", "Fights First", "Infiltrators",
+        "Lone Operative", "Scouts", "Stealth", "Titanic Walker",
+    ];
+
+    /// <summary>
+    /// True when a <c>factionRules</c> token is a unit-level core ability to surface as a chip (e.g.
+    /// "Deep Strike", "Scouts 8\"", "Deadly Demise D3"). Matched by prefix so a valued token keeps its value.
+    /// </summary>
+    public static bool IsUnitCoreAbility(string factionRule) =>
+        !string.IsNullOrWhiteSpace(factionRule)
+        && UnitCoreAbilityPrefixes.Any(p => factionRule.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// True when an ability is a model's / unit's <b>own</b> always-on save rule (e.g. "This model has a 4+
     /// invulnerable save" or "Models in this unit have a 5+ invulnerable save") rather than a conditional
     /// ability that <i>confers</i> a save (e.g. a Leader's "While this model is leading a unit, …"). Own save

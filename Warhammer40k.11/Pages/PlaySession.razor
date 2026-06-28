@@ -254,11 +254,12 @@ else
 					var effectAbilities = unit.CombinedAbilities.Where(HasEffectKeywords).ToList();
 					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
+					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = !_cardSwipe && unit.IsWarlord;
 					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0)) || reanimate || battleShock;
 					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
-					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0);
+					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -343,6 +344,15 @@ else
 													@foreach (var a in alwaysAbilities)
 													{
 														<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — tap to read its rules")"
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
+													@foreach (var a in coreAbilities)
+													{
+														<span class="chip ability" role="button" tabindex="0"
 															  title="@($"{a.Ability.Name} — tap to read its rules")"
 															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
 															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
