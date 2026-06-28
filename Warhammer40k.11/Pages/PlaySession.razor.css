@@ -455,6 +455,20 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--text);
 }
 
+/* Warlord marker sits above the unit name at the very top. */
+.deck-warlord {
+    align-self: center;
+    margin-bottom: 0.12rem;
+    padding: 0.04rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent-line);
+    color: var(--accent);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
 /* Quick unit selectors: a single non-wrapping, centered row that squeezes every pill onto one line. */
 .deck-dots {
     position: relative;

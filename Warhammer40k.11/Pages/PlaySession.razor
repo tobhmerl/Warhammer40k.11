@@ -47,6 +47,10 @@ else
 			var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
 			<div class="deck-bar" role="group" aria-label="Current unit">
 				<span class="deck-pos">
+					@if (ordered[activeIdx].IsWarlord)
+					{
+						<span class="deck-warlord">Warlord</span>
+					}
 					<span class="deck-name">@ordered[activeIdx].Name</span>
 				</span>
 			</div>
@@ -260,7 +264,7 @@ else
 										<span class="u-name">@unit.Name</span>
 									}
 									<span class="u-chips">
-											@if (unit.IsWarlord)
+											@if (!_cardSwipe && unit.IsWarlord)
 											{
 												<span class="chip warlord">Warlord</span>
 											}
