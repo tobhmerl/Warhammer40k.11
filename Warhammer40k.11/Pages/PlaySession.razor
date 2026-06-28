@@ -251,8 +251,9 @@ else
 					var collapsed = IsCollapsed(unit);
 					var reanimate = MyCommandPhase && NeedsReanimation(unit);
 					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
-					var keywordAbilities = unit.CombinedAbilities.Where(a => a.HasManualKeyword).ToList();
-					var alwaysAbilities = unit.CombinedAbilities.Where(a => !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
+					var effectAbilities = unit.CombinedAbilities.Where(HasEffectKeywords).ToList();
+					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
+					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -282,12 +283,21 @@ else
 												}
 												@if (!dead)
 												{
+													@foreach (var a in effectAbilities)
+													{
+														<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
 													@foreach (var a in keywordAbilities)
 													{
 														<span class="chip keyword" role="button" tabindex="0"
 															  title="@($"{a.Ability.Name} — tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, a)" @onkeydown:stopPropagation="true">
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
 															@a.ManualKeyword
 														</span>
 													}
@@ -295,8 +305,8 @@ else
 													{
 														<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
 															  title="@($"{a.Ability.Name} — tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, a)" @onkeydown:stopPropagation="true">
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
 															@a.Ability.Name
 														</span>
 													}
@@ -330,7 +340,7 @@ else
 
 						@{
 							var activeAbilities = unit.CombinedAbilities
-								.Where(a => !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
+								.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn))
 								.ToList();
 						}
 						@if (!dead && activeAbilities.Count > 0)
@@ -438,7 +448,7 @@ else
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true);
-														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true);
+														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveEffectKeywords(unit)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
 													}
 													<div class="w-top">
@@ -489,7 +499,7 @@ else
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false);
-														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false);
+														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveEffectKeywords(unit)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
@@ -702,13 +712,20 @@ else
 </Sheet>
 
 	<Sheet Open="_abilityCard is not null"
-		   Eyebrow="@(_abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : "Always available")"
+		   Eyebrow="@(_abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : "Always available")"
 		   Title="@_abilityCard?.Ability.Name" OnCloseRequested="CloseAbilityCard">
 		@if (_abilityCard is { } ac)
 		{
 			@if (!string.IsNullOrWhiteSpace(ac.Source) && !string.Equals(ac.Source, ac.Ability.Name, StringComparison.OrdinalIgnoreCase))
 			{
 				<p class="a-src">@ac.Source</p>
+			}
+			@if (HasEffectKeywords(ac) && _abilityCardUnit is { } acu)
+			{
+				<label class="ac-toggle">
+					<input type="checkbox" checked="@IsEffectActive(acu, ac)" @onchange="e => ToggleEffect(acu, ac, (bool)e.Value!)" />
+					<span>Active now — apply @EffectLabel(ac) to this unit's weapons</span>
+				</label>
 			}
 			<p class="a-text">@Clean(ac.Ability.Text)</p>
 		}
@@ -793,6 +810,7 @@ else
 	private BattleUnit? _detail;
 	// The always-available ability whose rules text is shown in a popup (tapped from its head chip). Null = closed.
 	private BattleAbility? _abilityCard;
+	private BattleUnit? _abilityCardUnit;
 
 	// Single-cell highlight on a weapon stat ("Rng", "A", "BS"…) so you can mark the exact spot you're on while
 	// resolving an attack. Only the one cell you clicked lights up; click it again to clear.
@@ -1322,16 +1340,67 @@ else
 
 	private void CloseDetail() => _detail = null;
 
-	private void OpenAbilityCard(BattleAbility ability) => _abilityCard = ability;
+	private void OpenAbilityCard(BattleUnit unit, BattleAbility ability)
+	{
+		_abilityCardUnit = unit;
+		_abilityCard = ability;
+	}
 
-	private void CloseAbilityCard() => _abilityCard = null;
+	private void CloseAbilityCard()
+	{
+		_abilityCard = null;
+		_abilityCardUnit = null;
+	}
 
-	// Keyboard activation for the always-available ability chips (they are spans, not buttons, to avoid nesting in the card toggle).
-	private void OnAbilityChipKey(KeyboardEventArgs e, BattleAbility ability)
+	// Keyboard activation for the ability chips (they are spans, not buttons, to avoid nesting in the card toggle).
+	private void OnAbilityChipKey(KeyboardEventArgs e, BattleUnit unit, BattleAbility ability)
 	{
 		if (e.Key is "Enter" or " " or "Spacebar")
+		{
+			_abilityCardUnit = unit;
 			_abilityCard = ability;
+		}
 	}
+
+	// ---- Conditional weapon effects ----
+	// An ability whose text names a bracketed weapon ability (e.g. [DEVASTATING WOUNDS]) the engine can't auto-
+	// apply because it's situational. The player switches it on when its condition is met, and the keyword is
+	// stamped onto the unit's weapons. Runtime only — the condition is a per-turn call, not saved.
+	private static readonly Regex EffectKeywordRx = new(@"\[([^\]]+)\]", RegexOptions.Compiled);
+	private readonly HashSet<string> _activeEffects = new(StringComparer.Ordinal);
+
+	private static List<string> EffectKeywords(BattleAbility ability)
+	{
+		var list = new List<string>();
+		foreach (Match m in EffectKeywordRx.Matches(ability.Ability.Text ?? ""))
+		{
+			var kw = m.Groups[1].Value.Trim();
+			if (kw.Length > 0 && !list.Contains(kw, StringComparer.OrdinalIgnoreCase))
+				list.Add(kw);
+		}
+		return list;
+	}
+
+	private static bool HasEffectKeywords(BattleAbility ability) => EffectKeywords(ability).Count > 0;
+
+	private static string EffectLabel(BattleAbility ability) =>
+		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));
+
+	private static string EffectKey(BattleUnit unit, BattleAbility ability) => unit.Id + "|" + ability.Ability.Name;
+
+	private bool IsEffectActive(BattleUnit unit, BattleAbility ability) => _activeEffects.Contains(EffectKey(unit, ability));
+
+	private void ToggleEffect(BattleUnit unit, BattleAbility ability, bool on)
+	{
+		if (on)
+			_activeEffects.Add(EffectKey(unit, ability));
+		else
+			_activeEffects.Remove(EffectKey(unit, ability));
+	}
+
+	// The weapon keywords currently switched on for a unit — added to every weapon's granted abilities.
+	private IEnumerable<string> ActiveEffectKeywords(BattleUnit unit) =>
+		unit.CombinedAbilities.Where(a => IsEffectActive(unit, a)).SelectMany(EffectKeywords);
 
 	// ---- Swipe deck navigation (one card at a time) ----
 	private int CardCount => _ordered.Count;
