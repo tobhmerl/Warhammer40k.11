@@ -1611,13 +1611,32 @@ else
 			StateHasChanged();
 	}
 
-	// The deck button's label: the unit's full name. For an attached (led) unit we use the bodyguard's name —
-	// the part the leader joined — so the button reads as the unit you recognise on the table, not the character.
+	// The deck button's label: one meaningful word. For an attached (led) unit we label by the bodyguard — the
+	// part the leader joined — not the character. "Necron Warriors" → "Warriors"; "Imotekh the Stormlord" → "Imotekh".
 	private static string DeckLabel(BattleUnit unit)
 	{
 		var bodyguard = unit.Parts.FirstOrDefault(p => !p.IsLeader) ?? unit.Parts.FirstOrDefault();
 		var name = bodyguard?.Datasheet.Name;
-		return string.IsNullOrWhiteSpace(name) ? unit.Name : name;
+		return MeaningfulWord(string.IsNullOrWhiteSpace(name) ? unit.Name : name);
+	}
+
+	private static readonly string[] DeckNoiseWords = ["the", "of", "and", "a", "an"];
+
+	// Picks the single most identifying word from a unit name. An "X the Y" epithet (no "of") reads as a proper
+	// name, so we keep the leading name ("Imotekh the Stormlord" → "Imotekh", "Trazyn the Infinite" → "Trazyn").
+	// Otherwise the distinguishing word is the last significant one ("Necron Warriors" → "Warriors",
+	// "C'tan Shard of the Nightbringer" → "Nightbringer").
+	private static string MeaningfulWord(string? name)
+	{
+		var words = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		if (words.Length == 0)
+			return "?";
+		var hasThe = words.Any(w => string.Equals(w, "the", StringComparison.OrdinalIgnoreCase));
+		var hasOf = words.Any(w => string.Equals(w, "of", StringComparison.OrdinalIgnoreCase));
+		if (hasThe && !hasOf)
+			return words[0];
+		var significant = words.Where(w => !DeckNoiseWords.Contains(w, StringComparer.OrdinalIgnoreCase)).ToList();
+		return significant.Count > 0 ? significant[^1] : words[^1];
 	}
 
 	private void OnDeckKeyDown(KeyboardEventArgs e)
