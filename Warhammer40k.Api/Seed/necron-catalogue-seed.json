@@ -4130,24 +4130,7 @@
           "points": 70
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "2bf6-b47f-ed31-3280::7fe5-a4c9-2ed6-67c1",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "atomiser-beam",
-              "name": "Atomiser beam"
-            },
-            {
-              "id": "reanimators-claws",
-              "name": "Reanimator's claws"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Canoptek Spyders",
