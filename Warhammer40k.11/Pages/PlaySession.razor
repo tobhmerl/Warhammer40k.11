@@ -47,10 +47,6 @@ else
 			var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
 			<div class="deck-bar" role="group" aria-label="Current unit">
 				<span class="deck-pos">
-					@if (ordered[activeIdx].IsWarlord)
-					{
-						<span class="deck-warlord">Warlord</span>
-					}
 					<span class="deck-name">@ordered[activeIdx].Name</span>
 				</span>
 			</div>
@@ -259,7 +255,7 @@ else
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
-					var warlordShown = !_cardSwipe && unit.IsWarlord;
+					var warlordShown = unit.IsWarlord;
 					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0)) || reanimate || battleShock;
 					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
