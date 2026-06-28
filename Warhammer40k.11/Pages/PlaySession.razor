@@ -1442,7 +1442,8 @@ else
 	// ---- Conditional detachment buffs (player-toggled) ----
 	// Situational detachment-rule buffs the engine can't auto-apply because they depend on board state
 	// (e.g. Relentless Onslaught's "+1 to Hit while targeting a unit on an objective"). Every matching unit
-	// gets a toggle; switching it on injects the buff's modifiers into that unit's weapon stats. Runtime only.
+	// gets a toggle; switching it on injects the buff's modifiers into that unit's weapon stats. The buff is
+	// only offered in the phases/turns the player scheduled for it in Setup (like army rules / stratagems).
 	private IEnumerable<ConditionalUnitBuff> ConditionalBuffsFor(BattleUnit unit)
 	{
 		if (_battle is null)
@@ -1450,7 +1451,8 @@ else
 		foreach (var det in _battle.Detachments)
 			foreach (var rule in det.Rules)
 				foreach (var buff in rule.ConditionalBuffs)
-					if (UnitMatchesBuff(unit, buff))
+					if (UnitMatchesBuff(unit, buff)
+						&& _battle.Source.IsScheduledNow(AbilityScheduleKeys.ForDetachmentBuff(det.Id, buff.Label), _phase, _turn))
 						yield return buff;
 	}
 

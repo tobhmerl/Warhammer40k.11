@@ -48,9 +48,13 @@ public class AbilityScheduleTests
         Assert.Equal("strat|core|15.02", AbilityScheduleKeys.ForCoreStratagem("15.02"));
         Assert.Equal("strat|cryptek-conclave|microscarab-swarm",
             AbilityScheduleKeys.ForDetachmentStratagem("cryptek-conclave", "microscarab-swarm"));
+        Assert.Equal("detbuff|starshatter-arsenal|relentless onslaught",
+            AbilityScheduleKeys.ForDetachmentBuff("starshatter-arsenal", "Relentless Onslaught"));
 
         // A unit ability and an army rule of the same name never collide.
         Assert.NotEqual(AbilityScheduleKeys.ForUnitAbility("x", "Protocols"), AbilityScheduleKeys.ForArmyRule("Protocols"));
+        // A detachment buff and a detachment stratagem of the same ids never collide.
+        Assert.NotEqual(AbilityScheduleKeys.ForDetachmentBuff("d", "x"), AbilityScheduleKeys.ForDetachmentStratagem("d", "x"));
     }
 
     [Fact]

@@ -346,7 +346,7 @@ else
 	@if (_roster is not null)
 	{
 		<div class="config">
-			<p class="cfg-note">Tick the phase + turn each army rule and stratagem can be used in. Nothing appears in Play Mode until you tick it. Tap a name to read its rules.</p>
+			<p class="cfg-note">Tick the phase + turn each army rule, detachment rule and stratagem can be used in. Nothing appears in Play Mode until you tick it. Tap a name to read its rules.</p>
 
 			@{ var armyRules = ArmyRuleCatalogue.ForFaction(_roster.Faction); }
 			@if (armyRules.Count > 0)
@@ -358,6 +358,35 @@ else
 						var key = AbilityScheduleKeys.ForArmyRule(rule.Name);
 						<div class="sched" @key="key">
 							<div class="sched-head"><span class="sched-name">@rule.Name</span></div>
+							@ScheduleGrid(key)
+						</div>
+					}
+				</div>
+			}
+
+			@{ var detBuffs = _detachments
+				.SelectMany(d => d.Rules.SelectMany(r => r.ConditionalBuffs.Select(b => (Det: d, Buff: b))))
+				.ToList(); }
+			@if (detBuffs.Count > 0)
+			{
+				<div class="cfg-block">
+					<span class="cfg-label">Detachment rules</span>
+					@foreach (var (det, buff) in detBuffs)
+					{
+						var key = AbilityScheduleKeys.ForDetachmentBuff(det.Id, buff.Label);
+						var textOpen = _openSchedText.Contains(key);
+						<div class="sched" @key="key">
+							<div class="sched-head">
+								<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this rule's effect">
+									<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
+									<span class="sched-name">@buff.Label</span>
+								</button>
+								<span class="sched-src">@det.Name</span>
+							</div>
+							@if (textOpen)
+							{
+								<p class="sched-text">@buff.Effect</p>
+							}
 							@ScheduleGrid(key)
 						</div>
 					}

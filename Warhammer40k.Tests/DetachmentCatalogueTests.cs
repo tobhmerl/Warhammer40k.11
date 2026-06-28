@@ -306,6 +306,21 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Relentless_Onslaught_carries_a_schedulable_plus1_hit_conditional_buff()
+    {
+        var rule = Assert.Single(DetachmentCatalogue.FindById("starshatter-arsenal")!.Rules);
+
+        var buff = Assert.Single(rule.ConditionalBuffs);
+        Assert.Equal("Relentless Onslaught", buff.Label);
+        Assert.Contains("Necrons", buff.RequiredKeywords);
+        Assert.Contains("Monster", buff.ExcludedKeywords);
+
+        var mod = Assert.Single(buff.Modifiers);
+        Assert.Equal(StatTarget.Skill, mod.Target);
+        Assert.Equal(1, mod.Delta);
+    }
+
+    [Fact]
     public void Starshatter_Arsenal_enhancements_carry_text_and_eligibility()
     {
         var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal")!;

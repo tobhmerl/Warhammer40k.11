@@ -94,5 +94,9 @@ public static class AbilityScheduleKeys
     public static string ForDetachmentStratagem(string detachmentId, string stratagemId) =>
         $"strat|{Norm(detachmentId)}|{Norm(stratagemId)}";
 
+    /// <summary>A detachment conditional buff (e.g. Relentless Onslaught), keyed by detachment id + buff label.</summary>
+    public static string ForDetachmentBuff(string detachmentId, string buffLabel) =>
+        $"detbuff|{Norm(detachmentId)}|{Norm(buffLabel)}";
+
     private static string Norm(string value) => (value ?? string.Empty).Trim().ToLowerInvariant();
 }
