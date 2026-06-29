@@ -1,16 +1,22 @@
 /* Combat Simulator styles (removable feature — see Features/CombatSimulator/DELETE.md).
-   Mobile-first: single column, full-width controls; widens to two columns on larger screens. */
+   Mobile-first, modern look. NOTE: the page renders several child components (UnitPicker, WeaponSelector,
+   ModifierPanel, ResultsView). Blazor CSS isolation does NOT reach into child components, so every selector
+   that targets markup rendered by a child uses the ::deep combinator. */
+
 .csim {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0.75rem 0.75rem 4.5rem;
+    padding: 1rem 0.85rem 4.5rem;
     color: var(--text, #e6f2ea);
     box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
 }
 
 .csim-title {
-    font-size: 1.3rem;
-    margin: 0 0 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 1rem;
 }
 
 .csim-sub {
@@ -18,37 +24,139 @@
     margin: 0 0 1rem;
 }
 
-/* Who attacks: a clear segmented toggle (My army vs Opponent). */
+/* ---- Modern form controls (page + every child component via ::deep) ---- */
+.csim select,
+.csim input[type="number"],
+.csim textarea,
+.csim ::deep select,
+.csim ::deep input[type="number"],
+.csim ::deep textarea {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid var(--border-strong, #3a4d43);
+    background: var(--surface, #0e1813);
+    color: var(--text, #e6f2ea);
+    font: inherit;
+    border-radius: 0.55rem;
+    padding: 0.5rem 0.65rem;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.csim select,
+.csim ::deep select {
+    padding-right: 1.9rem;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237fe3b0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    cursor: pointer;
+}
+
+.csim select:focus,
+.csim input[type="number"]:focus,
+.csim textarea:focus,
+.csim ::deep select:focus,
+.csim ::deep input[type="number"]:focus,
+.csim ::deep textarea:focus {
+    outline: none;
+    border-color: var(--accent, #5cc99a);
+    box-shadow: 0 0 0 3px rgba(92, 201, 154, 0.18);
+}
+
+.csim input[type="number"],
+.csim ::deep input[type="number"] {
+    text-align: center;
+}
+
+/* Toggle switch in place of native checkboxes (child components included). */
+.csim ::deep input[type="checkbox"],
+.csim input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 2.1rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    background: var(--surface-3, #1b2c23);
+    border: 1px solid var(--border-strong, #3a4d43);
+    cursor: pointer;
+    flex: none;
+    margin: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.csim ::deep input[type="checkbox"]::after,
+.csim input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0.12rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: var(--text-dim, #9fb4a8);
+    transform: translateY(-50%);
+    transition: transform 0.18s ease, background 0.15s ease;
+}
+
+.csim ::deep input[type="checkbox"]:checked,
+.csim input[type="checkbox"]:checked {
+    background: linear-gradient(180deg, var(--accent-strong, #7fe3b0), var(--accent-deep, #2f6b4d));
+    border-color: transparent;
+}
+
+.csim ::deep input[type="checkbox"]:checked::after,
+.csim input[type="checkbox"]:checked::after {
+    transform: translate(0.9rem, -50%);
+    background: #04130d;
+}
+
+.csim ::deep input[type="checkbox"]:focus-visible,
+.csim input[type="checkbox"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(92, 201, 154, 0.18);
+}
+
+/* ---- Direction / weapon-class segmented toggle ---- */
 .csim-direction {
     display: flex;
-    gap: 0.4rem;
-    margin-bottom: 0.85rem;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+    background: var(--surface, #0e1813);
+    border: 1px solid var(--border, #2c3a33);
+    border-radius: 0.7rem;
+    padding: 0.25rem;
 }
 
 .csim-dir {
     flex: 1;
-    padding: 0.5rem 0.4rem;
+    padding: 0.55rem 0.4rem;
     border-radius: 0.5rem;
-    border: 1px solid var(--border-strong, #3a4d43);
-    background: var(--surface-2, #14201a);
+    border: none;
+    background: transparent;
     color: var(--text-dim, #9fb4a8);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
 .csim-dir.on {
     background: linear-gradient(180deg, var(--accent-strong, #7fe3b0), var(--accent-deep, #2f6b4d));
     color: #04130d;
-    border-color: transparent;
+    box-shadow: 0 2px 8px -2px rgba(127, 227, 176, 0.4);
 }
 
+/* ---- Section cards ---- */
 .csim-col {
     border: 1px solid var(--border, #2c3a33);
-    border-radius: 0.6rem;
-    padding: 0.75rem;
-    background: var(--surface-2, #14201a);
+    border-radius: 0.85rem;
+    padding: 0.9rem;
+    background:
+        linear-gradient(180deg, rgba(127, 227, 176, 0.04), transparent 40%),
+        var(--surface-2, #14201a);
     margin-bottom: 0.85rem;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 6px 20px -14px rgba(0, 0, 0, 0.8);
 }
 
 .csim-col-head {
@@ -56,13 +164,17 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
 }
 
 .csim-h2 {
-    font-size: 0.95rem;
-    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 0.6rem;
     color: var(--accent-strong, #7fe3b0);
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
 }
 
 .csim-col-head .csim-h2 {
@@ -70,11 +182,14 @@
 }
 
 .csim-side {
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.68rem;
+    font-weight: 700;
     color: var(--text-dim, #9fb4a8);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: var(--surface-3, #1b2c23);
 }
 
 .csim-h3 {
@@ -84,21 +199,15 @@
 }
 
 .csim-select,
+.csim ::deep .csim-select,
 .csim-paste {
     width: 100%;
-    padding: 0.55rem 0.5rem;
-    border-radius: 0.4rem;
-    border: 1px solid var(--border-strong, #3a4d43);
-    background: var(--surface, #0e1813);
-    color: inherit;
-    font: inherit;
-    box-sizing: border-box;
 }
 
 .csim-meta {
     color: var(--text-dim, #9fb4a8);
     font-size: 0.85rem;
-    margin: 0.4rem 0 0;
+    margin: 0.5rem 0 0;
 }
 
 .csim-note {
@@ -106,18 +215,18 @@
     font-size: 0.85rem;
 }
 
-/* Two columns only on wider (tablet/desktop) screens. */
 @media (min-width: 760px) {
     .csim-title {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
     }
 }
 
-/* Import modal */
+/* ---- Import modal ---- */
 .csim-modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -131,10 +240,10 @@
     max-width: 560px;
     margin-top: 3rem;
     border: 1px solid var(--accent-line, #2f6b4d);
-    border-radius: 0.7rem;
-    padding: 1rem;
+    border-radius: 0.9rem;
+    padding: 1.1rem;
     background: var(--surface-2, #14201a);
-    box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 18px 50px -10px rgba(0, 0, 0, 0.85);
     box-sizing: border-box;
 }
 
@@ -180,19 +289,25 @@
     margin: 0.5rem 0 0;
 }
 
+/* ---- Buttons ---- */
 .csim-btn {
     padding: 0.55rem 0.9rem;
-    border-radius: 0.45rem;
+    border-radius: 0.55rem;
     border: 1px solid var(--accent-line, #2f6b4d);
     background: var(--surface-3, #1b2c23);
     color: var(--accent-strong, #7fe3b0);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.csim-btn:hover {
+    filter: brightness(1.1);
 }
 
 .csim-btn.tiny {
-    padding: 0.3rem 0.55rem;
+    padding: 0.35rem 0.6rem;
     font-size: 0.75rem;
 }
 
@@ -200,11 +315,13 @@
     background: linear-gradient(180deg, var(--accent-strong, #7fe3b0), var(--accent-deep, #2f6b4d));
     color: #04130d;
     border-color: transparent;
+    box-shadow: 0 4px 14px -6px rgba(127, 227, 176, 0.6);
 }
 
 .csim-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: default;
+    filter: none;
 }
 
 .csim-run {
@@ -217,278 +334,277 @@
 
 .csim-run .csim-btn.primary {
     flex: 1 1 100%;
-    padding: 0.7rem;
+    padding: 0.8rem;
     font-size: 1rem;
 }
 
-.csim-field {
+/* Stacked label + control (used in the run row and weapon rows). */
+.csim-field,
+.csim ::deep .csim-field {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    font-size: 0.8rem;
+    gap: 0.25rem;
+    font-size: 0.78rem;
     color: var(--text-dim, #9fb4a8);
-}
-
-.csim-field.small {
-    font-size: 0.68rem;
-    flex: 1 1 4.5rem;
-    min-width: 0;
-}
-
-.csim-field input,
-.csim-field select {
-    padding: 0.45rem 0.4rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--border-strong, #3a4d43);
-    background: var(--surface, #0e1813);
-    color: var(--text, #e6f2ea);
-    font: inherit;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 .csim-run .csim-field {
     flex: 1 1 6rem;
 }
 
-/* Weapons */
-.csim-weapons {
+/* ---- Weapons (child: WeaponSelector) ---- */
+.csim ::deep .csim-weapons {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.5rem;
     margin-top: 0.6rem;
 }
 
-.csim-weapon {
+.csim ::deep .csim-weapon {
     border: 1px solid var(--border, #2c3a33);
-    border-radius: 0.45rem;
-    padding: 0.45rem 0.6rem;
-    opacity: 0.6;
+    border-radius: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    background: var(--surface, #0e1813);
+    opacity: 0.55;
+    transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.csim-weapon.on {
+.csim ::deep .csim-weapon.on {
     opacity: 1;
     border-color: var(--accent-line, #2f6b4d);
+    background:
+        linear-gradient(180deg, rgba(127, 227, 176, 0.05), transparent 50%),
+        var(--surface, #0e1813);
 }
 
-.csim-weapon-head {
+.csim ::deep .csim-weapon-head {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.55rem;
     cursor: pointer;
     flex-wrap: wrap;
 }
 
-.csim-weapon-name {
-    font-weight: 600;
+.csim ::deep .csim-weapon-name {
+    font-weight: 700;
 }
 
-.csim-weapon-stats {
+.csim ::deep .csim-weapon-stats {
     flex-basis: 100%;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     color: var(--text-dim, #9fb4a8);
-    padding-left: 1.4rem;
+    padding-left: 2.65rem;
+    font-variant-numeric: tabular-nums;
 }
 
-.csim-weapon-row {
+.csim ::deep .csim-weapon-row {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    margin-top: 0.4rem;
+    gap: 0.7rem;
+    margin-top: 0.5rem;
     flex-wrap: wrap;
-    padding-left: 1.4rem;
+    padding-left: 2.65rem;
 }
 
-.csim-weapon-row .csim-field.small {
-    flex: 0 0 5rem;
+.csim ::deep .csim-weapon-row .csim-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
 }
 
-.csim-weapon-kw {
+.csim ::deep .csim-weapon-row input {
+    flex: 0 0 4rem;
+}
+
+.csim ::deep .csim-weapon-kw {
     font-size: 0.72rem;
     color: var(--accent, #5cc99a);
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: var(--surface-3, #1b2c23);
 }
 
-/* Modifiers — one per line: bullet · label (left) · control (right). */
-.csim-mlist {
+/* ---- Modifiers (child: ModifierPanel) — one per line, label left, control right ---- */
+.csim ::deep .csim-mlist {
     list-style: none;
-    margin: 0.4rem 0 0;
+    margin: 0.3rem 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
 }
 
-.csim-mline {
+.csim ::deep .csim-mline {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.4rem 0.2rem;
+    gap: 0.8rem;
+    padding: 0.55rem 0.15rem;
     border-bottom: 1px solid var(--border, #2c3a33);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
-.csim-mline::before {
-    content: "·";
-    color: var(--accent, #5cc99a);
-    font-weight: 800;
+.csim ::deep .csim-mline:last-child {
+    border-bottom: none;
 }
 
-.csim-mline.check::before {
-    content: "";
-}
-
-.csim-mline.check label {
+.csim ::deep .csim-mline.check label {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.7rem;
     cursor: pointer;
+    width: 100%;
 }
 
-.csim-mlabel {
+.csim ::deep .csim-mlabel {
     flex: 1;
     color: var(--text, #e6f2ea);
 }
 
-.csim-mline > select,
-.csim-mline > input {
+.csim ::deep .csim-mline > select,
+.csim ::deep .csim-mline > input {
     flex: 0 0 5.5rem;
-    padding: 0.4rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--border-strong, #3a4d43);
-    background: var(--surface, #0e1813);
-    color: var(--text, #e6f2ea);
-    font: inherit;
     text-align: center;
 }
 
-.csim-detected {
+.csim ::deep .csim-detected {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.6rem;
+    gap: 0.4rem;
+    margin-top: 0.7rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border, #2c3a33);
 }
 
-.csim-detected-label {
+.csim ::deep .csim-detected-label {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-dim, #9fb4a8);
 }
 
-.csim-detected-chip {
+.csim ::deep .csim-detected-chip {
     font-size: 0.72rem;
-    padding: 0.12rem 0.45rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 999px;
     border: 1px solid var(--accent-line, #2f6b4d);
     color: var(--accent-strong, #7fe3b0);
 }
 
-/* Results — two big headline numbers, then a plain step list. */
-.csim-results {
+/* ---- Results (child: ResultsView) ---- */
+.csim ::deep .csim-results {
     margin-top: 0.5rem;
 }
 
-.csim-headline {
+.csim ::deep .csim-headline {
     display: flex;
     gap: 0.6rem;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.9rem;
 }
 
-.csim-big {
+.csim ::deep .csim-big {
     flex: 1;
     border: 1px solid var(--accent-line, #2f6b4d);
-    border-radius: 0.6rem;
-    padding: 0.7rem 0.8rem;
-    background: var(--surface-2, #14201a);
+    border-radius: 0.85rem;
+    padding: 0.9rem 0.8rem;
+    background:
+        linear-gradient(180deg, rgba(127, 227, 176, 0.08), transparent 60%),
+        var(--surface-2, #14201a);
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.15rem;
     text-align: center;
 }
 
-.csim-big-num {
-    font-size: 2rem;
+.csim ::deep .csim-big-num {
+    font-size: 2.2rem;
     font-weight: 800;
     color: var(--accent-strong, #7fe3b0);
-    line-height: 1.1;
+    line-height: 1.05;
 }
 
-.csim-big-label {
+.csim ::deep .csim-big-label {
     font-size: 0.85rem;
     font-weight: 600;
 }
 
-.csim-big-sub {
-    font-size: 0.7rem;
+.csim ::deep .csim-big-sub {
+    font-size: 0.72rem;
     color: var(--text-dim, #9fb4a8);
 }
 
-.csim-plain {
+.csim ::deep .csim-plain {
     font-size: 0.95rem;
-    line-height: 1.5;
+    line-height: 1.55;
     margin: 0 0 0.9rem;
 }
 
-.csim-plain strong {
+.csim ::deep .csim-plain strong {
     color: var(--accent-strong, #7fe3b0);
 }
 
-.csim-steps {
+.csim ::deep .csim-steps {
     list-style: none;
     margin: 0 0 0.8rem;
     padding: 0;
     border: 1px solid var(--border, #2c3a33);
-    border-radius: 0.6rem;
+    border-radius: 0.7rem;
     overflow: hidden;
 }
 
-.csim-step {
+.csim ::deep .csim-step {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.55rem 0.8rem;
+    padding: 0.6rem 0.85rem;
     border-bottom: 1px solid var(--border, #2c3a33);
     font-size: 0.9rem;
 }
 
-.csim-step:last-child {
+.csim ::deep .csim-step:last-child {
     border-bottom: none;
 }
 
-.csim-step.strong {
+.csim ::deep .csim-step.strong {
     background: rgba(127, 227, 176, 0.1);
     font-weight: 700;
 }
 
-.csim-step-label {
+.csim ::deep .csim-step-label {
     color: var(--text, #e6f2ea);
 }
 
-.csim-step-num {
+.csim ::deep .csim-step-num {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: var(--accent-strong, #7fe3b0);
 }
 
-.csim-wipe {
+.csim ::deep .csim-wipe {
     font-size: 0.9rem;
     margin: 0 0 0.5rem;
 }
 
-.csim-wipe strong {
+.csim ::deep .csim-wipe strong {
     color: var(--accent-strong, #7fe3b0);
 }
 
-.csim-runs {
+.csim ::deep .csim-runs {
     color: var(--text-dim, #9fb4a8);
     font-size: 0.78rem;
 }
 
-.csim-reanim {
+.csim ::deep .csim-reanim {
     margin-top: 1rem;
     padding: 0.6rem 0.8rem;
     border-left: 3px solid var(--accent, #5cc99a);
     background: rgba(92, 201, 154, 0.08);
+    border-radius: 0.3rem;
+    font-size: 0.85rem;
+}
+
+/* The unit picker + note also live in child components. */
+.csim ::deep .csim-note {
+    color: var(--text-dim, #9fb4a8);
     font-size: 0.85rem;
 }
