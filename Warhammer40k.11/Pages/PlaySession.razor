@@ -265,7 +265,7 @@ else
 													{
 														@foreach (var buff in conditionalBuffs)
 														{
-															<span class="chip effect @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
+															<span class="chip effect now @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
 																  title="@($"{buff.Label} — tap; switch on to apply {BuffModifierLabel(buff)} ({buff.Effect})")"
 																  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
 																  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
