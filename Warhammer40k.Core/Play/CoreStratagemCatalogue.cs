@@ -143,7 +143,7 @@ public static class CoreStratagemCatalogue
             Phases = [BattlePhase.Charge],
             Flavour = "Voices raised in furious war cries, your warriors surge forth to meet the enemy's onslaught head-on.",
             When = "End of your opponent's Charge phase.",
-            Target = "One friendly unengaged unit within 12\" of one or more enemy units. You can only select a VEHICLE unit if it is a CHARACTER/WALKER unit.",
+            Target = "One friendly unengaged NECRONS unit within 12\" of one or more enemy units. You can only select a VEHICLE unit if it is a WALKER unit.",
             Effect = "Resolve a charge with your unit (11.02). While doing so, before making the charge roll, you must select one of the following modes:\n" +
                      "• Leap to Defend: When selecting charge targets, you can only select enemy units that made a charge move this phase and are within the maximum distance.\n" +
                      "• Into the Fray (+1CP): When making the charge roll, if the result is greater than 6 (after modifiers), change it to 6. When selecting charge targets, you can select any enemy units that are within 6\" of your unit and within the maximum distance.",
