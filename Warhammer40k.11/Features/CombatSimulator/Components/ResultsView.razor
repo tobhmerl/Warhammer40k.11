@@ -6,27 +6,34 @@
 	<div class="csim-headline">
 		<div class="csim-big">
 			<span class="csim-big-num">@F1(Result.ModelsSlain.Mean)</span>
-			<span class="csim-big-label">models destroyed</span>
-			<span class="csim-big-sub">of @TargetModels · @Range(Result.ModelsSlain)</span>
+			<span class="csim-big-label">of @TargetModels models destroyed</span>
+			<span class="csim-big-sub">@Range(Result.ModelsSlain) per game</span>
 		</div>
 		<div class="csim-big">
 			<span class="csim-big-num">@F1(Result.EffectiveDamage.Mean)</span>
 			<span class="csim-big-label">wounds dealt</span>
-			<span class="csim-big-sub">@Range(Result.EffectiveDamage)</span>
+			<span class="csim-big-sub">@Range(Result.EffectiveDamage) per game</span>
 		</div>
 	</div>
 
+	<p class="csim-plain">
+		On average, this attack lands <strong>@F1(Result.Funnel.Hits) hits</strong>.
+		<strong>@F1(WoundsCaused)</strong> of those wound the target, the defender fails
+		<strong>@F1(FailedSaves) saves</strong>, and <strong>@F1(Result.Funnel.EffectiveDamage) wounds</strong>
+		get through — destroying <strong>@F1(Result.Funnel.ModelsSlain) of @TargetModels models</strong>.
+	</p>
+
 	<ul class="csim-steps">
-		<li class="csim-step"><span class="csim-step-label">Hits landed</span><span class="csim-step-num">@F1(Result.Funnel.Hits)</span></li>
-		<li class="csim-step"><span class="csim-step-label">Wounds caused</span><span class="csim-step-num">@F1(WoundsCaused)</span></li>
-		<li class="csim-step"><span class="csim-step-label">Saves failed</span><span class="csim-step-num">@F1(FailedSaves)</span></li>
-		<li class="csim-step"><span class="csim-step-label">Wounds dealt</span><span class="csim-step-num">@F1(Result.Funnel.EffectiveDamage)</span></li>
-		<li class="csim-step strong"><span class="csim-step-label">Models destroyed</span><span class="csim-step-num">@F1(Result.Funnel.ModelsSlain)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Hits landed</span> <span class="csim-step-num">@F1(Result.Funnel.Hits)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Of those, wounds caused</span> <span class="csim-step-num">@F1(WoundsCaused)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Saves the defender failed</span> <span class="csim-step-num">@F1(FailedSaves)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Wounds that got through</span> <span class="csim-step-num">@F1(Result.Funnel.EffectiveDamage)</span></li>
+		<li class="csim-step strong"><span class="csim-step-label">Models destroyed</span> <span class="csim-step-num">@F1(Result.Funnel.ModelsSlain)</span></li>
 	</ul>
 
 	<p class="csim-wipe">
-		Chance to wipe the unit: <strong>@P0(Result.ProbabilityWiped)</strong>
-		<span class="csim-runs">· @Result.Iterations.ToString("N0") simulated games</span>
+		Chance to wipe the whole unit: <strong>@P0(Result.ProbabilityWiped)</strong>
+		<span class="csim-runs">(based on @Result.Iterations.ToString("N0") simulated games)</span>
 	</p>
 
 	@if (!string.IsNullOrEmpty(Result.ReanimationPreview))
@@ -46,5 +53,5 @@
 	private static string F1(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);
 	private static string P0(double v) => v.ToString("P0", CultureInfo.InvariantCulture);
 
-	private static string Range(Distribution d) => $"usually {d.P25}–{d.P75}, up to {d.Max}";
+	private static string Range(Distribution d) => d.P25 == d.P75 ? $"about {d.P25}" : $"usually {d.P25}–{d.P75}";
 }

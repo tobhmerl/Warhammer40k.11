@@ -423,6 +423,16 @@
     color: var(--text-dim, #9fb4a8);
 }
 
+.csim-plain {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 0.9rem;
+}
+
+.csim-plain strong {
+    color: var(--accent-strong, #7fe3b0);
+}
+
 .csim-steps {
     list-style: none;
     margin: 0 0 0.8rem;
@@ -434,8 +444,9 @@
 
 .csim-step {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
+    gap: 1rem;
     padding: 0.55rem 0.8rem;
     border-bottom: 1px solid var(--border, #2c3a33);
     font-size: 0.9rem;
