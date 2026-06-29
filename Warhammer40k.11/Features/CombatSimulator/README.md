@@ -25,6 +25,14 @@ a mixed list.
 
 The layout is mobile-first (single column, full-width controls) and widens on tablets/desktops.
 
+## Persistence
+The whole setup (attack direction, ranged/melee choice, picked attacker/target, per-weapon firing models &
+modes, both sides' modifiers, iterations & seed, and the imported opponent army as its raw JSON) is saved to
+browser `localStorage` (key `combat-sim-state`) on every change and on leaving the page, then restored when you
+return — so you can nip into Play Mode to check a rule and come back to exactly where you were. Each modifier
+panel has a **Reset** button that returns its values to defaults (the defender keeps the target's parsed
+invuln/FNP prefill).
+
 ## Rule decisions (§8 of the build spec)
 - **Two hit-modifier buckets (11th edition):** the BS/WS-characteristic modifier is uncapped and **cover applies
   here** (worsens the attacker's BS by 1, not the defender's save); the hit-roll ±1 modifier is separate and the

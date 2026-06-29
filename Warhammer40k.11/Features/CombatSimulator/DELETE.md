@@ -26,3 +26,7 @@ The unit tests for the engine live in `Warhammer40k.Tests/CombatSimulator/` and 
    ```
 
 Nothing in the existing app (domain models, Play Mode, rosters, catalogue) is touched by this feature — it only **reads** the Necron types through `Adapters/NativeNecronSource.cs`.
+
+### Stored data
+The feature persists its setup to browser `localStorage` under the key **`combat-sim-state`**. It's harmless if
+left behind, but to fully clean up you can clear that one key from the browser's storage.

@@ -13,11 +13,24 @@ public sealed class ImportedUnitStore
 {
     private readonly List<CombatUnit> _units = [];
 
+    /// <summary>The raw JSON of each successful import, kept so the session can be persisted and rebuilt.</summary>
+    private readonly List<string> _rawJson = [];
+
     public IReadOnlyList<CombatUnit> Units => _units;
 
-    public void AddRange(IEnumerable<CombatUnit> units) => _units.AddRange(units);
+    public IReadOnlyList<string> RawJson => _rawJson;
 
-    public void Clear() => _units.Clear();
+    public void Add(string rawJson, IEnumerable<CombatUnit> units)
+    {
+        _rawJson.Add(rawJson);
+        _units.AddRange(units);
+    }
+
+    public void Clear()
+    {
+        _units.Clear();
+        _rawJson.Clear();
+    }
 }
 
 /// <summary>
@@ -32,6 +45,7 @@ public static class CombatSimulatorModule
     {
         services.AddSingleton<MonteCarloRunner>();
         services.AddScoped<ImportedUnitStore>();
+        services.AddScoped<CombatSimStateStore>();
         return services;
     }
 }

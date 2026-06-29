@@ -56,7 +56,8 @@ public static class NativeNecronSource
                     FeelNoPain = modelFnp,
                 },
                 Count = Math.Max(1, part.ModelCount),
-                Weapons = part.Weapons.Select(MapWeapon).ToList(),
+                // Pre-fill how many models carry each weapon from the group size (matches the imported-army path).
+                Weapons = part.Weapons.Select(w => MapWeapon(w, Math.Max(1, part.ModelCount))).ToList(),
             });
         }
 
@@ -75,7 +76,7 @@ public static class NativeNecronSource
         };
     }
 
-    private static CombatWeapon MapWeapon(WeaponProfile w)
+    private static CombatWeapon MapWeapon(WeaponProfile w, int carriedByModels)
     {
         var isMelee = w.Type.Equals("Melee", StringComparison.OrdinalIgnoreCase);
         return new CombatWeapon
@@ -89,7 +90,7 @@ public static class NativeNecronSource
             ArmourPenetration = ParseAp(w.ArmourPenetration),
             Damage = DiceExpression.Parse(w.Damage),
             Abilities = Import.WeaponKeywordParser.Parse(w.Keywords),
-            CarriedByModels = 1,
+            CarriedByModels = carriedByModels,
         };
     }
 

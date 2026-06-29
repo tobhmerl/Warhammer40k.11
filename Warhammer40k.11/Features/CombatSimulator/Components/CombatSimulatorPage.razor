@@ -11,6 +11,8 @@
 @inject IApiClient Api
 @inject MonteCarloRunner Runner
 @inject ImportedUnitStore Imported
+@inject CombatSimStateStore Store
+@implements IAsyncDisposable
 
 @* Combat Simulator (removable feature — see Features/CombatSimulator/DELETE.md).
    Monte-Carlo attack/save simulator: My army (native Necrons) vs Opponent (imported). *@
@@ -68,13 +70,19 @@
 		</section>
 
 		<section class="csim-col">
-			<h2 class="csim-h2">3 · Attacker modifiers</h2>
-			<ModifierPanel Attacker="_attackerMods" AttackerChanged="m => _attackerMods = m" />
+			<div class="csim-col-head">
+				<h2 class="csim-h2">3 · Attacker modifiers</h2>
+				<button type="button" class="csim-btn tiny" @onclick="ResetAttackerMods">Reset</button>
+			</div>
+			<ModifierPanel Attacker="_attackerMods" AttackerChanged="OnAttackerModsChanged" />
 		</section>
 
 		<section class="csim-col">
-			<h2 class="csim-h2">4 · Defender modifiers</h2>
-			<ModifierPanel Defender="_defenderMods" DefenderChanged="m => _defenderMods = m" Abilities="TargetAbilities" />
+			<div class="csim-col-head">
+				<h2 class="csim-h2">4 · Defender modifiers</h2>
+				<button type="button" class="csim-btn tiny" @onclick="ResetDefenderMods">Reset</button>
+			</div>
+			<ModifierPanel Defender="_defenderMods" DefenderChanged="OnDefenderModsChanged" Abilities="TargetAbilities" />
 		</section>
 
 		<section class="csim-run">
@@ -201,10 +209,59 @@
 		{
 			// Offline / not signed in: the importer still works; native list stays empty.
 		}
-		finally
+
+		await RestoreAsync();
+		_loading = false;
+	}
+
+	// Rebuilds the whole page state from the persisted snapshot (imported army, selections, modifiers).
+	private async Task RestoreAsync()
+	{
+		var snap = await Store.LoadAsync();
+		if (snap is null)
+			return;
+
+		// Re-import the saved opponent army (only if the store is empty, e.g. after a reload).
+		if (Imported.Units.Count == 0)
+			foreach (var json in snap.ImportedJson)
+			{
+				var result = NewRecruitImporter.Import(json);
+				Imported.Add(json, result.Units);
+			}
+
+		_myArmyAttacks = snap.MyArmyAttacks;
+		_attackerMods = snap.Attacker;
+		_defenderMods = snap.Defender;
+		_iterations = snap.Iterations;
+		_seed = snap.Seed;
+
+		_attacker = AttackerPool.FirstOrDefault(u => u.Name == snap.AttackerName);
+		_target = TargetPool.FirstOrDefault(u => u.Name == snap.TargetName);
+
+		_weaponSelection.Reset(_attacker);
+		_weaponSelection.SetClass(snap.ShowMelee);
+		_weaponSelection.Restore(snap.WeaponPicks.Select(p => (p.Name, p.Selected, p.Models, p.ModeIndex)));
+	}
+
+	// Captures the current page state and persists it (best-effort).
+	private Task SaveAsync()
+	{
+		var snap = new CombatSimSnapshot
 		{
-			_loading = false;
-		}
+			MyArmyAttacks = _myArmyAttacks,
+			ShowMelee = _weaponSelection.ShowMelee,
+			ImportedJson = [.. Imported.RawJson],
+			AttackerName = _attacker?.Name,
+			TargetName = _target?.Name,
+			WeaponPicks = _weaponSelection.Snapshot()
+				.Select(p => new WeaponPick { Name = p.Name, Selected = p.Selected, Models = p.Models, ModeIndex = p.ModeIndex })
+				.ToList(),
+			Attacker = _attackerMods,
+			Defender = _defenderMods,
+			Iterations = _iterations,
+			Seed = _seed,
+		};
+		return Store.SaveAsync(snap);
 	}
 
 	private void SetDirection(bool myArmyAttacks)
@@ -217,15 +274,51 @@
 		_target = null;
 		_weaponSelection.Reset(null);
 		_result = null;
+		_ = SaveAsync();
 	}
 
 	private void OnAttackerChanged(CombatUnit? unit)
 	{
 		_attacker = unit;
 		_weaponSelection.Reset(unit);
+		_ = SaveAsync();
 	}
 
-	private void SetWeaponClass(bool melee) => _weaponSelection.SetClass(melee);
+	private void SetWeaponClass(bool melee)
+	{
+		_weaponSelection.SetClass(melee);
+		_ = SaveAsync();
+	}
+
+	private void OnAttackerModsChanged(AttackerModifiers m)
+	{
+		_attackerMods = m;
+		_ = SaveAsync();
+	}
+
+	private void OnDefenderModsChanged(DefenderModifiers m)
+	{
+		_defenderMods = m;
+		_ = SaveAsync();
+	}
+
+	private void ResetAttackerMods()
+	{
+		_attackerMods = new AttackerModifiers();
+		_ = SaveAsync();
+	}
+
+	private void ResetDefenderMods()
+	{
+		// Keep the target's parsed invuln/FNP prefill; reset everything else to defaults.
+		var profile = _target?.ModelGroups.FirstOrDefault()?.Profile;
+		_defenderMods = new DefenderModifiers
+		{
+			InvulnSaveOverride = profile?.InvulnSave,
+			FeelNoPainOverride = profile?.FeelNoPain,
+		};
+		_ = SaveAsync();
+	}
 
 	private void OnTargetChanged(CombatUnit? unit)
 	{
@@ -237,6 +330,7 @@
 			InvulnSaveOverride = profile?.InvulnSave,
 			FeelNoPainOverride = profile?.FeelNoPain,
 		};
+		_ = SaveAsync();
 	}
 
 	private void OpenImport()
@@ -266,13 +360,15 @@
 	private void ImportJson()
 	{
 		_importWarnings.Clear();
-		var result = NewRecruitImporter.Import(_importText);
-		Imported.AddRange(result.Units);
+		var json = _importText;
+		var result = NewRecruitImporter.Import(json);
+		Imported.Add(json, result.Units);
 		_importedCount = result.Units.Count;
 		_importWarnings.AddRange(result.Warnings);
 		_importText = "";
 		if (_importedCount > 0 && result.Warnings.Count == 0)
 			_importOpen = false;
+		_ = SaveAsync();
 	}
 
 	private async Task RunAsync()
@@ -315,4 +411,7 @@
 			keywords.Add(group.Profile.Name);
 		return keywords;
 	}
+
+	// Save once more when leaving the page (covers numeric inputs bound with @bind that don't call a handler).
+	public async ValueTask DisposeAsync() => await SaveAsync();
 }

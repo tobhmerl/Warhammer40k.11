@@ -82,4 +82,22 @@ public sealed class WeaponSelectionState
     }
 
     private bool Valid(int index) => index >= 0 && index < _entries.Count;
+
+    /// <summary>Captures the current per-weapon selection for persistence (keyed by weapon name).</summary>
+    public List<(string Name, bool Selected, int Models, int ModeIndex)> Snapshot() =>
+        _entries.Select(e => (e.Weapon.Name, e.Selected, e.Models, e.ModeIndex)).ToList();
+
+    /// <summary>Re-applies a saved selection (matched by weapon name) after a Reset(unit).</summary>
+    public void Restore(IEnumerable<(string Name, bool Selected, int Models, int ModeIndex)> picks)
+    {
+        foreach (var pick in picks)
+        {
+            var entry = _entries.FirstOrDefault(e => string.Equals(e.Weapon.Name, pick.Name, StringComparison.Ordinal));
+            if (entry is null)
+                continue;
+            entry.Selected = pick.Selected;
+            entry.Models = pick.Models;
+            entry.ModeIndex = pick.ModeIndex;
+        }
+    }
 }
