@@ -10,3 +10,4 @@
 
 ## Code Management
 - After making code changes, once the build and tests pass, automatically commit and push to the current branch (origin) without waiting to be asked.
+- When proposing solutions, prefer minimal, non-over-engineered changes: don't add automatic injection or new abstraction layers when an adequate manual mechanism already exists (e.g., the Combat Simulator already has a manual 5+/6+ crit modifier, so no automatic crit wiring should be added there).
