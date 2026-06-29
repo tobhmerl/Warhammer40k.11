@@ -8,15 +8,22 @@ deterministic expected-value cross-check.
 Everything lives under `Features/CombatSimulator/`. See [`DELETE.md`](DELETE.md) for one-step removal.
 
 ## UI flow (`/combat-sim`)
-1. **Pick attacker** — from your saved Necron roster or an imported enemy army.
-2. **Pick target** — same two sources (either side can attack or defend).
-3. **Import enemy JSON** — paste a New Recruit / BattleScribe 11th-edition export; parsed units are added to
-   the pickers (held in the feature's own in-memory store, never the app's roster store).
+The screen is two armies: **My army** (your saved Necron roster) and **Opponent** (imported). A direction
+toggle at the top picks who attacks; the attacker and target pickers are then each scoped to one army — never
+a mixed list.
+1. **Choose direction** — "My army attacks" or "Opponent attacks".
+2. **Pick attacker** — from the attacking army.
+3. **Pick target** — from the defending army. When the target is the opponent, an **Import opponent** button
+   sits in that box header and opens the import dialog (file upload or paste), held in the feature's own
+   in-memory store, never the app's roster store.
 4. **Select weapons & firing modes** — per-weapon "firing models" pre-filled; multi-mode weapons get a dropdown.
-5. **Set modifiers** for both sides (hit/wound/save mods, cover, FNP, damage reduction, Oath, Anti, …).
+5. **Set modifiers** for both sides, grouped into labelled sections (To hit / To wound / Attacks & damage;
+   Saves / FNP & damage / Profile overrides).
 6. **Set iterations** (default 10,000) and an optional seed.
 7. **Run** → results: stat cards, an average funnel, a damage histogram, the models-slain distribution,
    `P(wiped)`, and the closed-form expected-value comparison.
+
+The layout is mobile-first (single column, full-width controls) and widens on tablets/desktops.
 
 ## Rule decisions (§8 of the build spec)
 - **Two hit-modifier buckets (11th edition):** the BS/WS-characteristic modifier is uncapped and **cover applies

@@ -1,4 +1,5 @@
 @page "/combat-sim"
+@using Microsoft.AspNetCore.Components.Forms
 @using Warhammer40k.Core
 @using Warhammer40k.Core.Catalogue
 @using Warhammer40k.Core.Play
@@ -12,10 +13,9 @@
 @inject ImportedUnitStore Imported
 
 @* Combat Simulator (removable feature — see Features/CombatSimulator/DELETE.md).
-   Monte-Carlo attack/save simulator over native Necron units + imported enemy armies. *@
+   Monte-Carlo attack/save simulator: My army (native Necrons) vs Opponent (imported). *@
 <div class="csim">
 	<h1 class="csim-title">Combat Simulator</h1>
-	<p class="csim-sub">Monte-Carlo attack &amp; save simulator (11th edition). Pick an attacker and a target, set modifiers, run.</p>
 
 	@if (_loading)
 	{
@@ -23,58 +23,60 @@
 	}
 	else
 	{
-		<div class="csim-grid">
-			<section class="csim-col">
-				<h2 class="csim-h2">1 · Attacker</h2>
-				<UnitPicker Units="AllUnits" Selected="_attacker" SelectedChanged="OnAttackerChanged" />
-				@if (_attacker is not null)
-				{
-					<WeaponSelector Unit="_attacker" Selection="_weaponSelection" />
-				}
-			</section>
-
-			<section class="csim-col">
-				<h2 class="csim-h2">2 · Target</h2>
-				<UnitPicker Units="AllUnits" Selected="_target" SelectedChanged="OnTargetChanged" />
-				@if (_target is not null)
-				{
-					<p class="csim-meta">@_target.TotalModels model(s), T@(TargetToughness), Sv @(TargetSave)+@(TargetInvulnText)</p>
-				}
-			</section>
+		<div class="csim-direction" role="group" aria-label="Who is attacking">
+			<button type="button" class="csim-dir @(_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(true)">My army attacks ▸</button>
+			<button type="button" class="csim-dir @(!_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(false)">Opponent attacks ◂</button>
 		</div>
 
-		<section class="csim-import">
-			<h2 class="csim-h2">Import enemy army (New Recruit / BattleScribe JSON)</h2>
-			<textarea class="csim-paste" @bind="_importText" rows="3" placeholder="Paste a New Recruit 11th-edition JSON export here…"></textarea>
-			<div class="csim-import-row">
-				<button class="csim-btn" type="button" @onclick="ImportJson" disabled="@string.IsNullOrWhiteSpace(_importText)">Import</button>
-				@if (_importWarnings.Count > 0)
-				{
-					<span class="csim-warn">@string.Join(" ", _importWarnings)</span>
-				}
-				@if (_importedCount > 0)
-				{
-					<span class="csim-ok">Imported @_importedCount unit(s).</span>
-				}
+		<section class="csim-col">
+			<div class="csim-col-head">
+				<h2 class="csim-h2">1 · Attacker <span class="csim-side">@(_myArmyAttacks ? "my army" : "opponent")</span></h2>
 			</div>
+			<UnitPicker Units="AttackerPool" Selected="_attacker" SelectedChanged="OnAttackerChanged" />
+			@if (_attacker is not null)
+			{
+				<WeaponSelector Unit="_attacker" Selection="_weaponSelection" />
+			}
+			else if (AttackerPool.Count == 0)
+			{
+				<p class="csim-note">@EmptyPoolHint(attacker: true)</p>
+			}
 		</section>
 
-		<div class="csim-grid">
-			<section class="csim-col">
-				<h2 class="csim-h2">3 · Attacker modifiers</h2>
-				<ModifierPanel Attacker="_attackerMods" AttackerChanged="m => _attackerMods = m" />
-			</section>
-			<section class="csim-col">
-				<h2 class="csim-h2">4 · Defender modifiers</h2>
-				<ModifierPanel Defender="_defenderMods" DefenderChanged="m => _defenderMods = m" Abilities="TargetAbilities" />
-			</section>
-		</div>
+		<section class="csim-col">
+			<div class="csim-col-head">
+				<h2 class="csim-h2">2 · Target <span class="csim-side">@(_myArmyAttacks ? "opponent" : "my army")</span></h2>
+				@if (TargetIsOpponent)
+				{
+					<button type="button" class="csim-btn tiny" @onclick="OpenImport">Import opponent ↑</button>
+				}
+			</div>
+			<UnitPicker Units="TargetPool" Selected="_target" SelectedChanged="OnTargetChanged" />
+			@if (_target is not null)
+			{
+				<p class="csim-meta">@_target.TotalModels model(s) · T@(TargetToughness) · Sv @(TargetSave)+@(TargetInvulnText)</p>
+			}
+			else if (TargetPool.Count == 0)
+			{
+				<p class="csim-note">@EmptyPoolHint(attacker: false)</p>
+			}
+		</section>
+
+		<section class="csim-col">
+			<h2 class="csim-h2">3 · Attacker modifiers</h2>
+			<ModifierPanel Attacker="_attackerMods" AttackerChanged="m => _attackerMods = m" />
+		</section>
+
+		<section class="csim-col">
+			<h2 class="csim-h2">4 · Defender modifiers</h2>
+			<ModifierPanel Defender="_defenderMods" DefenderChanged="m => _defenderMods = m" Abilities="TargetAbilities" />
+		</section>
 
 		<section class="csim-run">
 			<label class="csim-field">Iterations
 				<input type="number" min="100" max="100000" step="1000" @bind="_iterations" />
 			</label>
-			<label class="csim-field">Seed (optional)
+			<label class="csim-field">Seed
 				<input type="number" @bind="_seed" placeholder="random" />
 			</label>
 			<button class="csim-btn primary" type="button" @onclick="RunAsync" disabled="@(_running || !CanRun)">
@@ -87,12 +89,48 @@
 			<ResultsView Result="_result" TargetModels="_target?.TotalModels ?? 0" />
 		}
 	}
+
+	@if (_importOpen)
+	{
+		<div class="csim-modal-backdrop" @onclick="CloseImport">
+			<div class="csim-modal" @onclick:stopPropagation="true">
+				<div class="csim-modal-head">
+					<h2 class="csim-h2">Import opponent army</h2>
+					<button type="button" class="csim-modal-x" @onclick="CloseImport" aria-label="Close">×</button>
+				</div>
+				<p class="csim-note">New Recruit / BattleScribe 11th-edition JSON. Upload a file or paste the export.</p>
+
+				<label class="csim-file">
+					<InputFile OnChange="OnFileSelected" accept=".json,application/json" />
+				</label>
+
+				<textarea class="csim-paste" @bind="_importText" rows="6" placeholder="…or paste the JSON export here"></textarea>
+
+				<div class="csim-import-row">
+					<button class="csim-btn primary" type="button" @onclick="ImportJson" disabled="@string.IsNullOrWhiteSpace(_importText)">Import</button>
+					<button class="csim-btn" type="button" @onclick="CloseImport">Cancel</button>
+				</div>
+				@if (_importWarnings.Count > 0)
+				{
+					<p class="csim-warn">@string.Join(" ", _importWarnings)</p>
+				}
+				@if (_importedCount > 0)
+				{
+					<p class="csim-ok">Imported @_importedCount unit(s).</p>
+				}
+			</div>
+		</div>
+	}
 </div>
 
 @code {
 	private bool _loading = true;
 	private bool _running;
 	private double _progress;
+
+	// My army = native Necrons; Opponent = imported. The direction toggle swaps which is attacker/target.
+	private bool _myArmyAttacks = true;
+	private bool _importOpen;
 
 	private readonly List<CombatUnit> _native = [];
 	private CombatUnit? _attacker;
@@ -111,8 +149,13 @@
 
 	private SimulationResult? _result;
 
-	private IReadOnlyList<CombatUnit> AllUnits =>
-		_native.Concat(Imported.Units).ToList();
+	private IReadOnlyList<CombatUnit> MyArmy => _native;
+	private IReadOnlyList<CombatUnit> Opponent => Imported.Units;
+
+	// The attacker pool is one army, the target pool the other — never both mixed.
+	private IReadOnlyList<CombatUnit> AttackerPool => _myArmyAttacks ? MyArmy : Opponent;
+	private IReadOnlyList<CombatUnit> TargetPool => _myArmyAttacks ? Opponent : MyArmy;
+	private bool TargetIsOpponent => _myArmyAttacks;
 
 	private int TargetToughness => _target?.BodyguardToughness ?? _target?.ModelGroups.FirstOrDefault()?.Profile.Toughness ?? 0;
 	private int TargetSave => _target?.ModelGroups.FirstOrDefault()?.Profile.Save ?? 7;
@@ -128,6 +171,14 @@
 	private IReadOnlyList<UnitAbility> TargetAbilities => _target?.UnitAbilities ?? [];
 
 	private bool CanRun => _attacker is not null && _target is not null && _weaponSelection.Any;
+
+	private string EmptyPoolHint(bool attacker)
+	{
+		var isOpponentPool = attacker ? !_myArmyAttacks : _myArmyAttacks;
+		return isOpponentPool
+			? "No opponent units yet — import an enemy army (button above the Target box)."
+			: "No units in your army — add a roster in Rosters first.";
+	}
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -151,6 +202,18 @@
 		}
 	}
 
+	private void SetDirection(bool myArmyAttacks)
+	{
+		if (_myArmyAttacks == myArmyAttacks)
+			return;
+		_myArmyAttacks = myArmyAttacks;
+		// Pools swap — clear the now-invalid selections.
+		_attacker = null;
+		_target = null;
+		_weaponSelection.Reset(null);
+		_result = null;
+	}
+
 	private void OnAttackerChanged(CombatUnit? unit)
 	{
 		_attacker = unit;
@@ -169,6 +232,30 @@
 		};
 	}
 
+	private void OpenImport()
+	{
+		_importOpen = true;
+		_importedCount = 0;
+		_importWarnings.Clear();
+	}
+
+	private void CloseImport() => _importOpen = false;
+
+	private async Task OnFileSelected(InputFileChangeEventArgs e)
+	{
+		try
+		{
+			using var stream = e.File.OpenReadStream(maxAllowedSize: 8 * 1024 * 1024);
+			using var reader = new StreamReader(stream);
+			_importText = await reader.ReadToEndAsync();
+		}
+		catch (Exception ex)
+		{
+			_importWarnings.Clear();
+			_importWarnings.Add($"Could not read file: {ex.Message}");
+		}
+	}
+
 	private void ImportJson()
 	{
 		_importWarnings.Clear();
@@ -177,6 +264,8 @@
 		_importedCount = result.Units.Count;
 		_importWarnings.AddRange(result.Warnings);
 		_importText = "";
+		if (_importedCount > 0 && result.Warnings.Count == 0)
+			_importOpen = false;
 	}
 
 	private async Task RunAsync()
