@@ -142,15 +142,6 @@ else
 								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
 									<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 									<span class="s-name">@s.Name</span>
-									@{ var tk = TargetKeywords(s.Target); }
-									@foreach (var kw in tk.Include)
-									{
-										<span class="s-kw">@kw</span>
-									}
-									@if (tk.Exclude.Count > 0)
-									{
-										<span class="s-kw excl">excl. @string.Join(", ", tk.Exclude)</span>
-									}
 								</button>
 								<span class="s-cp">@s.Cost CP</span>
 								<button class="btn small s-use" type="button"
@@ -1179,8 +1170,26 @@ else
 						if (_battle.DetachmentStratagemUsable(det, s, _phase, _turn))
 							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
 			}
+			// In swipe mode, narrow the list to stratagems the unit you're viewing can actually use, by matching
+			// its keywords against the Target's required/excluded keywords. (List mode shows them all.)
+			if (_cardSwipe && ActiveUnit is { } unit)
+				list = list.Where(s => StratagemAppliesTo(unit, s.Target)).ToList();
 			return list;
 		}
+	}
+
+	private BattleUnit? ActiveUnit =>
+		_ordered.Count > 0 ? _ordered[Math.Clamp(_activeCard, 0, _ordered.Count - 1)] : null;
+
+	// A stratagem applies to a unit when the unit has at least one of the Target's required keywords (or there
+	// are none) and none of its excluded keywords. CAPS keywords are parsed from the Target text (TargetKeywords).
+	private bool StratagemAppliesTo(BattleUnit unit, string? target)
+	{
+		var (include, exclude) = TargetKeywords(target);
+		bool Has(string kw) => unit.Parts.Any(p => p.Datasheet.Keywords.Any(k => KeywordMatches(k, kw)));
+		if (exclude.Any(Has))
+			return false;
+		return include.Count == 0 || include.Any(Has);
 	}
 
 	private bool CanAfford(StratView stratagem) => _cp >= stratagem.Cost;
