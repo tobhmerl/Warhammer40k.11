@@ -57,7 +57,7 @@ else
 					{
 						var index = i;
 						var u = ordered[index];
-						var dUsable = IsDead(u) ? 0 : u.ActiveAbilityCount(_phase, _turn);
+						var dUsable = IsDead(u) ? 0 : AvailableNowCount(u);
 						var dShock = MyCommandPhase && NeedsBattleShock(u);
 						var dReanim = MyCommandPhase && !dShock && NeedsReanimation(u);
 						var dState = dShock ? " · battle-shock" : dReanim ? " · can reanimate" : "";
@@ -226,15 +226,15 @@ else
 					var collapsed = IsCollapsed(unit);
 					var reanimate = MyCommandPhase && NeedsReanimation(unit);
 					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
-					var effectAbilities = unit.CombinedAbilities.Where(HasEffectKeywords).ToList();
+					var effectNow = unit.CombinedAbilities.Where(IsEffectNow).ToList(); var effectAlways = unit.CombinedAbilities.Where(IsEffectAlways).ToList();
 					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
-					var usableAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn)).ToList();
+					var usableAbilities = unit.CombinedAbilities.Where(IsUsableNow).ToList();
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
-					var hasNowLine = !dead && (conditionalBuffs.Count > 0 || effectAbilities.Count > 0 || usableAbilities.Count > 0);
-					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
+					var hasNowLine = !dead && (conditionalBuffs.Count > 0 || effectNow.Count > 0 || usableAbilities.Count > 0);
+					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0 || effectAlways.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -292,9 +292,9 @@ else
 															@buff.Label
 														</span>
 													}
-													@foreach (var a in effectAbilities)
+													@foreach (var a in effectNow)
 													{
-														<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+														<span class="chip effect now @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
 															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
 															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
 															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
@@ -333,6 +333,15 @@ else
 													{
 														<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
 															  title="@($"{a.Ability.Name} — tap to read its rules")"
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
+													@foreach (var a in effectAlways)
+													{
+														<span class="chip effect toggle @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
 															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
 															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
 															@a.Ability.Name
@@ -1425,6 +1434,26 @@ else
 	}
 
 	private static bool HasEffectKeywords(BattleAbility ability) => EffectKeywords(ability).Count > 0;
+
+	// One rule for the whole ability strip, regardless of origin (unit ability, detachment buff, enhancement,
+	// army rule): an item is "available now" — shown highlighted on Line 2 AND counted on the deck pill — when it
+	// is scheduled for the current phase + turn. Everything else is "always available" (Line 3, not highlighted).
+	private bool IsUsableNow(BattleAbility a) =>
+		!HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+
+	private bool IsEffectNow(BattleAbility a) =>
+		HasEffectKeywords(a) && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+
+	private bool IsEffectAlways(BattleAbility a) =>
+		HasEffectKeywords(a) && !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+
+	// The number of a unit's "available now" items (the Line 2 set): conditional detachment buffs scheduled now,
+	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
+	// equals the number of highlighted chips on the card, whatever the ability's origin.
+	private int AvailableNowCount(BattleUnit unit) =>
+		ConditionalBuffsFor(unit).Count()
+		+ unit.CombinedAbilities.Count(IsEffectNow)
+		+ unit.CombinedAbilities.Count(IsUsableNow);
 
 	private static string EffectLabel(BattleAbility ability) =>
 		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));

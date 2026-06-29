@@ -840,6 +840,12 @@ html[data-scroll="up"] .hud.sticky {
     outline: none;
 }
 
+/* Always-available effect on Line 3: a dashed (hatched) edge signals it carries a toggle checkbox you can
+   switch on from its card. The bright-green .now / .on rules below override the dash when it's live. */
+.chip.effect.toggle {
+    border-style: dashed;
+}
+
 /* Scheduled and live this phase/turn: same bright-green fill as a usable-now ability, for a unified look. */
 .chip.effect.now {
     color: #04130d;
