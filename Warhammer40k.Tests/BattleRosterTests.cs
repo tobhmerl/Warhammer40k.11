@@ -447,6 +447,10 @@ public class BattleRosterTests
         Assert.DoesNotContain("Shieldvanes", abilityNames);
         Assert.DoesNotContain("Nebuloscope", abilityNames);
         Assert.Contains("Shadowloom", abilityNames);
+
+        // Stealth is wargear-conditional (Shieldvanes), not a faction rule, so it must not surface as a core chip.
+        Assert.DoesNotContain(unit.CoreAbilities, a => a.Ability.Name == "Stealth");
+        Assert.Contains(unit.CoreAbilities, a => a.Ability.Name.StartsWith("Scouts"));
     }
 
 
