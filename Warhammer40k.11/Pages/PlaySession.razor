@@ -645,6 +645,10 @@ else
 				}
 				<button class="btn small ghost" type="button" @onclick="OpenRulebook" title="Core Rules lookup">Rulebook</button>
 				<button class="btn small ghost" type="button" @onclick="OpenVp" title="Victory points">VPs</button>
+				@if (_activeEffects.Count > 0)
+				{
+					<button class="btn small ghost reset" type="button" @onclick="ResetAbilities" title="Switch off all activated abilities (keeps CP, VP, models)">Reset abilities</button>
+				}
 				<button class="btn small ghost reset" type="button" @onclick="RequestReset" title="Reset CP, VP and models">Reset</button>
 			</div>
 		</div>
@@ -1093,6 +1097,10 @@ else
 	private void RequestReset() => _confirmReset = true;
 
 	private void CancelReset() => _confirmReset = false;
+
+	// Switches off every activated ability/buff (e.g. Relentless Onslaught, Overwhelming Obliteration) so their
+	// weapon-stat changes drop away at end of turn — without touching CP, VP, model counts or the phase/turn.
+	private void ResetAbilities() => _activeEffects.Clear();
 
 	private void ConfirmReset()
 	{

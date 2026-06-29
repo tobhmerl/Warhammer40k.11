@@ -23,6 +23,7 @@
 .topbar {
     display: flex;
     align-items: center;
+    margin-top: 1.25rem;
     margin-bottom: 0.75rem;
 }
 
@@ -823,13 +824,12 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 
-/* Conditional weapon-effect toggle (e.g. an ability granting [DEVASTATING WOUNDS] under a condition): dashed
-   while off; tap to open its rules and switch it on, which stamps the keyword onto this unit's weapons. */
+/* Conditional weapon-effect toggle (e.g. an ability granting [DEVASTATING WOUNDS] under a condition): same
+   standard border as any other usable ability; tap to open its rules and switch it on (bright-green fill). */
 .chip.effect {
     cursor: pointer;
     color: var(--text);
     border-color: var(--accent-line);
-    border-style: dashed;
     transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
