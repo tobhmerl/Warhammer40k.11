@@ -830,11 +830,13 @@ html[data-scroll="up"] .hud.sticky {
     outline: none;
 }
 
-/* Scheduled and live this phase/turn (but not yet switched on): solid bright accent so it reads as actionable now. */
+/* Scheduled and live this phase/turn: same bright-green fill as a usable-now ability, for a unified look. */
 .chip.effect.now {
-    color: var(--accent-strong);
-    border-color: var(--accent);
+    color: #04130d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
     border-style: solid;
+    box-shadow: var(--glow-sm);
 }
 
 .chip.effect.on {
