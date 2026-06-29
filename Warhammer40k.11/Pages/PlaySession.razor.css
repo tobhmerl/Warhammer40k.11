@@ -787,6 +787,16 @@ html[data-scroll="up"] .hud.sticky {
     transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
+/* Empty-slot placeholder: holds the line's position so chips never shift between cards. Muted + non-interactive. */
+.chip.ph {
+    cursor: default;
+    color: var(--text-dim);
+    border-color: var(--border);
+    border-style: dashed;
+    opacity: 0.5;
+    font-weight: 600;
+}
+
 .chip.ability:hover,
 .chip.ability:focus-visible,
 .chip.keyword:hover,

@@ -242,7 +242,6 @@ else
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
-					var hasTopLine = warlordShown || unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
 					var hasNowLine = !dead && (conditionalBuffs.Count > 0 || effectAbilities.Count > 0 || usableAbilities.Count > 0);
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
@@ -256,32 +255,43 @@ else
 										<span class="u-name">@unit.Name</span>
 									}
 									<span class="u-chips">
-											@* Line 1 — Warlord, then Invulnerable saves and Feel No Pain *@
-											@if (hasTopLine)
-											{
-												<span class="chip-line">
-													@if (warlordShown)
-													{
-														<span class="chip warlord">Warlord</span>
-													}
+											@* Line 1 — Invulnerable, Feel No Pain, then Warlord (fixed slots; "-" placeholder when absent) *@
+											<span class="chip-line">
+												@if (unit.InvulnerableSaves.Count > 0)
+												{
 													@foreach (var inv in unit.InvulnerableSaves)
 													{
 														<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
 															@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
 														</span>
 													}
+												}
+												else
+												{
+													<span class="chip ph" aria-hidden="true">— inv</span>
+												}
+												@if (unit.FeelNoPains.Count > 0)
+												{
 													@foreach (var fnp in unit.FeelNoPains)
 													{
 														<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
 															FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
 														</span>
 													}
-												</span>
-											}
-											@* Line 2 — everything available this phase/turn, highlighted together (buffs, effects, usable) *@
-											@if (hasNowLine)
-											{
-												<span class="chip-line">
+												}
+												else
+												{
+													<span class="chip ph" aria-hidden="true">— FNP</span>
+												}
+												@if (warlordShown)
+												{
+													<span class="chip warlord">Warlord</span>
+												}
+											</span>
+											@* Line 2 — everything available this phase/turn, highlighted together ("-" placeholder when none) *@
+											<span class="chip-line">
+												@if (hasNowLine)
+												{
 													@foreach (var buff in conditionalBuffs)
 													{
 														<span class="chip effect now @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
@@ -309,12 +319,16 @@ else
 															@a.Ability.Name
 														</span>
 													}
-												</span>
-											}
-											@* Line 3 — all other always-available abilities and keywords *@
-											@if (hasAbilityLine)
-											{
-												<span class="chip-line">
+												}
+												else
+												{
+													<span class="chip ph" aria-hidden="true">— available now</span>
+												}
+											</span>
+											@* Line 3 — all other always-available abilities and keywords ("-" placeholder when none) *@
+											<span class="chip-line">
+												@if (hasAbilityLine)
+												{
 													@foreach (var a in keywordAbilities)
 													{
 														<span class="chip keyword" role="button" tabindex="0"
@@ -342,8 +356,12 @@ else
 															@a.Ability.Name
 														</span>
 													}
-												</span>
-											}
+												}
+												else
+												{
+													<span class="chip ph" aria-hidden="true">— always-on</span>
+												}
+											</span>
 										</span>
 								</span>
 							</button>
