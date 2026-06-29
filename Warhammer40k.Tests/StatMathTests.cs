@@ -52,6 +52,12 @@ public class StatMathTests
         Assert.Equal(expected, StatMath.Apply(raw, delta));
 
     [Theory]
+    [InlineData("N/A", 1, "N/A")]    // an auto-hit weapon has no Hit roll, so +1 Hit does nothing
+    [InlineData("N/A", -1, "N/A")]
+    public void Auto_hit_skill_is_unchanged_by_a_delta(string raw, int delta, string expected) =>
+        Assert.Equal(expected, StatMath.Apply(raw, delta));
+
+    [Theory]
     [InlineData("4+", 0, "4+")]
     [InlineData("", 5, "")]
     public void Zero_delta_or_blank_is_unchanged(string raw, int delta, string expected) =>

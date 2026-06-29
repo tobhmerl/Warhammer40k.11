@@ -11,6 +11,7 @@ namespace Warhammer40k.Core.Play;
 /// <item>A Move value (<c>8"</c>): the delta is added to the inches.</item>
 /// <item>A plain integer (Toughness, Attacks, …): the delta is added.</item>
 /// <item>A random value (<c>D6</c>, <c>D3+1</c>): the delta is folded into a formula rather than guessed.</item>
+/// <item>A non-numeric value (<c>N/A</c> — a weapon that auto-hits): unchanged, since there is no roll to modify.</item>
 /// </list>
 /// </summary>
 public static class StatMath
@@ -54,7 +55,11 @@ public static class StatMath
         }
 
         // Random value with no constant (e.g. "D6", "2D6"): keep it honest as a formula.
-        return delta > 0 ? $"{value}+{delta}" : $"{value}{delta}";
+        if (value.Contains('D', StringComparison.OrdinalIgnoreCase))
+            return delta > 0 ? $"{value}+{delta}" : $"{value}{delta}";
+
+        // Anything else (e.g. "N/A" — a weapon that auto-hits) has no roll to modify; leave it unchanged.
+        return value;
     }
 
     /// <summary>
