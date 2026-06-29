@@ -62,6 +62,16 @@ public static partial class LeaderConferralParser
 
         // 3) Numeric buffs: "add N to the Hit roll" / "add N to the <stat> characteristic".
         effect.StatModifiers = ParseStatModifiers(text);
+
+        // 4) Critical-hit threshold: "each time a model in that unit makes a [ranged|melee] attack, a
+        //    successful unmodified Hit roll of N+ scores a Critical Hit" (an absent class = both).
+        var crit = CritHitRegex().Match(text);
+        if (crit.Success && int.TryParse(crit.Groups["n"].Value, out var critOn) && critOn is >= 2 and <= 6)
+        {
+            effect.CriticalHitOn = critOn;
+            effect.WeaponClass = ParseClass(crit.Groups["class"].Value);
+        }
+
         return effect.IsEmpty ? null : effect;
     }
 
@@ -166,4 +176,11 @@ public static partial class LeaderConferralParser
 
     [GeneratedRegex(@"\[([^\]]+)\]")]
     private static partial Regex BracketRegex();
+
+    // "each time a model in that unit makes a [ranged|melee] attack, … Hit roll of N+ scores a Critical Hit".
+    // The class token is optional (absent ⇒ both), and the wording between "attack" and "Hit roll" varies
+    // (incl. the seed's "unmodifed" typo), so it is matched leniently.
+    [GeneratedRegex(@"each\s+time\s+a\s+model\s+in\s+(?:that|this)\s+unit\s+makes\s+(?:a|an)\s+(?:(?<class>ranged|melee)\s+)?attack\b.*?\bhit\s+roll\s+of\s+(?<n>\d)\+\s+scores\s+a\s+critical\s+hit",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex CritHitRegex();
 }

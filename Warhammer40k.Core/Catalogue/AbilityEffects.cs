@@ -125,9 +125,16 @@ public sealed class ConferredEffect
     /// <summary>Numeric characteristic buffs applied to the led unit / its weapons.</summary>
     [JsonPropertyName("statModifiers")] public List<StatModifier> StatModifiers { get; set; } = [];
 
+    /// <summary>
+    /// The improved Critical Hit threshold this effect confers on the scoped weapons (e.g. <c>5</c> for "scores a
+    /// Critical Hit on an unmodified 5+"), or <c>0</c> when the ability does not change it. Scoped by
+    /// <see cref="WeaponClass"/> just like the granted <see cref="WeaponAbilities"/>.
+    /// </summary>
+    [JsonPropertyName("criticalHitOn")] public int CriticalHitOn { get; set; }
+
     /// <summary>True when this effect grants nothing (used to drop no-op parses).</summary>
     [JsonIgnore]
-    public bool IsEmpty => WeaponAbilities.Count == 0 && UnitAbilities.Count == 0 && StatModifiers.Count == 0;
+    public bool IsEmpty => WeaponAbilities.Count == 0 && UnitAbilities.Count == 0 && StatModifiers.Count == 0 && CriticalHitOn == 0;
 
     /// <summary>A compact one-line summary for the "Applied: …" note, e.g. "LETHAL HITS on melee weapons".</summary>
     [JsonIgnore]
@@ -140,6 +147,8 @@ public sealed class ConferredEffect
                 parts.Add($"{string.Join(", ", WeaponAbilities)} on {WeaponScope()}");
             parts.AddRange(UnitAbilities);
             parts.AddRange(StatModifiers.Select(m => m.Describe()));
+            if (CriticalHitOn > 0)
+                parts.Add($"Critical Hit on {CriticalHitOn}+ for {WeaponScope()}");
             return string.Join("; ", parts);
         }
     }

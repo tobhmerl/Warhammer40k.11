@@ -677,6 +677,90 @@ public class BattleRosterTests
         Assert.Equal("Lethal Hits on melee weapons", group.AppliedSummaryFor("United In Destruction"));
     }
 
+    // ---------- Conferred Critical-Hit threshold (the Lokhust Lord / Plasmancer scenario) ----------
+
+    [Fact]
+    public void LeaderConferralParser_parses_critical_hit_on_5_for_ranged_weapons()
+    {
+        // The exact seed text (incl. the "unmodifed" typo) shared by the Lokhust Lord and Plasmancer.
+        var ability = new Ability
+        {
+            Name = "Hyperphasic Reactor",
+            Text = "While this model is leading a unit, each time a model in that unit makes a ranged attack, a successful unmodifed Hit roll of 5+ scores a Critical Hit.",
+        };
+
+        var effect = LeaderConferralParser.ParseAbility(ability);
+
+        Assert.NotNull(effect);
+        Assert.False(effect!.IsEmpty);
+        Assert.Equal(5, effect.CriticalHitOn);
+        Assert.Equal(WeaponClass.Ranged, effect.WeaponClass);
+        Assert.Empty(effect.WeaponAbilities);
+    }
+
+    [Fact]
+    public void Crit_threshold_applies_to_ranged_only_when_apply_to_unit_is_ticked()
+    {
+        var lord = LeaderSheet("lokhust-lord", "Lokhust Lord", "4",
+            new ConferredEffect
+            {
+                SourceAbility = "Hyperphasic Reactor",
+                WeaponClass = WeaponClass.Ranged,
+                CriticalHitOn = 5,
+            });
+        var warriors = Sheet("necron-warriors", "Necron Warriors", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss flayer", Type = "Ranged", Skill = "4+" }]);
+
+        var roster = new Roster
+        {
+            Units = [Unit("u1", "lokhust-lord", attachedTo: "u2"), Unit("u2", "necron-warriors", models: 10)],
+        };
+
+        // Not ticked → no crit improvement surfaces (pure manual model, like other conferrals).
+        var battle = BattleRoster.Build(roster, Catalogue(lord, warriors));
+        var group = Assert.Single(battle.Units);
+        var warriorsPart = group.Parts.Single(p => p.Datasheet.Id == "necron-warriors");
+        Assert.Null(battle.CriticalHitOn(group, warriorsPart, ranged: true));
+
+        // Tick "Apply to unit" → ranged weapons crit on 5+; melee is unaffected.
+        ApplyAbility(roster, "lokhust-lord", "Hyperphasic Reactor");
+        battle = BattleRoster.Build(roster, Catalogue(lord, warriors));
+        group = Assert.Single(battle.Units);
+        warriorsPart = group.Parts.Single(p => p.Datasheet.Id == "necron-warriors");
+
+        Assert.Equal(5, battle.CriticalHitOn(group, warriorsPart, ranged: true));
+        Assert.Null(battle.CriticalHitOn(group, warriorsPart, ranged: false));
+    }
+
+    [Fact]
+    public void Real_seed_Lokhust_Lord_confers_crit_on_5_to_ranged_weapons()
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var lord = catalogue.Datasheets.Single(d => d.Name == "Lokhust Lord");
+        var crit = Assert.Single(lord.LeaderConferrals.Where(c => c.CriticalHitOn > 0));
+        var led = catalogue.Datasheets.First(d => lord.LeaderTargetIds.Contains(d.Id));
+
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("u1", lord.Id, attachedTo: "u2"),
+                Unit("u2", led.Id, models: 3),
+            ],
+        };
+        ApplyAbility(roster, lord.Id, crit.SourceAbility);
+
+        var battle = BattleRoster.Build(roster, catalogue);
+        var group = Assert.Single(battle.Units);
+        var ledPart = group.Parts.Single(p => p.Datasheet.Id == led.Id);
+
+        // The real seed text parsed into a ranged crit-on-5 conferral.
+        Assert.Equal(5, crit.CriticalHitOn);
+        Assert.Equal(WeaponClass.Ranged, crit.WeaponClass);
+        Assert.Equal(5, battle.CriticalHitOn(group, ledPart, ranged: true));
+        Assert.Null(battle.CriticalHitOn(group, ledPart, ranged: false));
+    }
+
     // ---------- Setup-assigned Enhancements surface in Play Mode as abilities / stat changes ----------
 
     private static Detachment EnhancementDetachment(Enhancement enhancement) => new()

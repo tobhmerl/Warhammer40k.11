@@ -70,6 +70,16 @@ public static partial class SelfAbilityParser
 
         // 2) Absolute stat-set: "has a/an <Stat> characteristic of <value>" (one or more, e.g. Save + Move).
         effect.StatModifiers = ParseStatSets(text);
+
+        // 3) Critical-hit threshold the bearer's own weapons gain (e.g. "each time this model makes a ranged
+        //    attack, a successful unmodified Hit roll of 5+ scores a Critical Hit"). Absent class ⇒ both.
+        var crit = CritHitRegex().Match(text);
+        if (crit.Success && int.TryParse(crit.Groups["n"].Value, out var critOn) && critOn is >= 2 and <= 6)
+        {
+            effect.CriticalHitOn = critOn;
+            effect.WeaponClass = ParseClass(crit.Groups["class"].Value);
+        }
+
         return effect.IsEmpty ? null : effect;
     }
 
@@ -150,4 +160,10 @@ public static partial class SelfAbilityParser
 
     [GeneratedRegex(@"\[([^\]]+)\]")]
     private static partial Regex BracketRegex();
+
+    // Bearer-affecting crit threshold: "each time this model / a model in this unit makes a [ranged|melee]
+    // attack, … Hit roll of N+ scores a Critical Hit". Class optional (absent ⇒ both); wording is lenient.
+    [GeneratedRegex(@"each\s+time\s+(?:this\s+model|a\s+model\s+in\s+this\s+unit)\s+makes\s+(?:a|an)\s+(?:(?<class>ranged|melee)\s+)?attack\b.*?\bhit\s+roll\s+of\s+(?<n>\d)\+\s+scores\s+a\s+critical\s+hit",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex CritHitRegex();
 }

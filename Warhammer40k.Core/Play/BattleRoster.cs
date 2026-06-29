@@ -219,6 +219,29 @@ public sealed class BattleRoster
     }
 
     /// <summary>
+    /// The improved Critical Hit threshold for this part's weapons of the given class (e.g. <c>5</c> for
+    /// "scores a Critical Hit on an unmodified 5+"), or <c>null</c> when nothing applied lowers it (the default
+    /// unmodified 6 still stands). Mirrors <see cref="GrantedWeaponAbilities"/>: an attached Leader's conferral
+    /// counts only when the player ticked "Apply to unit"; a model's own self-effects always count. When several
+    /// sources apply, the best (lowest) threshold wins.
+    /// </summary>
+    public int? CriticalHitOn(BattleUnit unit, BattlePart part, bool ranged)
+    {
+        int? best = null;
+
+        foreach (var leader in unit.Parts.Where(p => p.IsLeader))
+            foreach (var conferral in leader.Datasheet.LeaderConferrals)
+                if (conferral.CriticalHitOn > 0 && ClassMatches(conferral.WeaponClass, ranged) && ConferralApplied(leader, conferral))
+                    best = best is { } b ? Math.Min(b, conferral.CriticalHitOn) : conferral.CriticalHitOn;
+
+        foreach (var effect in part.Datasheet.SelfEffects)
+            if (effect.CriticalHitOn > 0 && ClassMatches(effect.WeaponClass, ranged))
+                best = best is { } b ? Math.Min(b, effect.CriticalHitOn) : effect.CriticalHitOn;
+
+        return best;
+    }
+
+    /// <summary>
     /// Numeric buffs to apply to this part's weapon characteristics (Hit/A/S/D) of the given class, summed and
     /// applied by <see cref="StatMath"/> in the UI. Sourced from attached Leaders' conferrals and from
     /// detachment <see cref="DetachmentStatBuff"/>s.
