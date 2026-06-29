@@ -1,0 +1,339 @@
+{
+  "roster": {
+    "gameSystemName": "Warhammer 40,000 11th Edition",
+    "forces": [
+      {
+        "catalogueName": "Imperium - Adeptus Astartes - Dark Angels",
+        "selections": [
+          {
+            "id": "cfg-1",
+            "name": "Battle Size",
+            "type": "upgrade",
+            "from": "entry",
+            "selections": [
+              { "id": "cfg-1a", "name": "Strike Force (2000 Points)", "type": "upgrade", "from": "group" }
+            ]
+          },
+          {
+            "id": "cfg-2",
+            "name": "Detachment",
+            "type": "upgrade",
+            "from": "entry",
+            "selections": [
+              { "id": "cfg-2a", "name": "Gladius Task Force", "type": "upgrade", "from": "group" }
+            ]
+          },
+          {
+            "id": "azrael-1",
+            "name": "Azrael",
+            "type": "model",
+            "from": "entry",
+            "number": 1,
+            "profiles": [
+              {
+                "id": "azrael-unit",
+                "name": "Azrael",
+                "typeName": "Unit",
+                "characteristics": [
+                  { "name": "M", "$text": "6\"" },
+                  { "name": "T", "$text": "4" },
+                  { "name": "Sv", "$text": "2+" },
+                  { "name": "W", "$text": "6" },
+                  { "name": "LD", "$text": "5+" },
+                  { "name": "OC", "$text": "1" },
+                  { "name": "InSv", "$text": "4+" }
+                ]
+              },
+              {
+                "id": "azrael-lionhelm",
+                "name": "The Lion Helm",
+                "typeName": "Abilities",
+                "characteristics": [
+                  { "name": "Description", "$text": "The bearer has a 4+ invulnerable save. While leading a unit, models in that unit have a 4+ invulnerable save." }
+                ]
+              }
+            ],
+            "selections": [
+              {
+                "id": "azrael-wpn-1",
+                "name": "Lion's Wrath",
+                "type": "upgrade",
+                "from": "entry",
+                "number": 1,
+                "profiles": [
+                  {
+                    "id": "azrael-lw",
+                    "name": "Lion's Wrath",
+                    "typeName": "Ranged Weapons",
+                    "characteristics": [
+                      { "name": "Range", "$text": "24\"" },
+                      { "name": "A", "$text": "2" },
+                      { "name": "BS", "$text": "2+" },
+                      { "name": "S", "$text": "8" },
+                      { "name": "AP", "$text": "-3" },
+                      { "name": "D", "$text": "2" },
+                      { "name": "Keywords", "$text": "Anti-Infantry 4+, Devastating Wounds, Rapid Fire 1" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "azrael-wpn-2",
+                "name": "The Sword of Secrets",
+                "type": "upgrade",
+                "from": "entry",
+                "number": 1,
+                "profiles": [
+                  {
+                    "id": "azrael-sos",
+                    "name": "The Sword of Secrets",
+                    "typeName": "Melee Weapons",
+                    "characteristics": [
+                      { "name": "Range", "$text": "Melee" },
+                      { "name": "A", "$text": "6" },
+                      { "name": "WS", "$text": "2+" },
+                      { "name": "S", "$text": "6" },
+                      { "name": "AP", "$text": "-4" },
+                      { "name": "D", "$text": "2" },
+                      { "name": "Keywords", "$text": "Devastating Wounds" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "hi-squad",
+            "name": "Heavy Intercessor Squad",
+            "type": "unit",
+            "from": "entry",
+            "number": 1,
+            "selections": [
+              {
+                "id": "hi-sgt",
+                "name": "Heavy Intercessor Sergeant",
+                "type": "model",
+                "from": "entry",
+                "number": 1,
+                "profiles": [
+                  {
+                    "id": "hi-sgt-unit",
+                    "name": "Heavy Intercessor Sergeant",
+                    "typeName": "Unit",
+                    "characteristics": [
+                      { "name": "M", "$text": "5\"" },
+                      { "name": "T", "$text": "6" },
+                      { "name": "Sv", "$text": "3+" },
+                      { "name": "W", "$text": "3" },
+                      { "name": "LD", "$text": "6+" },
+                      { "name": "OC", "$text": "1" },
+                      { "name": "InSv", "$text": "-" }
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "hi-sgt-hbr",
+                    "name": "Heavy Bolt Rifle",
+                    "type": "upgrade",
+                    "from": "entry",
+                    "number": 1,
+                    "profiles": [
+                      {
+                        "id": "hi-sgt-hbr-p",
+                        "name": "Heavy Bolt Rifle",
+                        "typeName": "Ranged Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "36\"" },
+                          { "name": "A", "$text": "3" },
+                          { "name": "BS", "$text": "3+" },
+                          { "name": "S", "$text": "5" },
+                          { "name": "AP", "$text": "-1" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "Assault, Heavy" }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "hi-sgt-bp",
+                    "name": "Bolt pistol",
+                    "type": "upgrade",
+                    "from": "entry",
+                    "number": 1,
+                    "profiles": [
+                      {
+                        "id": "hi-sgt-bp-p",
+                        "name": "Bolt pistol",
+                        "typeName": "Ranged Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "12\"" },
+                          { "name": "A", "$text": "1" },
+                          { "name": "BS", "$text": "3+" },
+                          { "name": "S", "$text": "4" },
+                          { "name": "AP", "$text": "0" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "Pistol" }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "hi-sgt-ccw",
+                    "name": "Close combat weapon",
+                    "type": "upgrade",
+                    "from": "entry",
+                    "number": 1,
+                    "profiles": [
+                      {
+                        "id": "hi-sgt-ccw-p",
+                        "name": "Close combat weapon",
+                        "typeName": "Melee Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "Melee" },
+                          { "name": "A", "$text": "3" },
+                          { "name": "WS", "$text": "3+" },
+                          { "name": "S", "$text": "4" },
+                          { "name": "AP", "$text": "0" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "hi-bodies",
+                "name": "Heavy Intercessors",
+                "type": "model",
+                "from": "entry",
+                "number": 4,
+                "profiles": [
+                  {
+                    "id": "hi-body-unit",
+                    "name": "Heavy Intercessors",
+                    "typeName": "Unit",
+                    "characteristics": [
+                      { "name": "M", "$text": "5\"" },
+                      { "name": "T", "$text": "6" },
+                      { "name": "Sv", "$text": "3+" },
+                      { "name": "W", "$text": "3" },
+                      { "name": "LD", "$text": "6+" },
+                      { "name": "OC", "$text": "1" },
+                      { "name": "InSv", "$text": "-" }
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "hi-body-hbr",
+                    "name": "Heavy Bolt Rifle",
+                    "type": "upgrade",
+                    "from": "entry",
+                    "number": 4,
+                    "profiles": [
+                      {
+                        "id": "hi-body-hbr-p",
+                        "name": "Heavy Bolt Rifle",
+                        "typeName": "Ranged Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "36\"" },
+                          { "name": "A", "$text": "3" },
+                          { "name": "BS", "$text": "3+" },
+                          { "name": "S", "$text": "5" },
+                          { "name": "AP", "$text": "-1" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "Assault, Heavy" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "icc-squad",
+            "name": "Inner Circle Companions",
+            "type": "unit",
+            "from": "entry",
+            "number": 1,
+            "selections": [
+              {
+                "id": "icc-model",
+                "name": "Inner Circle Companion",
+                "type": "model",
+                "from": "entry",
+                "number": 3,
+                "profiles": [
+                  {
+                    "id": "icc-unit",
+                    "name": "Inner Circle Companion",
+                    "typeName": "Unit",
+                    "characteristics": [
+                      { "name": "M", "$text": "6\"" },
+                      { "name": "T", "$text": "4" },
+                      { "name": "Sv", "$text": "3+" },
+                      { "name": "W", "$text": "3" },
+                      { "name": "LD", "$text": "6+" },
+                      { "name": "OC", "$text": "1" },
+                      { "name": "InSv", "$text": "-" }
+                    ]
+                  },
+                  {
+                    "id": "icc-ability",
+                    "name": "Honoured Protectors",
+                    "typeName": "Abilities",
+                    "characteristics": [
+                      { "name": "Description", "$text": "Each time an attack is allocated to this unit, subtract 1 from the Damage characteristic of that attack." }
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "icc-greatsword",
+                    "name": "Calibanite Greatsword",
+                    "type": "upgrade",
+                    "from": "entry",
+                    "number": 3,
+                    "profiles": [
+                      {
+                        "id": "icc-gs-strike",
+                        "name": "\u27a4 Calibanite Greatsword - Strike",
+                        "typeName": "Melee Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "Melee" },
+                          { "name": "A", "$text": "4" },
+                          { "name": "WS", "$text": "3+" },
+                          { "name": "S", "$text": "6" },
+                          { "name": "AP", "$text": "-2" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "Lethal Hits" }
+                        ]
+                      },
+                      {
+                        "id": "icc-gs-sweep",
+                        "name": "\u27a4 Calibanite Greatsword - Sweep",
+                        "typeName": "Melee Weapons",
+                        "characteristics": [
+                          { "name": "Range", "$text": "Melee" },
+                          { "name": "A", "$text": "5" },
+                          { "name": "WS", "$text": "3+" },
+                          { "name": "S", "$text": "6" },
+                          { "name": "AP", "$text": "-1" },
+                          { "name": "D", "$text": "1" },
+                          { "name": "Keywords", "$text": "Sustained Hits 2" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

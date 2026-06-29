@@ -1,0 +1,55 @@
+@using Warhammer40k._11.Features.CombatSimulator.Domain
+
+@* Combat Simulator weapon selector (removable feature). Per-weapon: fire toggle, firing-model count, mode. *@
+<div class="csim-weapons">
+	@for (var i = 0; i < Selection.Weapons.Count; i++)
+	{
+		var index = i;
+		var weapon = Selection.Weapons[index];
+		<div class="csim-weapon @(Selection.IsSelected(index) ? "on" : "")">
+			<label class="csim-weapon-head">
+				<input type="checkbox" checked="@Selection.IsSelected(index)"
+					   @onchange="e => Selection.SetSelected(index, (bool)e.Value!)" />
+				<span class="csim-weapon-name">@DisplayName(weapon)</span>
+				<span class="csim-weapon-stats">@StatLine(weapon)</span>
+			</label>
+			<div class="csim-weapon-row">
+				<label class="csim-field small">models
+					<input type="number" min="0" value="@Selection.Models(index)"
+						   @onchange="e => Selection.SetModels(index, ParseInt(e.Value))" />
+				</label>
+				@if (weapon.HasFiringModes)
+				{
+					<label class="csim-field small">mode
+						<select @onchange="e => Selection.SetMode(index, ParseInt(e.Value))">
+							@for (var m = 0; m < weapon.FiringModes.Count; m++)
+							{
+								<option value="@m" selected="@(Selection.ModeIndex(index) == m)">@weapon.FiringModes[m].Name</option>
+							}
+						</select>
+					</label>
+				}
+				@if (weapon.Abilities.Count > 0)
+				{
+					<span class="csim-weapon-kw">@string.Join(", ", weapon.Abilities.Select(a => a.Label))</span>
+				}
+			</div>
+		</div>
+	}
+	@if (Selection.Weapons.Count == 0)
+	{
+		<p class="csim-note">This unit has no weapons.</p>
+	}
+</div>
+
+@code {
+	[Parameter] public CombatUnit Unit { get; set; } = new();
+	[Parameter] public WeaponSelectionState Selection { get; set; } = new();
+
+	private static string DisplayName(CombatWeapon w) => w.HasFiringModes ? w.Name.Split('-')[0].Trim() : w.Name;
+
+	private static string StatLine(CombatWeapon w) =>
+		$"A {w.Attacks} · {(w.IsMelee ? "WS" : "BS")} {w.Skill}+ · S {w.Strength} · AP {w.ArmourPenetration} · D {w.Damage}";
+
+	private static int ParseInt(object? value) => int.TryParse(value?.ToString(), out var n) ? n : 0;
+}

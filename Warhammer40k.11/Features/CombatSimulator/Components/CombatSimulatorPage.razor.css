@@ -1,0 +1,342 @@
+/* Combat Simulator styles (removable feature — see Features/CombatSimulator/DELETE.md).
+   Kept self-contained with a csim- prefix; uses the app's CSS custom properties where available. */
+.csim {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+    color: var(--text, #e6f2ea);
+}
+
+.csim-title {
+    font-size: 1.6rem;
+    margin: 0 0 0.25rem;
+}
+
+.csim-sub {
+    color: var(--text-dim, #9fb4a8);
+    margin: 0 0 1.25rem;
+}
+
+.csim-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+    .csim-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.csim-col {
+    border: 1px solid var(--border, #2c3a33);
+    border-radius: 0.6rem;
+    padding: 0.8rem;
+    background: var(--surface-2, #14201a);
+}
+
+.csim-h2 {
+    font-size: 1rem;
+    margin: 0 0 0.6rem;
+    color: var(--accent-strong, #7fe3b0);
+}
+
+.csim-h3 {
+    font-size: 0.95rem;
+    margin: 1.2rem 0 0.5rem;
+    color: var(--accent-strong, #7fe3b0);
+}
+
+.csim-select,
+.csim-paste {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border-strong, #3a4d43);
+    background: var(--surface, #0e1813);
+    color: inherit;
+    font: inherit;
+}
+
+.csim-meta {
+    color: var(--text-dim, #9fb4a8);
+    font-size: 0.85rem;
+    margin: 0.4rem 0 0;
+}
+
+.csim-note {
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-import {
+    border: 1px solid var(--border, #2c3a33);
+    border-radius: 0.6rem;
+    padding: 0.8rem;
+    background: var(--surface-2, #14201a);
+    margin-bottom: 1rem;
+}
+
+.csim-import-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.csim-warn {
+    color: #ffcf99;
+    font-size: 0.85rem;
+}
+
+.csim-ok {
+    color: var(--accent-strong, #7fe3b0);
+    font-size: 0.85rem;
+}
+
+.csim-btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--accent-line, #2f6b4d);
+    background: var(--surface-3, #1b2c23);
+    color: var(--accent-strong, #7fe3b0);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.csim-btn.primary {
+    background: linear-gradient(180deg, var(--accent-strong, #7fe3b0), var(--accent-deep, #2f6b4d));
+    color: #04130d;
+    border-color: transparent;
+}
+
+.csim-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.csim-run {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.csim-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-field.small {
+    font-size: 0.72rem;
+}
+
+.csim-field input,
+.csim-field select {
+    padding: 0.3rem 0.4rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--border-strong, #3a4d43);
+    background: var(--surface, #0e1813);
+    color: var(--text, #e6f2ea);
+    font: inherit;
+}
+
+/* Weapons */
+.csim-weapons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+}
+
+.csim-weapon {
+    border: 1px solid var(--border, #2c3a33);
+    border-radius: 0.45rem;
+    padding: 0.45rem 0.6rem;
+    opacity: 0.6;
+}
+
+.csim-weapon.on {
+    opacity: 1;
+    border-color: var(--accent-line, #2f6b4d);
+}
+
+.csim-weapon-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+}
+
+.csim-weapon-name {
+    font-weight: 600;
+}
+
+.csim-weapon-stats {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-weapon-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.csim-weapon-kw {
+    font-size: 0.72rem;
+    color: var(--accent, #5cc99a);
+}
+
+/* Modifiers */
+.csim-mods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.csim-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+}
+
+.csim-detected {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
+
+.csim-detected-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-detected-chip {
+    font-size: 0.72rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent-line, #2f6b4d);
+    color: var(--accent-strong, #7fe3b0);
+}
+
+/* Results */
+.csim-result-cards {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 1rem;
+}
+
+.csim-card {
+    flex: 1 1 160px;
+    border: 1px solid var(--accent-line, #2f6b4d);
+    border-radius: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface-2, #14201a);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.csim-card-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--accent-strong, #7fe3b0);
+}
+
+.csim-card-label {
+    font-size: 0.8rem;
+}
+
+.csim-card-sub {
+    font-size: 0.7rem;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-funnel,
+.csim-hist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.csim-funnel-row,
+.csim-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.csim-funnel-label {
+    flex: 0 0 130px;
+    font-size: 0.78rem;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-funnel-bar,
+.csim-bar {
+    flex: 1;
+    height: 0.8rem;
+    background: var(--surface, #0e1813);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.csim-funnel-fill,
+.csim-bar-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-deep, #2f6b4d), var(--accent-strong, #7fe3b0));
+}
+
+.csim-bar-fill.slain {
+    background: linear-gradient(90deg, #8a3b3b, #e08a8a);
+}
+
+.csim-funnel-num {
+    flex: 0 0 48px;
+    text-align: right;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.csim-bar-key {
+    flex: 0 0 28px;
+    text-align: right;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-bar-pct {
+    flex: 0 0 44px;
+    font-size: 0.72rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.csim-reanim {
+    margin-top: 1rem;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--accent, #5cc99a);
+    background: rgba(92, 201, 154, 0.08);
+    font-size: 0.85rem;
+}

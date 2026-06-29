@@ -1,0 +1,222 @@
+@page "/combat-sim"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Play
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k._11.Features.CombatSimulator.Adapters
+@using Warhammer40k._11.Features.CombatSimulator.Domain
+@using Warhammer40k._11.Features.CombatSimulator.Engine
+@using Warhammer40k._11.Features.CombatSimulator.Import
+@inject IApiClient Api
+@inject MonteCarloRunner Runner
+@inject ImportedUnitStore Imported
+
+@* Combat Simulator (removable feature — see Features/CombatSimulator/DELETE.md).
+   Monte-Carlo attack/save simulator over native Necron units + imported enemy armies. *@
+<div class="csim">
+	<h1 class="csim-title">Combat Simulator</h1>
+	<p class="csim-sub">Monte-Carlo attack &amp; save simulator (11th edition). Pick an attacker and a target, set modifiers, run.</p>
+
+	@if (_loading)
+	{
+		<p class="csim-note">Loading your roster…</p>
+	}
+	else
+	{
+		<div class="csim-grid">
+			<section class="csim-col">
+				<h2 class="csim-h2">1 · Attacker</h2>
+				<UnitPicker Units="AllUnits" Selected="_attacker" SelectedChanged="OnAttackerChanged" />
+				@if (_attacker is not null)
+				{
+					<WeaponSelector Unit="_attacker" Selection="_weaponSelection" />
+				}
+			</section>
+
+			<section class="csim-col">
+				<h2 class="csim-h2">2 · Target</h2>
+				<UnitPicker Units="AllUnits" Selected="_target" SelectedChanged="OnTargetChanged" />
+				@if (_target is not null)
+				{
+					<p class="csim-meta">@_target.TotalModels model(s), T@(TargetToughness), Sv @(TargetSave)+@(TargetInvulnText)</p>
+				}
+			</section>
+		</div>
+
+		<section class="csim-import">
+			<h2 class="csim-h2">Import enemy army (New Recruit / BattleScribe JSON)</h2>
+			<textarea class="csim-paste" @bind="_importText" rows="3" placeholder="Paste a New Recruit 11th-edition JSON export here…"></textarea>
+			<div class="csim-import-row">
+				<button class="csim-btn" type="button" @onclick="ImportJson" disabled="@string.IsNullOrWhiteSpace(_importText)">Import</button>
+				@if (_importWarnings.Count > 0)
+				{
+					<span class="csim-warn">@string.Join(" ", _importWarnings)</span>
+				}
+				@if (_importedCount > 0)
+				{
+					<span class="csim-ok">Imported @_importedCount unit(s).</span>
+				}
+			</div>
+		</section>
+
+		<div class="csim-grid">
+			<section class="csim-col">
+				<h2 class="csim-h2">3 · Attacker modifiers</h2>
+				<ModifierPanel Attacker="_attackerMods" AttackerChanged="m => _attackerMods = m" />
+			</section>
+			<section class="csim-col">
+				<h2 class="csim-h2">4 · Defender modifiers</h2>
+				<ModifierPanel Defender="_defenderMods" DefenderChanged="m => _defenderMods = m" Abilities="TargetAbilities" />
+			</section>
+		</div>
+
+		<section class="csim-run">
+			<label class="csim-field">Iterations
+				<input type="number" min="100" max="100000" step="1000" @bind="_iterations" />
+			</label>
+			<label class="csim-field">Seed (optional)
+				<input type="number" @bind="_seed" placeholder="random" />
+			</label>
+			<button class="csim-btn primary" type="button" @onclick="RunAsync" disabled="@(_running || !CanRun)">
+				@(_running ? $"Running… {_progress:P0}" : "Run simulation")
+			</button>
+		</section>
+
+		@if (_result is not null)
+		{
+			<ResultsView Result="_result" TargetModels="_target?.TotalModels ?? 0" />
+		}
+	}
+</div>
+
+@code {
+	private bool _loading = true;
+	private bool _running;
+	private double _progress;
+
+	private readonly List<CombatUnit> _native = [];
+	private CombatUnit? _attacker;
+	private CombatUnit? _target;
+	private readonly WeaponSelectionState _weaponSelection = new();
+
+	private AttackerModifiers _attackerMods = new();
+	private DefenderModifiers _defenderMods = new();
+
+	private string _importText = "";
+	private readonly List<string> _importWarnings = [];
+	private int _importedCount;
+
+	private int _iterations = 10_000;
+	private int? _seed;
+
+	private SimulationResult? _result;
+
+	private IReadOnlyList<CombatUnit> AllUnits =>
+		_native.Concat(Imported.Units).ToList();
+
+	private int TargetToughness => _target?.BodyguardToughness ?? _target?.ModelGroups.FirstOrDefault()?.Profile.Toughness ?? 0;
+	private int TargetSave => _target?.ModelGroups.FirstOrDefault()?.Profile.Save ?? 7;
+	private string TargetInvulnText
+	{
+		get
+		{
+			var inv = _target?.ModelGroups.FirstOrDefault()?.Profile.InvulnSave;
+			return inv is null ? "" : $" / {inv}++";
+		}
+	}
+
+	private IReadOnlyList<UnitAbility> TargetAbilities => _target?.UnitAbilities ?? [];
+
+	private bool CanRun => _attacker is not null && _target is not null && _weaponSelection.Any;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var rosters = await Api.GetRostersAsync();
+			var catalogue = await Api.GetCatalogueAsync();
+			foreach (var roster in rosters)
+			{
+				var battle = BattleRoster.Build(roster, catalogue);
+				_native.AddRange(NativeNecronSource.FromBattleRoster(battle));
+			}
+		}
+		catch
+		{
+			// Offline / not signed in: the importer still works; native list stays empty.
+		}
+		finally
+		{
+			_loading = false;
+		}
+	}
+
+	private void OnAttackerChanged(CombatUnit? unit)
+	{
+		_attacker = unit;
+		_weaponSelection.Reset(unit);
+	}
+
+	private void OnTargetChanged(CombatUnit? unit)
+	{
+		_target = unit;
+		// Pre-fill defender modifiers from the unit's parsed defensive abilities (user can edit).
+		var profile = unit?.ModelGroups.FirstOrDefault()?.Profile;
+		_defenderMods = new DefenderModifiers
+		{
+			InvulnSaveOverride = profile?.InvulnSave,
+			FeelNoPainOverride = profile?.FeelNoPain,
+		};
+	}
+
+	private void ImportJson()
+	{
+		_importWarnings.Clear();
+		var result = NewRecruitImporter.Import(_importText);
+		Imported.AddRange(result.Units);
+		_importedCount = result.Units.Count;
+		_importWarnings.AddRange(result.Warnings);
+		_importText = "";
+	}
+
+	private async Task RunAsync()
+	{
+		if (_attacker is null || _target is null)
+			return;
+
+		_running = true;
+		_progress = 0;
+		_result = null;
+		StateHasChanged();
+
+		var config = new SimulationConfig
+		{
+			Weapons = _weaponSelection.ResolvedWeapons(),
+			Target = _target,
+			Attacker = _attackerMods,
+			Defender = _defenderMods,
+			TargetKeywords = TargetKeywordsFor(_target),
+			Iterations = _iterations,
+			Seed = _seed,
+		};
+
+		var progress = new Progress<double>(p =>
+		{
+			_progress = p;
+			InvokeAsync(StateHasChanged);
+		});
+
+		_result = await Task.Run(() => Runner.Run(config, progress));
+		_running = false;
+		_progress = 1;
+	}
+
+	private static List<string> TargetKeywordsFor(CombatUnit unit)
+	{
+		// Use the model-group names + faction as keyword hints for Anti-X matching.
+		var keywords = new List<string> { unit.Faction };
+		foreach (var group in unit.ModelGroups)
+			keywords.Add(group.Profile.Name);
+		return keywords;
+	}
+}

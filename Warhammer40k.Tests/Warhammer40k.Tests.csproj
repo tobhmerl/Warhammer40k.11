@@ -19,8 +19,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- CombatSimulator feature (removable): importer fixture copied next to the test assembly. -->
+    <Content Include="CombatSimulator\Fixtures\dark-angels-sample.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Warhammer40k.Core\Warhammer40k.Core.csproj" />
     <ProjectReference Include="..\Warhammer40k.Api\Warhammer40k.Api.csproj" />
+    <!-- CombatSimulator feature (removable): lets the engine/dice/importer be unit-tested. Remove with the feature. -->
+    <ProjectReference Include="..\Warhammer40k.11\Warhammer40k.11.csproj" />
   </ItemGroup>
 
 </Project>

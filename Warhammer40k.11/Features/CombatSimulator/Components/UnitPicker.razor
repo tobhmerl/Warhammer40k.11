@@ -1,0 +1,26 @@
+@using Warhammer40k._11.Features.CombatSimulator.Domain
+
+@* Combat Simulator unit picker (removable feature). A simple dropdown over native + imported units. *@
+<select class="csim-select" @onchange="OnChange">
+	<option value="">— choose a unit —</option>
+	@for (var i = 0; i < Units.Count; i++)
+	{
+		var unit = Units[i];
+		<option value="@i" selected="@(ReferenceEquals(unit, Selected))">
+			@unit.Name @(unit.Source == CombatSource.Imported ? $"· {unit.Faction}" : "")
+		</option>
+	}
+</select>
+
+@code {
+	[Parameter] public IReadOnlyList<CombatUnit> Units { get; set; } = [];
+	[Parameter] public CombatUnit? Selected { get; set; }
+	[Parameter] public EventCallback<CombatUnit?> SelectedChanged { get; set; }
+
+	private async Task OnChange(ChangeEventArgs e)
+	{
+		var raw = e.Value?.ToString();
+		CombatUnit? unit = int.TryParse(raw, out var i) && i >= 0 && i < Units.Count ? Units[i] : null;
+		await SelectedChanged.InvokeAsync(unit);
+	}
+}
