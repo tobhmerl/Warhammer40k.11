@@ -242,9 +242,8 @@ else
 					var coreAbilities = unit.CoreAbilities;
 					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
-					var hasToggleLine = warlordShown || (!dead && (effectAbilities.Count > 0 || conditionalBuffs.Count > 0));
-					var hasSaveLine = unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
-					var hasUsableLine = !dead && usableAbilities.Count > 0;
+					var hasTopLine = warlordShown || unit.InvulnerableSaves.Count > 0 || unit.FeelNoPains.Count > 0;
+					var hasNowLine = !dead && (conditionalBuffs.Count > 0 || effectAbilities.Count > 0 || usableAbilities.Count > 0);
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
@@ -257,44 +256,14 @@ else
 										<span class="u-name">@unit.Name</span>
 									}
 									<span class="u-chips">
-											@* Line 1 — conditional-effect toggles (e.g. Relentless Onslaught → +1 Hit) *@
-											@if (hasToggleLine)
+											@* Line 1 — Warlord, then Invulnerable saves and Feel No Pain *@
+											@if (hasTopLine)
 											{
 												<span class="chip-line">
-													@if (!dead)
-													{
-														@foreach (var buff in conditionalBuffs)
-														{
-															<span class="chip effect now @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
-																  title="@($"{buff.Label} — tap; switch on to apply {BuffModifierLabel(buff)} ({buff.Effect})")"
-																  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
-																  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
-																@buff.Label
-															</span>
-														}
-													}
 													@if (warlordShown)
 													{
 														<span class="chip warlord">Warlord</span>
 													}
-													@if (!dead)
-													{
-																	@foreach (var a in effectAbilities)
-																	{
-																		<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-																			  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-																			  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-																			  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-																			@a.Ability.Name
-																		</span>
-																	}
-																}
-															</span>
-														}
-											@* Line 2 — Invulnerable saves and Feel No Pain *@
-											@if (hasSaveLine)
-											{
-												<span class="chip-line">
 													@foreach (var inv in unit.InvulnerableSaves)
 													{
 														<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
@@ -309,10 +278,28 @@ else
 													}
 												</span>
 											}
-											@* Line 3 — abilities usable in the current phase + turn, highlighted bright green *@
-											@if (hasUsableLine)
+											@* Line 2 — everything available this phase/turn, highlighted together (buffs, effects, usable) *@
+											@if (hasNowLine)
 											{
 												<span class="chip-line">
+													@foreach (var buff in conditionalBuffs)
+													{
+														<span class="chip effect now @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
+															  title="@($"{buff.Label} — tap; switch on to apply {BuffModifierLabel(buff)} ({buff.Effect})")"
+															  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
+															@buff.Label
+														</span>
+													}
+													@foreach (var a in effectAbilities)
+													{
+														<span class="chip effect @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
+															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
+															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
+															@a.Ability.Name
+														</span>
+													}
 													@foreach (var a in usableAbilities)
 													{
 														<span class="chip ability now" role="button" tabindex="0"
@@ -324,7 +311,7 @@ else
 													}
 												</span>
 											}
-											@* Line 4 — all other always-available abilities and keywords *@
+											@* Line 3 — all other always-available abilities and keywords *@
 											@if (hasAbilityLine)
 											{
 												<span class="chip-line">
