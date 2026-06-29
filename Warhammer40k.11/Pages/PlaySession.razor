@@ -458,7 +458,7 @@ else
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
-																<span class="wsrc">@row.Part.Datasheet.Name</span>
+																<span class="wsrc" title="@row.Part.Datasheet.Name">@ShortName(row.Part.Datasheet.Name)</span>
 															}
 															@foreach (var kw in row.Weapon.Keywords)
 															{
