@@ -508,7 +508,7 @@ else
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
 															{
-																<span class="wsrc">@row.Part.Datasheet.Name</span>
+																<span class="wsrc" title="@row.Part.Datasheet.Name">@ShortName(row.Part.Datasheet.Name)</span>
 															}
 															@foreach (var kw in row.Weapon.Keywords)
 															{
@@ -1617,10 +1617,26 @@ else
 	{
 		var bodyguard = unit.Parts.FirstOrDefault(p => !p.IsLeader) ?? unit.Parts.FirstOrDefault();
 		var name = bodyguard?.Datasheet.Name;
-		return MeaningfulWord(string.IsNullOrWhiteSpace(name) ? unit.Name : name);
+		return ShortName(string.IsNullOrWhiteSpace(name) ? unit.Name : name);
 	}
 
 	private static readonly string[] DeckNoiseWords = ["the", "of", "and", "a", "an"];
+
+	// Hand-picked abbreviations for units whose one-word label would be ambiguous or too long.
+	private static readonly Dictionary<string, string> ShortNames = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["Lokhust Heavy Destroyer"] = "LHD",
+		["Lokhust Heavy Destroyers"] = "LHD",
+		["Doomsday Ark"] = "DDA",
+	};
+
+	// The compact label for a unit/model name used in deck pills and weapon source tags: a hand-picked acronym
+	// when defined, otherwise the single most identifying word (see MeaningfulWord).
+	private static string ShortName(string? name)
+	{
+		var n = (name ?? "").Trim();
+		return ShortNames.TryGetValue(n, out var s) ? s : MeaningfulWord(n);
+	}
 
 	// Picks the single most identifying word from a unit name. An "X the Y" epithet (no "of") reads as a proper
 	// name, so we keep the leading name ("Imotekh the Stormlord" → "Imotekh", "Trazyn the Infinite" → "Trazyn").
