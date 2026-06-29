@@ -206,7 +206,7 @@ public sealed class BattleRoster
 
         // A model's own permanent self-effects (e.g. Tomb Blades' Nebuloscope → ranged [IGNORES COVER]) apply
         // to its own weapons of the matching class only.
-        foreach (var effect in part.Datasheet.SelfEffects)
+        foreach (var effect in part.ActiveSelfEffects)
         {
             if (!ClassMatches(effect.WeaponClass, ranged))
                 continue;
@@ -234,7 +234,7 @@ public sealed class BattleRoster
                 if (conferral.CriticalHitOn > 0 && ClassMatches(conferral.WeaponClass, ranged) && ConferralApplied(leader, conferral))
                     best = best is { } b ? Math.Min(b, conferral.CriticalHitOn) : conferral.CriticalHitOn;
 
-        foreach (var effect in part.Datasheet.SelfEffects)
+        foreach (var effect in part.ActiveSelfEffects)
             if (effect.CriticalHitOn > 0 && ClassMatches(effect.WeaponClass, ranged))
                 best = best is { } b ? Math.Min(b, effect.CriticalHitOn) : effect.CriticalHitOn;
 
@@ -299,7 +299,7 @@ public sealed class BattleRoster
 
         // A model's own permanent self-effects (e.g. Tomb Blades' Shieldvanes → Save 3+ / Move 8") rewrite
         // its own statline only — never an attached leader's or the rest of the group.
-        foreach (var effect in part.Datasheet.SelfEffects)
+        foreach (var effect in part.ActiveSelfEffects)
             foreach (var mod in effect.StatModifiers)
                 if (!mod.IsWeaponStat)
                     result.Add(mod);
@@ -488,6 +488,9 @@ public sealed class BattleUnit
             {
                 if (parse(ability) is not { } save)
                     continue;
+                // Wargear-granted saves (e.g. a Nanoscarab amulet's Feel No Pain) only count when that wargear is chosen.
+                if (!WargearResolver.IsAbilityActive(part.Datasheet, part.Unit, ability.Name))
+                    continue;
                 // Own save rule → always-on; conferring ability → only when the player ticked "Apply to unit".
                 if (!PhaseClassifier.IsOwnSaveRule(ability)
                     && !_roster.IsApplied(AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name)))
@@ -582,7 +585,8 @@ public sealed class BattleUnit
             foreach (var part in Parts)
             {
                 foreach (var ability in part.Datasheet.Abilities)
-                    if (!HiddenInPlay(ability) && !AbsorbedBySelfEffect(part.Datasheet, ability) && seen.Add(ability.Name))
+                    if (!HiddenInPlay(ability) && !AbsorbedBySelfEffect(part.Datasheet, ability)
+                        && WargearResolver.IsAbilityActive(part.Datasheet, part.Unit, ability.Name) && seen.Add(ability.Name))
                     {
                         var key = AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, ability.Name);
                         var schedule = _roster.FindSchedule(key);
@@ -795,9 +799,20 @@ public sealed class BattlePart
         Weapons = resolved.Select(r => r.Weapon).ToList();
         RangedWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
         MeleeWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
+        // Self-effects whose source ability is unselected wargear are gated out (e.g. a Tomb Blade's Nebuloscope
+        // [IGNORES COVER] applies only when that wargear is chosen); always-on self-effects (Shieldvanes) stay.
+        ActiveSelfEffects = datasheet.SelfEffects
+            .Where(e => WargearResolver.IsAbilityActive(datasheet, unit, e.SourceAbility))
+            .ToList();
     }
 
     private readonly Dictionary<WeaponProfile, int> _modelsCarrying;
+
+    /// <summary>
+    /// This part's permanent self-effects currently in play: <see cref="Datasheet.SelfEffects"/> minus any whose
+    /// source ability is a piece of unselected wargear (see <see cref="WargearResolver.IsAbilityActive"/>).
+    /// </summary>
+    public IReadOnlyList<ConferredEffect> ActiveSelfEffects { get; }
 
     /// <summary>The underlying roster unit (size, warlord flag, wargear, …).</summary>
     public RosterUnit Unit { get; }

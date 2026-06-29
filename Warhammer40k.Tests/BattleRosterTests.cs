@@ -428,7 +428,9 @@ public class BattleRosterTests
         var catalogue = CatalogueProvider.LoadEmbedded();
         var tombBlades = catalogue.Datasheets.Single(d => d.Name == "Tomb Blades");
 
+        var wargear = tombBlades.WargearGroups.Single(g => g.Options.Any(o => o.Id == "nebuloscope"));
         var roster = new Roster { Units = [Unit("t", tombBlades.Id, models: 3)] };
+        roster.Units[0].Wargear = [new WargearSelection { GroupId = wargear.Id, OptionIds = ["nebuloscope"] }];
         var battle = BattleRoster.Build(roster, catalogue);
         var unit = Assert.Single(battle.Units);
         var part = unit.Primary;
@@ -446,13 +448,76 @@ public class BattleRosterTests
         var abilityNames = unit.CombinedAbilities.Select(a => a.Ability.Name).ToList();
         Assert.DoesNotContain("Shieldvanes", abilityNames);
         Assert.DoesNotContain("Nebuloscope", abilityNames);
-        Assert.Contains("Shadowloom", abilityNames);
+        Assert.DoesNotContain("Shadowloom", abilityNames); // unchosen wargear is gated out
 
         // Stealth is wargear-conditional (Shieldvanes), not a faction rule, so it must not surface as a core chip.
         Assert.DoesNotContain(unit.CoreAbilities, a => a.Ability.Name == "Stealth");
         Assert.Contains(unit.CoreAbilities, a => a.Ability.Name.StartsWith("Scouts"));
     }
 
+    [Fact]
+    public void Real_seed_Tomb_Blades_without_Nebuloscope_have_no_ignores_cover()
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var tombBlades = catalogue.Datasheets.Single(d => d.Name == "Tomb Blades");
+        var roster = new Roster { Units = [Unit("t", tombBlades.Id, models: 3)] }; // no wargear chosen
+
+        var battle = BattleRoster.Build(roster, catalogue);
+        var unit = Assert.Single(battle.Units);
+        var part = unit.Primary;
+
+        // Always-on Shieldvanes still rewrites the statline; the unchosen Nebuloscope grants no [IGNORES COVER].
+        Assert.Equal("3+", StatMath.ApplyAll(part.Datasheet.StatProfiles[0].Save, battle.UnitStatModifiers(unit, part).Where(m => m.Target == StatTarget.Save)));
+        Assert.DoesNotContain("Ignores Cover", battle.GrantedWeaponAbilities(unit, part, ranged: true), StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Real_seed_Lokhust_Lord_amulet_grants_fnp_and_hides_the_orb()
+    {
+        var (battle, unit) = BuildLokhustLord("nanoscarab-amulet");
+        var abilityNames = unit.CombinedAbilities.Select(a => a.Ability.Name).ToList();
+
+        Assert.Contains(unit.FeelNoPains, b => b.Value == "5+");   // amulet grants Feel No Pain 5+
+        Assert.DoesNotContain("Resurrection orb", abilityNames);   // the unchosen orb is gated out
+        Assert.DoesNotContain("Nanoscarab amulet", abilityNames);  // shown as a chip, not prose
+    }
+
+    [Fact]
+    public void Real_seed_Lokhust_Lord_orb_shows_orb_ability_and_no_fnp()
+    {
+        var (battle, unit) = BuildLokhustLord("resurrection-orb");
+        var abilityNames = unit.CombinedAbilities.Select(a => a.Ability.Name).ToList();
+
+        Assert.Empty(unit.FeelNoPains);                            // no amulet → no FNP
+        Assert.Contains("Resurrection orb", abilityNames);         // the chosen orb is listed
+        Assert.DoesNotContain("Nanoscarab amulet", abilityNames);
+    }
+
+    [Fact]
+    public void Real_seed_Lokhust_Lord_with_no_equipment_shows_neither()
+    {
+        var (battle, unit) = BuildLokhustLord();
+        var abilityNames = unit.CombinedAbilities.Select(a => a.Ability.Name).ToList();
+
+        Assert.Empty(unit.FeelNoPains);
+        Assert.DoesNotContain("Resurrection orb", abilityNames);
+        Assert.DoesNotContain("Nanoscarab amulet", abilityNames);
+    }
+
+    // Builds a standalone Lokhust Lord with the given Equipment option(s) selected (none = bare).
+    private static (BattleRoster Battle, BattleUnit Unit) BuildLokhustLord(params string[] equipmentOptionIds)
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var lord = catalogue.Datasheets.Single(d => d.Name == "Lokhust Lord");
+        var roster = new Roster { Units = [Unit("u1", lord.Id)] };
+        if (equipmentOptionIds.Length > 0)
+        {
+            var equip = lord.WargearGroups.Single(g => g.Options.Any(o => o.Id == "nanoscarab-amulet"));
+            roster.Units[0].Wargear = [new WargearSelection { GroupId = equip.Id, OptionIds = equipmentOptionIds.ToList() }];
+        }
+        var battle = BattleRoster.Build(roster, catalogue);
+        return (battle, Assert.Single(battle.Units));
+    }
 
     private static Datasheet LeaderSheet(string id, string name, string wounds, params ConferredEffect[] conferrals)
     {

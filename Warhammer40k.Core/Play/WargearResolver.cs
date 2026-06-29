@@ -64,16 +64,59 @@ public static class WargearResolver
         foreach (var group in datasheet.WargearGroups.Where(g => g.PerModel))
             ApplyPerModelGroup(datasheet, group, FindSelection(unit, group.Id), models, counts);
 
-        // 3) Toggle groups: selected options' weapons are carried by every model. A unit with no selections of
-        //    any kind keeps its full toggle loadout (never-empty back-compat).
-        var hasAnySelection = unit.Wargear.Any(w => w.OptionIds.Count > 0 || w.Counts.Count > 0);
+        // 3) Toggle groups: a group's selected options are carried by every model; a group with NO selection of
+        //    its own keeps its full loadout (never-empty back-compat). Evaluated PER GROUP so picking one group
+        //    (e.g. a Lokhust Lord's Equipment amulet) never blanks another group's weapons.
         foreach (var group in datasheet.WargearGroups.Where(g => !g.PerModel))
-            ApplyToggleGroup(datasheet, group, FindSelection(unit, group.Id), hasAnySelection, models, counts);
+        {
+            var selection = FindSelection(unit, group.Id);
+            var groupHasSelection = selection is not null && selection.OptionIds.Count > 0;
+            ApplyToggleGroup(datasheet, group, selection, groupHasSelection, models, counts);
+        }
 
         return datasheet.Weapons
             .Where(w => counts.TryGetValue(w.Name, out var c) && c > 0)
             .Select(w => new ResolvedWeapon(w, counts[w.Name]))
             .ToList();
+    }
+
+    /// <summary>
+    /// Whether a datasheet ability is "in play" for <paramref name="unit"/> given its wargear. An ability whose
+    /// name exactly matches a <see cref="WargearOption"/> — i.e. it is a piece of selectable wargear (e.g. a
+    /// Lokhust Lord's "Nanoscarab amulet" or a Tomb Blade's "Nebuloscope") — is active only when that option is
+    /// selected; an ability matched by no option is always active. Gates the ability's prose, its derived chips
+    /// (Feel No Pain / Invulnerable), and its weapon self-effects on the chosen wargear.
+    /// </summary>
+    public static bool IsAbilityActive(Datasheet datasheet, RosterUnit unit, string abilityName)
+    {
+        ArgumentNullException.ThrowIfNull(datasheet);
+        ArgumentNullException.ThrowIfNull(unit);
+        if (string.IsNullOrWhiteSpace(abilityName))
+            return true;
+
+        var name = abilityName.Trim();
+        var governed = false;
+        foreach (var group in datasheet.WargearGroups)
+        {
+            foreach (var option in group.Options)
+            {
+                if (!string.Equals(name, option.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+                    continue;
+                governed = true;
+                if (IsOptionSelected(unit, group.Id, option.Id))
+                    return true;
+            }
+        }
+
+        return !governed; // governed by wargear but nothing selected → inactive; ungoverned → always active
+    }
+
+    /// <summary>True when <paramref name="unit"/> has picked <paramref name="optionId"/> within <paramref name="groupId"/>.</summary>
+    public static bool IsOptionSelected(RosterUnit unit, string groupId, string optionId)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
+        return selection is not null && selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase);
     }
 
     private static HashSet<string> WeaponNamesForGroups(Datasheet datasheet, Func<WargearGroup, bool> predicate)
@@ -123,11 +166,11 @@ public static class WargearResolver
 
     // Includes a toggle group's selected options' weapons at full model count. With no selections anywhere,
     // the whole toggle loadout is included (rosters predating weapon-pick are never shown empty).
-    private static void ApplyToggleGroup(Datasheet datasheet, WargearGroup group, WargearSelection? selection, bool hasAnySelection, int models, Dictionary<string, int> counts)
+    private static void ApplyToggleGroup(Datasheet datasheet, WargearGroup group, WargearSelection? selection, bool groupHasSelection, int models, Dictionary<string, int> counts)
     {
         foreach (var option in group.Options)
         {
-            var selected = !hasAnySelection
+            var selected = !groupHasSelection
                 || (selection is not null && selection.OptionIds.Contains(option.Id, StringComparer.OrdinalIgnoreCase));
             if (!selected)
                 continue;

@@ -252,4 +252,37 @@ public class WargearResolverTests
         Assert.Equal(1, one["Enmitic exterminator"]);
         Assert.Equal(1, one["Close combat weapon"]);
     }
+
+    // ---- Wargear-gated abilities (an ability whose name matches a wargear option) ----
+
+    private static Datasheet GearSheet() => new()
+    {
+        Id = "gear",
+        Name = "Gear",
+        WargearGroups =
+        [
+            new WargearGroup
+            {
+                Id = "equip", Name = "Equipment", Min = 0, Max = 1,
+                Options = [new() { Id = "nanoscarab-amulet", Name = "Nanoscarab amulet" }, new() { Id = "resurrection-orb", Name = "Resurrection orb" }],
+            },
+        ],
+    };
+
+    [Fact]
+    public void IsAbilityActive_ungoverned_ability_is_always_active()
+    {
+        Assert.True(WargearResolver.IsAbilityActive(GearSheet(), Unit("gear"), "Driven by Hatred"));
+    }
+
+    [Fact]
+    public void IsAbilityActive_wargear_ability_is_inactive_until_its_option_is_selected()
+    {
+        var sheet = GearSheet();
+
+        Assert.False(WargearResolver.IsAbilityActive(sheet, Unit("gear"), "Nanoscarab amulet"));  // nothing picked
+        Assert.True(WargearResolver.IsAbilityActive(sheet, Unit("gear", ("equip", ["nanoscarab-amulet"])), "Nanoscarab amulet"));
+        Assert.False(WargearResolver.IsAbilityActive(sheet, Unit("gear", ("equip", ["nanoscarab-amulet"])), "Resurrection orb")); // the other option
+        Assert.True(WargearResolver.IsAbilityActive(sheet, Unit("gear", ("equip", ["resurrection-orb"])), "Resurrection orb"));
+    }
 }
