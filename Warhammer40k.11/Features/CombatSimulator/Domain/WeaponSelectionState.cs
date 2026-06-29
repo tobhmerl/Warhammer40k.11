@@ -17,7 +17,10 @@ public sealed class WeaponSelectionState
 
     private readonly List<Entry> _entries = [];
 
-    /// <summary>Rebuilds the selectable list from a unit (all weapons selected by default).</summary>
+    /// <summary>When true the selector shows/uses melee weapons; when false, ranged. Defaults to ranged.</summary>
+    public bool ShowMelee { get; private set; }
+
+    /// <summary>Rebuilds the selectable list from a unit (weapons of the current class selected by default).</summary>
     public void Reset(CombatUnit? unit)
     {
         _entries.Clear();
@@ -27,11 +30,23 @@ public sealed class WeaponSelectionState
             _entries.Add(new Entry
             {
                 Weapon = weapon,
-                Selected = true,
+                Selected = weapon.IsMelee == ShowMelee,
                 Models = Math.Max(1, weapon.CarriedByModels),
                 ModeIndex = 0,
             });
     }
+
+    /// <summary>Switches between ranged and melee: only weapons of the chosen class stay selected.</summary>
+    public void SetClass(bool melee)
+    {
+        ShowMelee = melee;
+        foreach (var e in _entries)
+            e.Selected = e.Weapon.IsMelee == melee;
+    }
+
+    /// <summary>The weapons of the current class, with their original indices, for rendering.</summary>
+    public IReadOnlyList<(int Index, CombatWeapon Weapon)> VisibleWeapons =>
+        _entries.Select((e, i) => (i, e.Weapon)).Where(t => t.Weapon.IsMelee == ShowMelee).ToList();
 
     /// <summary>The weapons, in order, for rendering the selector rows.</summary>
     public IReadOnlyList<CombatWeapon> Weapons => _entries.Select(e => e.Weapon).ToList();

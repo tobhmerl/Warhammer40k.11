@@ -1,71 +1,33 @@
 @using Warhammer40k._11.Features.CombatSimulator.Domain
 @using System.Globalization
 
-@* Combat Simulator results (removable feature). Summary, funnel, histogram, models-slain, expected-value check. *@
+@* Combat Simulator results (removable feature). Plain-language summary: the numbers that matter at a glance. *@
 <div class="csim-results">
-	<div class="csim-result-cards">
-		<div class="csim-card">
-			<span class="csim-card-num">@F2(Result.EffectiveDamage.Mean)</span>
-			<span class="csim-card-label">mean damage</span>
-			<span class="csim-card-sub">closed-form @F2(Result.ExpectedValue.Damage)</span>
+	<div class="csim-headline">
+		<div class="csim-big">
+			<span class="csim-big-num">@F1(Result.ModelsSlain.Mean)</span>
+			<span class="csim-big-label">models destroyed</span>
+			<span class="csim-big-sub">of @TargetModels · @Range(Result.ModelsSlain)</span>
 		</div>
-		<div class="csim-card">
-			<span class="csim-card-num">@F2(Result.ModelsSlain.Mean)</span>
-			<span class="csim-card-label">models slain</span>
-			<span class="csim-card-sub">closed-form @F2(Result.ExpectedValue.ModelsSlain)</span>
-		</div>
-		<div class="csim-card">
-			<span class="csim-card-num">@P0(Result.ProbabilityWiped)</span>
-			<span class="csim-card-label">P(unit wiped)</span>
-			<span class="csim-card-sub">@Result.Iterations.ToString("N0") runs</span>
+		<div class="csim-big">
+			<span class="csim-big-num">@F1(Result.EffectiveDamage.Mean)</span>
+			<span class="csim-big-label">wounds dealt</span>
+			<span class="csim-big-sub">@Range(Result.EffectiveDamage)</span>
 		</div>
 	</div>
 
-	<h3 class="csim-h3">Funnel (average per run)</h3>
-	<div class="csim-funnel">
-		@FunnelRow("Attacks", Result.Funnel.Attacks, Result.Funnel.Attacks)
-		@FunnelRow("Hits", Result.Funnel.Hits, Result.Funnel.Attacks)
-		@FunnelRow("→ crit hits", Result.Funnel.CriticalHits, Result.Funnel.Attacks)
-		@FunnelRow("→ sustained", Result.Funnel.SustainedExtraHits, Result.Funnel.Attacks)
-		@FunnelRow("Wounds", Result.Funnel.Wounds, Result.Funnel.Attacks)
-		@FunnelRow("→ lethal auto", Result.Funnel.LethalAutoWounds, Result.Funnel.Attacks)
-		@FunnelRow("→ crit wounds", Result.Funnel.CriticalWounds, Result.Funnel.Attacks)
-		@FunnelRow("→ dev mortals", Result.Funnel.DevastatingMortalWounds, Result.Funnel.Attacks)
-		@FunnelRow("Failed saves", Result.Funnel.FailedArmourSaves + Result.Funnel.FailedInvulnSaves, Result.Funnel.Attacks)
-		@FunnelRow("FNP ignored", Result.Funnel.FnpIgnored, Result.Funnel.Attacks)
-		@FunnelRow("Damage (post-FNP)", Result.Funnel.DamageDealt, Result.Funnel.DamageDealt)
-	</div>
+	<ul class="csim-steps">
+		<li class="csim-step"><span class="csim-step-label">Hits landed</span><span class="csim-step-num">@F1(Result.Funnel.Hits)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Wounds caused</span><span class="csim-step-num">@F1(WoundsCaused)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Saves failed</span><span class="csim-step-num">@F1(FailedSaves)</span></li>
+		<li class="csim-step"><span class="csim-step-label">Wounds dealt</span><span class="csim-step-num">@F1(Result.Funnel.EffectiveDamage)</span></li>
+		<li class="csim-step strong"><span class="csim-step-label">Models destroyed</span><span class="csim-step-num">@F1(Result.Funnel.ModelsSlain)</span></li>
+	</ul>
 
-	<h3 class="csim-h3">Damage distribution</h3>
-	<div class="csim-hist">
-		@{
-			var max = Result.EffectiveDamage.Histogram.Values.DefaultIfEmpty(1).Max();
-			var keys = Result.EffectiveDamage.Histogram.Keys.OrderBy(k => k).ToList();
-		}
-		@foreach (var k in keys)
-		{
-			var count = Result.EffectiveDamage.Histogram[k];
-			var pct = max > 0 ? count * 100.0 / max : 0;
-			<div class="csim-bar-row" title="@k damage: @P1(count / (double)Result.Iterations)">
-				<span class="csim-bar-key">@k</span>
-				<span class="csim-bar"><span class="csim-bar-fill" style="width:@Css(pct)%"></span></span>
-			</div>
-		}
-	</div>
-	<p class="csim-meta">median @Result.EffectiveDamage.Median · p25 @Result.EffectiveDamage.P25 · p75 @Result.EffectiveDamage.P75 · min @Result.EffectiveDamage.Min · max @Result.EffectiveDamage.Max · σ @F2(Result.EffectiveDamage.StdDev)</p>
-
-	<h3 class="csim-h3">Models slain</h3>
-	<div class="csim-hist">
-		@for (var k = 0; k < Result.ModelsSlainProbabilities.Count; k++)
-		{
-			var p = Result.ModelsSlainProbabilities[k];
-			<div class="csim-bar-row" title="@P1(p)">
-				<span class="csim-bar-key">@k</span>
-				<span class="csim-bar"><span class="csim-bar-fill slain" style="width:@Css(p * 100)%"></span></span>
-				<span class="csim-bar-pct">@P0(p)</span>
-			</div>
-		}
-	</div>
+	<p class="csim-wipe">
+		Chance to wipe the unit: <strong>@P0(Result.ProbabilityWiped)</strong>
+		<span class="csim-runs">· @Result.Iterations.ToString("N0") simulated games</span>
+	</p>
 
 	@if (!string.IsNullOrEmpty(Result.ReanimationPreview))
 	{
@@ -77,31 +39,12 @@
 	[Parameter] public SimulationResult Result { get; set; } = new();
 	[Parameter] public int TargetModels { get; set; }
 
-	private RenderFragment FunnelRow(string label, double value, double scaleRef) => builder =>
-	{
-		var pct = scaleRef > 0 ? Math.Clamp(value / scaleRef * 100, 0, 100) : 0;
-		builder.OpenElement(0, "div");
-		builder.AddAttribute(1, "class", "csim-funnel-row");
-		builder.OpenElement(2, "span");
-		builder.AddAttribute(3, "class", "csim-funnel-label");
-		builder.AddContent(4, label);
-		builder.CloseElement();
-		builder.OpenElement(5, "span");
-		builder.AddAttribute(6, "class", "csim-funnel-bar");
-		builder.OpenElement(7, "span");
-		builder.AddAttribute(8, "class", "csim-funnel-fill");
-		builder.AddAttribute(9, "style", $"width:{Css(pct)}%");
-		builder.CloseElement();
-		builder.CloseElement();
-		builder.OpenElement(10, "span");
-		builder.AddAttribute(11, "class", "csim-funnel-num");
-		builder.AddContent(12, F2(value));
-		builder.CloseElement();
-		builder.CloseElement();
-	};
+	// "Wounds caused" = successful wound rolls + lethal auto-wounds (everything that got past the to-wound step).
+	private double WoundsCaused => Result.Funnel.Wounds + Result.Funnel.LethalAutoWounds;
+	private double FailedSaves => Result.Funnel.FailedArmourSaves + Result.Funnel.FailedInvulnSaves;
 
-	private static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+	private static string F1(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);
 	private static string P0(double v) => v.ToString("P0", CultureInfo.InvariantCulture);
-	private static string P1(double v) => v.ToString("P1", CultureInfo.InvariantCulture);
-	private static string Css(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+	private static string Range(Distribution d) => $"usually {d.P25}–{d.P75}, up to {d.Max}";
 }

@@ -308,59 +308,64 @@
     color: var(--accent, #5cc99a);
 }
 
-/* Modifiers — grouped into labelled sections, each a wrapping row of compact controls. */
-.csim-mgroups {
+/* Modifiers — one per line: bullet · label (left) · control (right). */
+.csim-mlist {
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
-    margin-top: 0.5rem;
 }
 
-.csim-mgroup {
-    border: 1px solid var(--border, #2c3a33);
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.6rem;
-    background: var(--surface, #0e1813);
-}
-
-.csim-mgroup-title {
-    display: block;
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--accent, #5cc99a);
-    margin-bottom: 0.45rem;
-}
-
-.csim-mrow {
+.csim-mline {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 0.45rem 0.6rem;
+    gap: 0.6rem;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 1px solid var(--border, #2c3a33);
+    font-size: 0.85rem;
 }
 
-.csim-mrow + .csim-mrow {
-    margin-top: 0.45rem;
+.csim-mline::before {
+    content: "·";
+    color: var(--accent, #5cc99a);
+    font-weight: 800;
 }
 
-.csim-chip {
-    display: inline-flex;
+.csim-mline.check::before {
+    content: "";
+}
+
+.csim-mline.check label {
+    display: flex;
     align-items: center;
-    gap: 0.3rem;
-    font-size: 0.78rem;
-    padding: 0.25rem 0.4rem;
+    gap: 0.45rem;
+    cursor: pointer;
+}
+
+.csim-mlabel {
+    flex: 1;
+    color: var(--text, #e6f2ea);
+}
+
+.csim-mline > select,
+.csim-mline > input {
+    flex: 0 0 5.5rem;
+    padding: 0.4rem;
     border-radius: 0.35rem;
-    background: var(--surface-2, #14201a);
-    white-space: nowrap;
+    border: 1px solid var(--border-strong, #3a4d43);
+    background: var(--surface, #0e1813);
+    color: var(--text, #e6f2ea);
+    font: inherit;
+    text-align: center;
 }
 
 .csim-detected {
-    flex-basis: 100%;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem;
-    margin-top: 0.4rem;
+    margin-top: 0.6rem;
 }
 
 .csim-detected-label {
@@ -378,100 +383,95 @@
     color: var(--accent-strong, #7fe3b0);
 }
 
-/* Results */
-.csim-result-cards {
-    display: flex;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-    margin: 0.5rem 0 1rem;
+/* Results — two big headline numbers, then a plain step list. */
+.csim-results {
+    margin-top: 0.5rem;
 }
 
-.csim-card {
-    flex: 1 1 160px;
+.csim-headline {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+}
+
+.csim-big {
+    flex: 1;
     border: 1px solid var(--accent-line, #2f6b4d);
     border-radius: 0.6rem;
-    padding: 0.7rem 0.9rem;
+    padding: 0.7rem 0.8rem;
     background: var(--surface-2, #14201a);
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.1rem;
+    text-align: center;
 }
 
-.csim-card-num {
-    font-size: 1.6rem;
+.csim-big-num {
+    font-size: 2rem;
     font-weight: 800;
     color: var(--accent-strong, #7fe3b0);
+    line-height: 1.1;
 }
 
-.csim-card-label {
-    font-size: 0.8rem;
+.csim-big-label {
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
-.csim-card-sub {
+.csim-big-sub {
     font-size: 0.7rem;
     color: var(--text-dim, #9fb4a8);
 }
 
-.csim-funnel,
-.csim-hist {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.csim-funnel-row,
-.csim-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.csim-funnel-label {
-    flex: 0 0 130px;
-    font-size: 0.78rem;
-    color: var(--text-dim, #9fb4a8);
-}
-
-.csim-funnel-bar,
-.csim-bar {
-    flex: 1;
-    height: 0.8rem;
-    background: var(--surface, #0e1813);
-    border-radius: 999px;
+.csim-steps {
+    list-style: none;
+    margin: 0 0 0.8rem;
+    padding: 0;
+    border: 1px solid var(--border, #2c3a33);
+    border-radius: 0.6rem;
     overflow: hidden;
 }
 
-.csim-funnel-fill,
-.csim-bar-fill {
-    display: block;
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-deep, #2f6b4d), var(--accent-strong, #7fe3b0));
+.csim-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--border, #2c3a33);
+    font-size: 0.9rem;
 }
 
-.csim-bar-fill.slain {
-    background: linear-gradient(90deg, #8a3b3b, #e08a8a);
+.csim-step:last-child {
+    border-bottom: none;
 }
 
-.csim-funnel-num {
-    flex: 0 0 48px;
-    text-align: right;
-    font-size: 0.78rem;
+.csim-step.strong {
+    background: rgba(127, 227, 176, 0.1);
+    font-weight: 700;
+}
+
+.csim-step-label {
+    color: var(--text, #e6f2ea);
+}
+
+.csim-step-num {
     font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--accent-strong, #7fe3b0);
 }
 
-.csim-bar-key {
-    flex: 0 0 28px;
-    text-align: right;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
+.csim-wipe {
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem;
+}
+
+.csim-wipe strong {
+    color: var(--accent-strong, #7fe3b0);
+}
+
+.csim-runs {
     color: var(--text-dim, #9fb4a8);
-}
-
-.csim-bar-pct {
-    flex: 0 0 44px;
-    font-size: 0.72rem;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
 }
 
 .csim-reanim {

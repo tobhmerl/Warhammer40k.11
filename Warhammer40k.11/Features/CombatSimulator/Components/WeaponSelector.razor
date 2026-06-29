@@ -1,30 +1,29 @@
 @using Warhammer40k._11.Features.CombatSimulator.Domain
 
-@* Combat Simulator weapon selector (removable feature). Per-weapon: fire toggle, firing-model count, mode. *@
+@* Combat Simulator weapon selector (removable feature). Shows only weapons of the chosen class (ranged/melee). *@
 <div class="csim-weapons">
-	@for (var i = 0; i < Selection.Weapons.Count; i++)
+	@foreach (var (index, weapon) in Selection.VisibleWeapons)
 	{
-		var index = i;
-		var weapon = Selection.Weapons[index];
-		<div class="csim-weapon @(Selection.IsSelected(index) ? "on" : "")">
+		var i = index;
+		<div class="csim-weapon @(Selection.IsSelected(i) ? "on" : "")">
 			<label class="csim-weapon-head">
-				<input type="checkbox" checked="@Selection.IsSelected(index)"
-					   @onchange="e => Selection.SetSelected(index, (bool)e.Value!)" />
+				<input type="checkbox" checked="@Selection.IsSelected(i)"
+					   @onchange="e => Selection.SetSelected(i, (bool)e.Value!)" />
 				<span class="csim-weapon-name">@DisplayName(weapon)</span>
 				<span class="csim-weapon-stats">@StatLine(weapon)</span>
 			</label>
 			<div class="csim-weapon-row">
 				<label class="csim-field small">models
-					<input type="number" min="0" value="@Selection.Models(index)"
-						   @onchange="e => Selection.SetModels(index, ParseInt(e.Value))" />
+					<input type="number" min="0" value="@Selection.Models(i)"
+						   @onchange="e => Selection.SetModels(i, ParseInt(e.Value))" />
 				</label>
 				@if (weapon.HasFiringModes)
 				{
 					<label class="csim-field small">mode
-						<select @onchange="e => Selection.SetMode(index, ParseInt(e.Value))">
+						<select @onchange="e => Selection.SetMode(i, ParseInt(e.Value))">
 							@for (var m = 0; m < weapon.FiringModes.Count; m++)
 							{
-								<option value="@m" selected="@(Selection.ModeIndex(index) == m)">@weapon.FiringModes[m].Name</option>
+								<option value="@m" selected="@(Selection.ModeIndex(i) == m)">@ModeName(weapon.FiringModes[m].Name)</option>
 							}
 						</select>
 					</label>
@@ -36,9 +35,9 @@
 			</div>
 		</div>
 	}
-	@if (Selection.Weapons.Count == 0)
+	@if (Selection.VisibleWeapons.Count == 0)
 	{
-		<p class="csim-note">This unit has no weapons.</p>
+		<p class="csim-note">No @(Selection.ShowMelee ? "melee" : "ranged") weapons on this unit.</p>
 	}
 </div>
 
@@ -47,6 +46,8 @@
 	[Parameter] public WeaponSelectionState Selection { get; set; } = new();
 
 	private static string DisplayName(CombatWeapon w) => w.HasFiringModes ? w.Name.Split('-')[0].Trim() : w.Name;
+
+	private static string ModeName(string full) => full.Contains('-') ? full[(full.IndexOf('-') + 1)..].Trim() : full;
 
 	private static string StatLine(CombatWeapon w) =>
 		$"A {w.Attacks} · {(w.IsMelee ? "WS" : "BS")} {w.Skill}+ · S {w.Strength} · AP {w.ArmourPenetration} · D {w.Damage}";

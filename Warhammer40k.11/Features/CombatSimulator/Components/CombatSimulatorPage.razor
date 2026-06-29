@@ -24,8 +24,13 @@
 	else
 	{
 		<div class="csim-direction" role="group" aria-label="Who is attacking">
-			<button type="button" class="csim-dir @(_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(true)">My army attacks ▸</button>
-			<button type="button" class="csim-dir @(!_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(false)">Opponent attacks ◂</button>
+			<button type="button" class="csim-dir @(_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(true)">My attacks ▸</button>
+			<button type="button" class="csim-dir @(!_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(false)">Opp attacks ◂</button>
+		</div>
+
+		<div class="csim-direction" role="group" aria-label="Weapon type">
+			<button type="button" class="csim-dir @(!_weaponSelection.ShowMelee ? "on" : "")" @onclick="() => SetWeaponClass(false)">Ranged</button>
+			<button type="button" class="csim-dir @(_weaponSelection.ShowMelee ? "on" : "")" @onclick="() => SetWeaponClass(true)">Melee</button>
 		</div>
 
 		<section class="csim-col">
@@ -219,6 +224,8 @@
 		_attacker = unit;
 		_weaponSelection.Reset(unit);
 	}
+
+	private void SetWeaponClass(bool melee) => _weaponSelection.SetClass(melee);
 
 	private void OnTargetChanged(CombatUnit? unit)
 	{

@@ -1,140 +1,96 @@
 @using Warhammer40k._11.Features.CombatSimulator.Domain
 
-@* Combat Simulator modifier panel (removable feature). Renders attacker OR defender controls, grouped into
-   labelled sections so it reads cleanly on a phone. *@
+@* Combat Simulator modifier panel (removable feature). One modifier per line (bullet · label · control). *@
 @if (Attacker is not null)
 {
 	var a = Attacker;
-	<div class="csim-mgroups">
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">To hit</span>
-			<div class="csim-mrow">
-				<label class="csim-field small">Hit roll
-					<select @onchange="e => Emit(a with { HitRollModifier = Int(e.Value) })">
-						<option value="-1" selected="@(a.HitRollModifier == -1)">−1</option>
-						<option value="0" selected="@(a.HitRollModifier == 0)">0</option>
-						<option value="1" selected="@(a.HitRollModifier == 1)">+1</option>
-					</select>
-				</label>
-				<label class="csim-field small">BS/WS
-					<select @onchange="e => Emit(a with { BsWsModifier = Int(e.Value) })">
-						<option value="-2" selected="@(a.BsWsModifier == -2)">−2</option>
-						<option value="-1" selected="@(a.BsWsModifier == -1)">−1</option>
-						<option value="0" selected="@(a.BsWsModifier == 0)">0</option>
-						<option value="1" selected="@(a.BsWsModifier == 1)">+1</option>
-					</select>
-				</label>
-				<label class="csim-field small">Re-roll
-					<select @onchange="e => Emit(a with { RerollHits = Policy(e.Value) })">
-						<option value="0" selected="@(a.RerollHits == RerollPolicy.None)">none</option>
-						<option value="1" selected="@(a.RerollHits == RerollPolicy.Ones)">1s</option>
-						<option value="2" selected="@(a.RerollHits == RerollPolicy.Failures)">all</option>
-					</select>
-				</label>
-				<label class="csim-field small">Crit
-					<select @onchange="e => Emit(a with { CritHitThreshold = Int(e.Value) })">
-						<option value="6" selected="@(a.CritHitThreshold == 6)">6+</option>
-						<option value="5" selected="@(a.CritHitThreshold == 5)">5+</option>
-					</select>
-				</label>
-			</div>
-			<div class="csim-mrow">
-				<label class="csim-chip"><input type="checkbox" checked="@a.LethalHits" @onchange="e => Emit(a with { LethalHits = Bool(e.Value) })" /> Lethal Hits</label>
-				<label class="csim-field small">Sustained
-					<input type="number" min="0" max="6" value="@a.SustainedHits" @onchange="e => Emit(a with { SustainedHits = Int(e.Value) })" />
-				</label>
-				<label class="csim-chip"><input type="checkbox" checked="@a.TargetWithinHalfRange" @onchange="e => Emit(a with { TargetWithinHalfRange = Bool(e.Value) })" /> ½ range</label>
-				<label class="csim-chip"><input type="checkbox" checked="@a.IgnoresCover" @onchange="e => Emit(a with { IgnoresCover = Bool(e.Value) })" /> Ignores Cover</label>
-			</div>
-		</div>
-
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">To wound</span>
-			<div class="csim-mrow">
-				<label class="csim-field small">Wound roll
-					<select @onchange="e => Emit(a with { WoundRollModifier = Int(e.Value) })">
-						<option value="-1" selected="@(a.WoundRollModifier == -1)">−1</option>
-						<option value="0" selected="@(a.WoundRollModifier == 0)">0</option>
-						<option value="1" selected="@(a.WoundRollModifier == 1)">+1</option>
-					</select>
-				</label>
-				<label class="csim-field small">Re-roll
-					<select @onchange="e => Emit(a with { RerollWounds = Policy(e.Value) })">
-						<option value="0" selected="@(a.RerollWounds == RerollPolicy.None)">none</option>
-						<option value="1" selected="@(a.RerollWounds == RerollPolicy.Ones)">1s</option>
-						<option value="2" selected="@(a.RerollWounds == RerollPolicy.Failures)">all</option>
-					</select>
-				</label>
-				<label class="csim-field small">+S<input type="number" value="@a.StrengthBonus" @onchange="e => Emit(a with { StrengthBonus = Int(e.Value) })" /></label>
-			</div>
-			<div class="csim-mrow">
-				<label class="csim-chip"><input type="checkbox" checked="@a.DevastatingWounds" @onchange="e => Emit(a with { DevastatingWounds = Bool(e.Value) })" /> Devastating</label>
-				<label class="csim-chip"><input type="checkbox" checked="@a.OathOfMoment" @onchange="e => Emit(a with { OathOfMoment = Bool(e.Value) })" /> Oath of Moment</label>
-			</div>
-		</div>
-
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">Attacks &amp; damage</span>
-			<div class="csim-mrow">
-				<label class="csim-field small">+A<input type="number" value="@a.AttacksBonus" @onchange="e => Emit(a with { AttacksBonus = Int(e.Value) })" /></label>
-				<label class="csim-field small">+D<input type="number" value="@a.DamageBonus" @onchange="e => Emit(a with { DamageBonus = Int(e.Value) })" /></label>
-				<label class="csim-field small">AP±<input type="number" value="@a.ApModifier" @onchange="e => Emit(a with { ApModifier = Int(e.Value) })" /></label>
-			</div>
-		</div>
-	</div>
+	<ul class="csim-mlist">
+		<li class="csim-mline"><span class="csim-mlabel">Hit roll</span>
+			<select @onchange="e => Emit(a with { HitRollModifier = Int(e.Value) })">
+				<option value="-1" selected="@(a.HitRollModifier == -1)">−1</option>
+				<option value="0" selected="@(a.HitRollModifier == 0)">0</option>
+				<option value="1" selected="@(a.HitRollModifier == 1)">+1</option>
+			</select>
+		</li>
+		<li class="csim-mline"><span class="csim-mlabel">BS / WS characteristic</span>
+			<select @onchange="e => Emit(a with { BsWsModifier = Int(e.Value) })">
+				<option value="-2" selected="@(a.BsWsModifier == -2)">−2</option>
+				<option value="-1" selected="@(a.BsWsModifier == -1)">−1</option>
+				<option value="0" selected="@(a.BsWsModifier == 0)">0</option>
+				<option value="1" selected="@(a.BsWsModifier == 1)">+1</option>
+			</select>
+		</li>
+		<li class="csim-mline"><span class="csim-mlabel">Re-roll hits</span>
+			<select @onchange="e => Emit(a with { RerollHits = Policy(e.Value) })">
+				<option value="0" selected="@(a.RerollHits == RerollPolicy.None)">none</option>
+				<option value="1" selected="@(a.RerollHits == RerollPolicy.Ones)">1s</option>
+				<option value="2" selected="@(a.RerollHits == RerollPolicy.Failures)">all</option>
+			</select>
+		</li>
+		<li class="csim-mline"><span class="csim-mlabel">Critical hit on</span>
+			<select @onchange="e => Emit(a with { CritHitThreshold = Int(e.Value) })">
+				<option value="6" selected="@(a.CritHitThreshold == 6)">6+</option>
+				<option value="5" selected="@(a.CritHitThreshold == 5)">5+</option>
+			</select>
+		</li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@a.LethalHits" @onchange="e => Emit(a with { LethalHits = Bool(e.Value) })" /> <span class="csim-mlabel">Lethal Hits</span></label></li>
+		<li class="csim-mline"><span class="csim-mlabel">Sustained Hits</span>
+			<input type="number" min="0" max="6" value="@a.SustainedHits" @onchange="e => Emit(a with { SustainedHits = Int(e.Value) })" />
+		</li>
+		<li class="csim-mline"><span class="csim-mlabel">Wound roll</span>
+			<select @onchange="e => Emit(a with { WoundRollModifier = Int(e.Value) })">
+				<option value="-1" selected="@(a.WoundRollModifier == -1)">−1</option>
+				<option value="0" selected="@(a.WoundRollModifier == 0)">0</option>
+				<option value="1" selected="@(a.WoundRollModifier == 1)">+1</option>
+			</select>
+		</li>
+		<li class="csim-mline"><span class="csim-mlabel">Re-roll wounds</span>
+			<select @onchange="e => Emit(a with { RerollWounds = Policy(e.Value) })">
+				<option value="0" selected="@(a.RerollWounds == RerollPolicy.None)">none</option>
+				<option value="1" selected="@(a.RerollWounds == RerollPolicy.Ones)">1s</option>
+				<option value="2" selected="@(a.RerollWounds == RerollPolicy.Failures)">all</option>
+			</select>
+		</li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@a.DevastatingWounds" @onchange="e => Emit(a with { DevastatingWounds = Bool(e.Value) })" /> <span class="csim-mlabel">Devastating Wounds</span></label></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@a.OathOfMoment" @onchange="e => Emit(a with { OathOfMoment = Bool(e.Value) })" /> <span class="csim-mlabel">Oath of Moment</span></label></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@a.TargetWithinHalfRange" @onchange="e => Emit(a with { TargetWithinHalfRange = Bool(e.Value) })" /> <span class="csim-mlabel">Target within ½ range</span></label></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@a.IgnoresCover" @onchange="e => Emit(a with { IgnoresCover = Bool(e.Value) })" /> <span class="csim-mlabel">Ignores Cover</span></label></li>
+		<li class="csim-mline"><span class="csim-mlabel">+ Strength</span><input type="number" value="@a.StrengthBonus" @onchange="e => Emit(a with { StrengthBonus = Int(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">+ Attacks</span><input type="number" value="@a.AttacksBonus" @onchange="e => Emit(a with { AttacksBonus = Int(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">+ Damage</span><input type="number" value="@a.DamageBonus" @onchange="e => Emit(a with { DamageBonus = Int(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">AP modifier</span><input type="number" value="@a.ApModifier" @onchange="e => Emit(a with { ApModifier = Int(e.Value) })" /></li>
+	</ul>
 }
 else if (Defender is not null)
 {
 	var d = Defender;
-	<div class="csim-mgroups">
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">Saves</span>
-			<div class="csim-mrow">
-				<label class="csim-chip"><input type="checkbox" checked="@d.Cover" @onchange="e => Emit(d with { Cover = Bool(e.Value) })" /> Cover (−1 BS)</label>
-				<label class="csim-field small">Save±<input type="number" value="@d.SaveModifier" @onchange="e => Emit(d with { SaveModifier = Int(e.Value) })" /></label>
-				<label class="csim-field small">Save set<input type="number" min="2" max="7" value="@d.SaveOverride" placeholder="—" @onchange="e => Emit(d with { SaveOverride = IntOrNull(e.Value) })" /></label>
-				<label class="csim-field small">Invuln<input type="number" min="2" max="6" value="@d.InvulnSaveOverride" placeholder="—" @onchange="e => Emit(d with { InvulnSaveOverride = IntOrNull(e.Value) })" /></label>
-			</div>
+	<ul class="csim-mlist">
+		<li class="csim-mline check"><label><input type="checkbox" checked="@d.Cover" @onchange="e => Emit(d with { Cover = Bool(e.Value) })" /> <span class="csim-mlabel">In cover (−1 BS)</span></label></li>
+		<li class="csim-mline"><span class="csim-mlabel">Save modifier</span><input type="number" value="@d.SaveModifier" @onchange="e => Emit(d with { SaveModifier = Int(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">Save override</span><input type="number" min="2" max="7" value="@d.SaveOverride" placeholder="—" @onchange="e => Emit(d with { SaveOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">Invulnerable save</span><input type="number" min="2" max="6" value="@d.InvulnSaveOverride" placeholder="—" @onchange="e => Emit(d with { InvulnSaveOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">Feel No Pain</span><input type="number" min="2" max="6" value="@d.FeelNoPainOverride" placeholder="—" @onchange="e => Emit(d with { FeelNoPainOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@d.FnpMortalOnly" @onchange="e => Emit(d with { FnpMortalOnly = Bool(e.Value) })" /> <span class="csim-mlabel">FNP vs mortal only</span></label></li>
+		<li class="csim-mline"><span class="csim-mlabel">Reduce damage by</span><input type="number" min="0" value="@d.DamageReductionFlat" @onchange="e => Emit(d with { DamageReductionFlat = Int(e.Value) })" /></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@d.DamageHalved" @onchange="e => Emit(d with { DamageHalved = Bool(e.Value) })" /> <span class="csim-mlabel">Halve damage</span></label></li>
+		<li class="csim-mline"><span class="csim-mlabel">Toughness override</span><input type="number" min="1" value="@d.ToughnessOverride" placeholder="—" @onchange="e => Emit(d with { ToughnessOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">Wounds per model</span><input type="number" min="1" value="@d.WoundsPerModelOverride" placeholder="—" @onchange="e => Emit(d with { WoundsPerModelOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline"><span class="csim-mlabel">Model count</span><input type="number" min="1" value="@d.ModelCountOverride" placeholder="—" @onchange="e => Emit(d with { ModelCountOverride = IntOrNull(e.Value) })" /></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@d.MinusOneToBeHit" @onchange="e => Emit(d with { MinusOneToBeHit = Bool(e.Value) })" /> <span class="csim-mlabel">−1 to be hit</span></label></li>
+		<li class="csim-mline check"><label><input type="checkbox" checked="@d.MinusOneToBeWounded" @onchange="e => Emit(d with { MinusOneToBeWounded = Bool(e.Value) })" /> <span class="csim-mlabel">−1 to be wounded</span></label></li>
+	</ul>
+	@if (Abilities.Any(x => x.HasParsedEffect))
+	{
+		<div class="csim-detected">
+			<span class="csim-detected-label">Detected</span>
+			@foreach (var ab in Abilities.Where(x => x.HasParsedEffect))
+			{
+				<span class="csim-detected-chip" title="@ab.Description">
+					@ab.Name@(ab.InvulnSave is { } iv ? $" · {iv}++" : "")@(ab.FeelNoPain is { } f ? $" · FNP {f}+" : "")@(ab.DamageReductionFlat > 0 ? " · −1 Dmg" : "")@(ab.DamageHalved ? " · halve" : "")
+				</span>
+			}
 		</div>
-
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">Feel No Pain &amp; damage</span>
-			<div class="csim-mrow">
-				<label class="csim-field small">FNP<input type="number" min="2" max="6" value="@d.FeelNoPainOverride" placeholder="—" @onchange="e => Emit(d with { FeelNoPainOverride = IntOrNull(e.Value) })" /></label>
-				<label class="csim-chip"><input type="checkbox" checked="@d.FnpMortalOnly" @onchange="e => Emit(d with { FnpMortalOnly = Bool(e.Value) })" /> vs mortal only</label>
-				<label class="csim-field small">−Dmg<input type="number" min="0" value="@d.DamageReductionFlat" @onchange="e => Emit(d with { DamageReductionFlat = Int(e.Value) })" /></label>
-				<label class="csim-chip"><input type="checkbox" checked="@d.DamageHalved" @onchange="e => Emit(d with { DamageHalved = Bool(e.Value) })" /> Halve dmg</label>
-			</div>
-		</div>
-
-		<div class="csim-mgroup">
-			<span class="csim-mgroup-title">Profile overrides</span>
-			<div class="csim-mrow">
-				<label class="csim-field small">T<input type="number" min="1" value="@d.ToughnessOverride" placeholder="—" @onchange="e => Emit(d with { ToughnessOverride = IntOrNull(e.Value) })" /></label>
-				<label class="csim-field small">W/model<input type="number" min="1" value="@d.WoundsPerModelOverride" placeholder="—" @onchange="e => Emit(d with { WoundsPerModelOverride = IntOrNull(e.Value) })" /></label>
-				<label class="csim-field small">Models<input type="number" min="1" value="@d.ModelCountOverride" placeholder="—" @onchange="e => Emit(d with { ModelCountOverride = IntOrNull(e.Value) })" /></label>
-			</div>
-			<div class="csim-mrow">
-				<label class="csim-chip"><input type="checkbox" checked="@d.MinusOneToBeHit" @onchange="e => Emit(d with { MinusOneToBeHit = Bool(e.Value) })" /> −1 to be hit</label>
-				<label class="csim-chip"><input type="checkbox" checked="@d.MinusOneToBeWounded" @onchange="e => Emit(d with { MinusOneToBeWounded = Bool(e.Value) })" /> −1 to be wounded</label>
-			</div>
-		</div>
-
-		@if (Abilities.Any(x => x.HasParsedEffect))
-		{
-			<div class="csim-mgroup">
-				<span class="csim-mgroup-title">Detected abilities</span>
-				<div class="csim-mrow">
-					@foreach (var ab in Abilities.Where(x => x.HasParsedEffect))
-					{
-						<span class="csim-detected-chip" title="@ab.Description">
-							@ab.Name@(ab.InvulnSave is { } iv ? $" · {iv}++" : "")@(ab.FeelNoPain is { } f ? $" · FNP {f}+" : "")@(ab.DamageReductionFlat > 0 ? " · −1 Dmg" : "")@(ab.DamageHalved ? " · halve" : "")
-						</span>
-					}
-				</div>
-			</div>
-		}
-	</div>
+	}
 }
 
 @code {

@@ -1,14 +1,12 @@
 @using Warhammer40k._11.Features.CombatSimulator.Domain
 
-@* Combat Simulator unit picker (removable feature). A simple dropdown over native + imported units. *@
+@* Combat Simulator unit picker (removable feature). Compact: just the unit name (faction tail stripped). *@
 <select class="csim-select" @onchange="OnChange">
 	<option value="">— choose a unit —</option>
 	@for (var i = 0; i < Units.Count; i++)
 	{
 		var unit = Units[i];
-		<option value="@i" selected="@(ReferenceEquals(unit, Selected))">
-			@unit.Name @(unit.Source == CombatSource.Imported ? $"· {unit.Faction}" : "")
-		</option>
+		<option value="@i" selected="@(ReferenceEquals(unit, Selected))">@ShortName(unit.Name)</option>
 	}
 </select>
 
@@ -22,5 +20,13 @@
 		var raw = e.Value?.ToString();
 		CombatUnit? unit = int.TryParse(raw, out var i) && i >= 0 && i < Units.Count ? Units[i] : null;
 		await SelectedChanged.InvokeAsync(unit);
+	}
+
+	// Drop the faction tail after " · " (e.g. "· Imperium - Adeptus Astartes - Dark Angels") and cap the length.
+	private static string ShortName(string name)
+	{
+		var cut = name.IndexOf('·');
+		var n = (cut >= 0 ? name[..cut] : name).Trim();
+		return n.Length > 30 ? n[..29].TrimEnd() + "…" : n;
 	}
 }
