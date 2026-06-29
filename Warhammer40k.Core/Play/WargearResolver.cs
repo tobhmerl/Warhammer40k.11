@@ -25,51 +25,116 @@ public static class WargearResolver
     private static readonly string[] Connectors = [" and ", ",", "&", "+"];
 
     /// <summary>
-    /// The weapons in play for <paramref name="unit"/>, in datasheet order: always-on weapons plus the
-    /// weapons named by the unit's selected wargear options.
+    /// The weapons in play for <paramref name="unit"/>, in datasheet order — a flat list without per-model
+    /// counts. Equivalent to <see cref="ResolveWeapons"/> projected onto the weapon profiles.
     /// </summary>
-    public static IReadOnlyList<WeaponProfile> SelectedWeapons(Datasheet datasheet, RosterUnit unit)
+    public static IReadOnlyList<WeaponProfile> SelectedWeapons(Datasheet datasheet, RosterUnit unit) =>
+        ResolveWeapons(datasheet, unit).Select(r => r.Weapon).ToList();
+
+    /// <summary>
+    /// The weapons in play for <paramref name="unit"/>, each with the number of models carrying it, in
+    /// datasheet order. Always-on weapons are carried by every model; an ordinary (toggle) option's weapons
+    /// are carried by every model when selected; a <see cref="WargearGroup.PerModel"/> group distributes the
+    /// unit's models across its options (the first option being the default that absorbs any unassigned
+    /// models). Weapons carried by nobody are omitted. A unit with no selections at all keeps its full toggle
+    /// loadout (back-compat with rosters predating weapon-pick).
+    /// </summary>
+    public static IReadOnlyList<ResolvedWeapon> ResolveWeapons(Datasheet datasheet, RosterUnit unit, int? liveModels = null)
     {
         ArgumentNullException.ThrowIfNull(datasheet);
         ArgumentNullException.ThrowIfNull(unit);
 
         if (datasheet.Weapons.Count == 0)
-            return datasheet.Weapons;
+            return [];
 
-        // Names referenced by ANY option across all groups → these weapons are "optional" (gated by choice).
-        var optionalWeaponNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var group in datasheet.WargearGroups)
+        var models = Math.Max(0, liveModels ?? unit.ModelCount);
+
+        // Weapon name → models carrying it (absent / 0 ⇒ not in play).
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        var perModelNames = WeaponNamesForGroups(datasheet, static g => g.PerModel);
+        var toggleNames = WeaponNamesForGroups(datasheet, static g => !g.PerModel);
+
+        // 1) Always-on weapons (named by no option) are carried by every model.
+        foreach (var weapon in datasheet.Weapons)
+            if (!perModelNames.Contains(weapon.Name) && !toggleNames.Contains(weapon.Name))
+                counts[weapon.Name] = models;
+
+        // 2) Per-model groups distribute the unit's models across their options.
+        foreach (var group in datasheet.WargearGroups.Where(g => g.PerModel))
+            ApplyPerModelGroup(datasheet, group, FindSelection(unit, group.Id), models, counts);
+
+        // 3) Toggle groups: selected options' weapons are carried by every model. A unit with no selections of
+        //    any kind keeps its full toggle loadout (never-empty back-compat).
+        var hasAnySelection = unit.Wargear.Any(w => w.OptionIds.Count > 0 || w.Counts.Count > 0);
+        foreach (var group in datasheet.WargearGroups.Where(g => !g.PerModel))
+            ApplyToggleGroup(datasheet, group, FindSelection(unit, group.Id), hasAnySelection, models, counts);
+
+        return datasheet.Weapons
+            .Where(w => counts.TryGetValue(w.Name, out var c) && c > 0)
+            .Select(w => new ResolvedWeapon(w, counts[w.Name]))
+            .ToList();
+    }
+
+    private static HashSet<string> WeaponNamesForGroups(Datasheet datasheet, Func<WargearGroup, bool> predicate)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in datasheet.WargearGroups.Where(predicate))
             foreach (var option in group.Options)
                 foreach (var weapon in datasheet.Weapons)
                     if (NameMatches(weapon.Name, option.Name))
-                        optionalWeaponNames.Add(weapon.Name);
+                        names.Add(weapon.Name);
+        return names;
+    }
 
-        // If nothing was selected, fall back to the whole loadout (back-compat / never-empty).
-        var hasSelections = unit.Wargear.Any(w => w.OptionIds.Count > 0);
-        if (!hasSelections)
-            return datasheet.Weapons;
+    private static WargearSelection? FindSelection(RosterUnit unit, string groupId) =>
+        unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
 
-        // Names referenced by the SELECTED options → the optional weapons actually taken.
-        var selectedWeaponNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var selection in unit.Wargear)
+    // Distributes the unit's models across a per-model group's options. Non-default options take their stored
+    // count (clamped to what's left, in option order); the first option absorbs the remainder, so the totals
+    // always sum to the model count and a unit with no stored counts resolves to all-of-the-first-option.
+    private static void ApplyPerModelGroup(Datasheet datasheet, WargearGroup group, WargearSelection? selection, int models, Dictionary<string, int> counts)
+    {
+        if (group.Options.Count == 0 || models <= 0)
+            return;
+
+        var assigned = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var remaining = models;
+
+        foreach (var option in group.Options.Skip(1))
         {
-            var group = datasheet.WargearGroups.FirstOrDefault(g => string.Equals(g.Id, selection.GroupId, StringComparison.OrdinalIgnoreCase));
-            if (group is null)
-                continue;
-            foreach (var optionId in selection.OptionIds)
-            {
-                var option = group.Options.FirstOrDefault(o => string.Equals(o.Id, optionId, StringComparison.OrdinalIgnoreCase));
-                if (option is null)
-                    continue;
-                foreach (var weapon in datasheet.Weapons)
-                    if (NameMatches(weapon.Name, option.Name))
-                        selectedWeaponNames.Add(weapon.Name);
-            }
+            var want = selection?.Counts.FirstOrDefault(c => string.Equals(c.OptionId, option.Id, StringComparison.OrdinalIgnoreCase))?.Models ?? 0;
+            var take = Math.Clamp(want, 0, remaining);
+            assigned[option.Id] = take;
+            remaining -= take;
         }
 
-        return datasheet.Weapons
-            .Where(w => !optionalWeaponNames.Contains(w.Name) || selectedWeaponNames.Contains(w.Name))
-            .ToList();
+        assigned[group.Options[0].Id] = remaining; // default option absorbs whatever is left
+
+        foreach (var option in group.Options)
+        {
+            if (!assigned.TryGetValue(option.Id, out var n) || n <= 0)
+                continue;
+            foreach (var weapon in datasheet.Weapons)
+                if (NameMatches(weapon.Name, option.Name))
+                    counts[weapon.Name] = n;
+        }
+    }
+
+    // Includes a toggle group's selected options' weapons at full model count. With no selections anywhere,
+    // the whole toggle loadout is included (rosters predating weapon-pick are never shown empty).
+    private static void ApplyToggleGroup(Datasheet datasheet, WargearGroup group, WargearSelection? selection, bool hasAnySelection, int models, Dictionary<string, int> counts)
+    {
+        foreach (var option in group.Options)
+        {
+            var selected = !hasAnySelection
+                || (selection is not null && selection.OptionIds.Contains(option.Id, StringComparer.OrdinalIgnoreCase));
+            if (!selected)
+                continue;
+            foreach (var weapon in datasheet.Weapons)
+                if (NameMatches(weapon.Name, option.Name))
+                    counts[weapon.Name] = models;
+        }
     }
 
     // A weapon matches an option label when the label (or one of its "and"/comma-separated tokens) contains
@@ -103,3 +168,6 @@ public static class WargearResolver
             yield return part;
     }
 }
+
+/// <summary>A weapon in play together with how many models in the unit carry it.</summary>
+public sealed record ResolvedWeapon(WeaponProfile Weapon, int Models);

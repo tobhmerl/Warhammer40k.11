@@ -56,8 +56,9 @@ public static class NativeNecronSource
                     FeelNoPain = modelFnp,
                 },
                 Count = Math.Max(1, part.ModelCount),
-                // Pre-fill how many models carry each weapon from the group size (matches the imported-army path).
-                Weapons = part.Weapons.Select(w => MapWeapon(w, Math.Max(1, part.ModelCount))).ToList(),
+                // Pre-fill how many models carry each weapon from the resolved per-model loadout (e.g. a
+                // Lokhust Heavy Destroyers unit split 2 Gauss / 1 Enmitic), falling back to the group size.
+                Weapons = part.Weapons.Select(w => MapWeapon(w, Math.Max(1, part.ModelsCarrying(w)))).ToList(),
             });
         }
 

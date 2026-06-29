@@ -23,6 +23,9 @@ public sealed class UnitSizeRule : IRosterRule
 
             foreach (var group in sheet.WargearGroups)
             {
+                if (group.PerModel)
+                    continue; // per-model loadouts are validated in the editor (counts sum to model count), not by Min/Max
+
                 var selection = unit.Wargear
                     .FirstOrDefault(w => string.Equals(w.GroupId, group.Id, StringComparison.OrdinalIgnoreCase));
                 var chosen = (selection?.OptionIds ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToList();

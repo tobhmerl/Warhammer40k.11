@@ -788,11 +788,16 @@ public sealed class BattlePart
         Unit = unit;
         Datasheet = datasheet;
         IsLeader = isLeader;
-        // Only the weapons actually selected in setup are in play (always-on weapons are always included).
-        Weapons = WargearResolver.SelectedWeapons(datasheet, unit);
+        // Only the weapons actually selected in setup are in play (always-on weapons are always included), each
+        // tagged with how many models carry it (per-model loadouts split the unit, e.g. 2 Gauss + 1 Enmitic).
+        var resolved = WargearResolver.ResolveWeapons(datasheet, unit);
+        _modelsCarrying = resolved.ToDictionary(r => r.Weapon, r => r.Models);
+        Weapons = resolved.Select(r => r.Weapon).ToList();
         RangedWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Shooting).ToList();
         MeleeWeapons = Weapons.Where(w => PhaseClassifier.PhaseForWeapon(w) == BattlePhase.Fight).ToList();
     }
+
+    private readonly Dictionary<WeaponProfile, int> _modelsCarrying;
 
     /// <summary>The underlying roster unit (size, warlord flag, wargear, …).</summary>
     public RosterUnit Unit { get; }
@@ -811,6 +816,27 @@ public sealed class BattlePart
 
     /// <summary>Models in this part.</summary>
     public int ModelCount => Unit.ModelCount;
+
+    /// <summary>
+    /// How many models in this part carry <paramref name="weapon"/>: <see cref="ModelCount"/> for always-on
+    /// and unit-wide weapons, or the number assigned to that weapon by a per-model loadout (e.g. 2 of 3 models
+    /// took the Gauss Destructor). Falls back to <see cref="ModelCount"/> for any unrecognised weapon.
+    /// </summary>
+    public int ModelsCarrying(WeaponProfile weapon) =>
+        _modelsCarrying.TryGetValue(weapon, out var n) ? n : ModelCount;
+
+    /// <summary>
+    /// As <see cref="ModelsCarrying(WeaponProfile)"/> but for a reduced number of <paramref name="liveModels"/>
+    /// (after casualties): the per-model group's default option absorbs losses first, so the live split still
+    /// sums to the models remaining. Equals the full value while the part is at full strength.
+    /// </summary>
+    public int ModelsCarrying(WeaponProfile weapon, int liveModels)
+    {
+        if (liveModels >= ModelCount)
+            return ModelsCarrying(weapon);
+        var resolved = WargearResolver.ResolveWeapons(Datasheet, Unit, liveModels);
+        return resolved.FirstOrDefault(r => ReferenceEquals(r.Weapon, weapon))?.Models ?? 0;
+    }
 
     /// <summary>The full-health statline (first profile), or null when the datasheet has none.</summary>
     public StatProfile? Profile => Datasheet.StatProfiles.FirstOrDefault();

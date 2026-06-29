@@ -447,13 +447,13 @@ else
 													@{
 														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true).Concat(ActiveBuffModifiers(unit, ranged: true)).ToList();
 														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null;
+														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null; var rCarry = row.Part.ModelsCarrying(row.Weapon);
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, rwMods) A</span>
 													</div>
-													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
+													@if (rCarry < row.Part.ModelCount || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
@@ -464,7 +464,7 @@ else
 															{
 																<span class="wkw">@kw</span>
 															}
-															@foreach (var g in rGrants)
+															@if (rCarry < row.Part.ModelCount){<span class="wcarry" title="Models carrying this weapon">@rCarry @(rCarry == 1 ? "model" : "models")</span>} @foreach (var g in rGrants)
 															{
 																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
@@ -497,13 +497,13 @@ else
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false).Concat(ActiveBuffModifiers(unit, ranged: false)).ToList();
-														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(); var mCarry = row.Part.ModelsCarrying(row.Weapon);
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, mwMods) A</span>
 													</div>
-													@if (unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
+													@if (mCarry < row.Part.ModelCount || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
@@ -514,7 +514,7 @@ else
 															{
 																<span class="wkw">@kw</span>
 															}
-															@foreach (var g in mGrants)
+															@if (mCarry < row.Part.ModelCount){<span class="wcarry" title="Models carrying this weapon">@mCarry @(mCarry == 1 ? "model" : "models")</span>} @foreach (var g in mGrants)
 															{
 																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
@@ -1313,7 +1313,7 @@ else
 	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
 
 	private string TotalAttacks(BattlePart part, WeaponProfile weapon, IReadOnlyList<StatModifier> weaponMods) =>
-		WeaponMath.TotalAttacks(PartModelsAlive(part), BuffedRaw(weapon.Attacks, weaponMods, StatTarget.Attacks));
+		WeaponMath.TotalAttacks(part.ModelsCarrying(weapon, PartModelsAlive(part)), BuffedRaw(weapon.Attacks, weaponMods, StatTarget.Attacks));
 
 	// ---- Applied stat buffs (leader conferrals + detachment buffs) shown directly on the stat cells ----
 	private static string BuffedRaw(string? raw, IReadOnlyList<StatModifier> mods, StatTarget target)

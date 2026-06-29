@@ -3297,14 +3297,15 @@
           "name": "Weapon",
           "min": 0,
           "max": 1,
+          "perModel": true,
           "options": [
-            {
-              "id": "enmitic-exterminator",
-              "name": "Enmitic exterminator"
-            },
             {
               "id": "gauss-destructor",
               "name": "Gauss destructor"
+            },
+            {
+              "id": "enmitic-exterminator",
+              "name": "Enmitic exterminator"
             }
           ]
         }

@@ -60,6 +60,23 @@ public sealed class WargearSelection
     /// <summary>The option-group this selection belongs to.</summary>
     public string GroupId { get; set; } = string.Empty;
 
-    /// <summary>The chosen option ids within the group.</summary>
+    /// <summary>The chosen option ids within the group (ordinary toggle groups).</summary>
     public List<string> OptionIds { get; set; } = [];
+
+    /// <summary>
+    /// Per-model model counts for a <see cref="Warhammer40k.Core.Catalogue.WargearGroup.PerModel"/> group:
+    /// how many models take each option. Only non-default options need an entry — the group's first option
+    /// (the default) absorbs any unassigned models. Empty for ordinary toggle groups.
+    /// </summary>
+    public List<WargearOptionCount> Counts { get; set; } = [];
+}
+
+/// <summary>How many models in a unit take a particular per-model wargear option.</summary>
+public sealed class WargearOptionCount
+{
+    /// <summary>The <see cref="Warhammer40k.Core.Catalogue.WargearOption.Id"/> this count applies to.</summary>
+    public string OptionId { get; set; } = string.Empty;
+
+    /// <summary>The number of models equipped with this option.</summary>
+    public int Models { get; set; }
 }

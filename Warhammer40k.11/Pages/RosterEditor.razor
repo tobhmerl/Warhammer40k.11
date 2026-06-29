@@ -193,16 +193,38 @@ else
 			@foreach (var group in sheet.WargearGroups)
 			{
 				<div class="cfg-block" @key="group.Id">
-					<span class="cfg-label">@group.Name <span class="cfg-hint">choose @WargearRangeLabel(group)</span></span>
-					<div class="sizes">
-						@foreach (var opt in group.Options)
-						{
-							<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
-									@onclick="() => ToggleWargear(u, group.Id, opt.Id)">
-								@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
-							</button>
-						}
-					</div>
+					@if (group.PerModel)
+					{
+						<span class="cfg-label">@group.Name <span class="cfg-hint">one per model · @PerModelAssignedLabel(u, group)</span></span>
+						<div class="loadout">
+							@foreach (var opt in group.Options)
+							{
+								var isDefault = ReferenceEquals(opt, group.Options[0]);
+								var count = PerModelCount(u, group, opt);
+								<div class="loadout-row">
+									<span class="loadout-name">@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)</span>
+									<span class="loadout-step">
+										<button type="button" class="lstep" disabled="@(isDefault || count == 0)" @onclick="() => StepPerModel(u, group, opt, -1)" aria-label="Fewer">−</button>
+										<span class="loadout-count @(count > 0 ? "has" : "")">@count</span>
+										<button type="button" class="lstep" disabled="@(isDefault || PerModelRemaining(u, group) == 0)" @onclick="() => StepPerModel(u, group, opt, 1)" aria-label="More">+</button>
+									</span>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<span class="cfg-label">@group.Name <span class="cfg-hint">choose @WargearRangeLabel(group)</span></span>
+						<div class="sizes">
+							@foreach (var opt in group.Options)
+							{
+								<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
+										@onclick="() => ToggleWargear(u, group.Id, opt.Id)">
+									@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
+								</button>
+							}
+						</div>
+					}
 				</div>
 			}
 
@@ -876,6 +898,68 @@ else
 			selection.OptionIds.Add(optionId);
 
 		if (selection.OptionIds.Count == 0)
+			unit.Wargear.Remove(selection);
+
+		MarkChanged();
+	}
+
+	// ---- Per-model loadout groups (e.g. Lokhust Heavy Destroyers: each model takes Gauss or Enmitic) ----
+
+	// Models taking this option: the stored count for a non-default option, or the remaining models (model
+	// count minus the others) for the group's first option, which is the default that absorbs the remainder.
+	private static int PerModelCount(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group, Warhammer40k.Core.Catalogue.WargearOption option)
+	{
+		if (group.Options.Count == 0)
+			return 0;
+		if (!ReferenceEquals(option, group.Options[0]))
+			return StoredPerModelCount(unit, group, option.Id);
+		var others = group.Options.Skip(1).Sum(o => StoredPerModelCount(unit, group, o.Id));
+		return Math.Max(0, unit.ModelCount - others);
+	}
+
+	private static int StoredPerModelCount(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group, string optionId)
+	{
+		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, group.Id, StringComparison.OrdinalIgnoreCase));
+		var stored = selection?.Counts.FirstOrDefault(c => string.Equals(c.OptionId, optionId, StringComparison.OrdinalIgnoreCase))?.Models ?? 0;
+		return Math.Clamp(stored, 0, unit.ModelCount);
+	}
+
+	// Models still on the default (first) option — how many are free to be reassigned to another option.
+	private static int PerModelRemaining(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group) =>
+		group.Options.Count == 0 ? 0
+		: Math.Max(0, unit.ModelCount - group.Options.Skip(1).Sum(o => StoredPerModelCount(unit, group, o.Id)));
+
+	private static string PerModelAssignedLabel(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group) =>
+		$"{unit.ModelCount} {(unit.ModelCount == 1 ? "model" : "models")}";
+
+	private void StepPerModel(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group, Warhammer40k.Core.Catalogue.WargearOption option, int delta)
+	{
+		if (group.Options.Count == 0 || ReferenceEquals(option, group.Options[0]))
+			return; // the default (first) option is derived from the others; it is not edited directly
+
+		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, group.Id, StringComparison.OrdinalIgnoreCase));
+		if (selection is null)
+		{
+			selection = new WargearSelection { GroupId = group.Id };
+			unit.Wargear.Add(selection);
+		}
+
+		var entry = selection.Counts.FirstOrDefault(c => string.Equals(c.OptionId, option.Id, StringComparison.OrdinalIgnoreCase));
+		if (entry is null)
+		{
+			entry = new WargearOptionCount { OptionId = option.Id };
+			selection.Counts.Add(entry);
+		}
+
+		// Cap so this option plus the OTHER non-default options never exceed the unit size (default keeps the rest).
+		var others = group.Options.Skip(1)
+			.Where(o => !string.Equals(o.Id, option.Id, StringComparison.OrdinalIgnoreCase))
+			.Sum(o => StoredPerModelCount(unit, group, o.Id));
+		entry.Models = Math.Clamp(entry.Models + delta, 0, Math.Max(0, unit.ModelCount - others));
+
+		// Keep storage minimal: drop zero entries, and an empty selection (an all-default unit stores nothing).
+		selection.Counts.RemoveAll(c => c.Models <= 0);
+		if (selection.OptionIds.Count == 0 && selection.Counts.Count == 0)
 			unit.Wargear.Remove(selection);
 
 		MarkChanged();

@@ -952,6 +952,68 @@
     box-shadow: var(--glow-sm);
 }
 
+/* ---- Per-model loadout steppers (e.g. Lokhust Heavy Destroyers: Gauss / Enmitic per model) ---- */
+.loadout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.loadout-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.loadout-name {
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.loadout-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lstep {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.lstep:hover:not(:disabled) {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+}
+
+.lstep:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.loadout-count {
+    min-width: 1.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-faint);
+}
+
+.loadout-count.has {
+    color: var(--accent);
+}
+
 .toggle {
     align-self: flex-start;
     padding: 0.5rem 1.1rem;

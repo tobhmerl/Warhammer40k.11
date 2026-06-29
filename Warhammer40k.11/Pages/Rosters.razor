@@ -332,7 +332,7 @@
 		IsWarlord = u.IsWarlord,
 		AppliedBindingId = u.AppliedBindingId,
 		BindingSurcharge = u.BindingSurcharge,
-		Wargear = u.Wargear.Select(w => new WargearSelection { GroupId = w.GroupId, OptionIds = new List<string>(w.OptionIds) }).ToList(),
+		Wargear = u.Wargear.Select(w => new WargearSelection { GroupId = w.GroupId, OptionIds = new List<string>(w.OptionIds), Counts = w.Counts.Select(c => new WargearOptionCount { OptionId = c.OptionId, Models = c.Models }).ToList() }).ToList(),
 	};
 
 	private static string Truncate(string value, int max) =>

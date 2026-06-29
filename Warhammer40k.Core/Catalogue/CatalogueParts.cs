@@ -67,6 +67,14 @@ public sealed class WargearGroup
     /// <summary>Maximum options that may be selected.</summary>
     [JsonPropertyName("max")] public int Max { get; set; } = 1;
 
+    /// <summary>
+    /// When true this is a <b>per-model</b> loadout group: every model in the unit takes exactly one of the
+    /// <see cref="Options"/>, and the player sets how many models take each (the counts sum to the unit's
+    /// model count) via <see cref="Warhammer40k.Core.Rosters.WargearSelection.Counts"/>. The first option is
+    /// the default that absorbs any unassigned models, so <see cref="Min"/>/<see cref="Max"/> do not apply.
+    /// </summary>
+    [JsonPropertyName("perModel")] public bool PerModel { get; set; }
+
     [JsonPropertyName("options")] public List<WargearOption> Options { get; set; } = [];
 }
 

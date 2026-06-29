@@ -148,4 +148,108 @@ public class WargearResolverTests
         var sheet = new Datasheet { Id = "x", Name = "X" };
         Assert.Empty(WargearResolver.SelectedWeapons(sheet, Unit("x")));
     }
+
+    // ---- Per-model loadouts (Lokhust Heavy Destroyers: each model takes Gauss or Enmitic) ----
+
+    private static Datasheet LokhustHeavy() => new()
+    {
+        Id = "lokhust-heavy-destroyers",
+        Name = "Lokhust Heavy Destroyers",
+        Weapons =
+        [
+            W("Close combat weapon", "Melee"),
+            W("Enmitic exterminator"),
+            W("Gauss destructor"),
+        ],
+        WargearGroups =
+        [
+            new WargearGroup
+            {
+                Id = "weapon", Name = "Weapon", PerModel = true,
+                Options = [new() { Id = "gauss-destructor", Name = "Gauss destructor" }, new() { Id = "enmitic-exterminator", Name = "Enmitic exterminator" }],
+            },
+        ],
+    };
+
+    private static RosterUnit PerModelUnit(int models, params (string OptionId, int Count)[] counts) => new()
+    {
+        Id = "u1",
+        DatasheetId = "lokhust-heavy-destroyers",
+        ModelCount = models,
+        Wargear = counts.Length == 0 ? [] :
+        [
+            new WargearSelection
+            {
+                GroupId = "weapon",
+                Counts = counts.Select(c => new WargearOptionCount { OptionId = c.OptionId, Models = c.Count }).ToList(),
+            },
+        ],
+    };
+
+    private static Dictionary<string, int> Carry(Datasheet sheet, RosterUnit unit, int? live = null) =>
+        WargearResolver.ResolveWeapons(sheet, unit, live).ToDictionary(r => r.Weapon.Name, r => r.Models, StringComparer.OrdinalIgnoreCase);
+
+    [Fact]
+    public void Per_model_default_is_all_of_the_first_option()
+    {
+        var carry = Carry(LokhustHeavy(), PerModelUnit(3));
+
+        Assert.Equal(3, carry["Gauss destructor"]);              // first option = default, takes every model
+        Assert.False(carry.ContainsKey("Enmitic exterminator")); // 0 carriers → omitted
+        Assert.Equal(3, carry["Close combat weapon"]);           // always-on, every model
+    }
+
+    [Fact]
+    public void Per_model_two_gauss_one_enmitic()
+    {
+        var carry = Carry(LokhustHeavy(), PerModelUnit(3, ("enmitic-exterminator", 1)));
+
+        Assert.Equal(2, carry["Gauss destructor"]);   // default absorbs the remainder
+        Assert.Equal(1, carry["Enmitic exterminator"]);
+        Assert.Equal(3, carry["Close combat weapon"]);
+    }
+
+    [Fact]
+    public void Per_model_one_gauss_two_enmitic()
+    {
+        var carry = Carry(LokhustHeavy(), PerModelUnit(3, ("enmitic-exterminator", 2)));
+
+        Assert.Equal(1, carry["Gauss destructor"]);
+        Assert.Equal(2, carry["Enmitic exterminator"]);
+    }
+
+    [Fact]
+    public void Per_model_all_enmitic_drops_the_default()
+    {
+        var carry = Carry(LokhustHeavy(), PerModelUnit(3, ("enmitic-exterminator", 3)));
+
+        Assert.False(carry.ContainsKey("Gauss destructor")); // 0 carriers → omitted
+        Assert.Equal(3, carry["Enmitic exterminator"]);
+    }
+
+    [Fact]
+    public void Per_model_count_over_the_unit_size_is_clamped()
+    {
+        var carry = Carry(LokhustHeavy(), PerModelUnit(3, ("enmitic-exterminator", 5)));
+
+        Assert.Equal(3, carry["Enmitic exterminator"]);      // clamped to the unit size
+        Assert.False(carry.ContainsKey("Gauss destructor"));
+    }
+
+    [Fact]
+    public void Per_model_casualties_reduce_the_default_first()
+    {
+        var sheet = LokhustHeavy();
+        var unit = PerModelUnit(3, ("enmitic-exterminator", 1)); // 2 Gauss + 1 Enmitic at full strength
+
+        var two = Carry(sheet, unit, live: 2);
+        Assert.Equal(1, two["Gauss destructor"]);      // a Gauss model fell first
+        Assert.Equal(1, two["Enmitic exterminator"]);
+        Assert.Equal(2, two["Close combat weapon"]);   // always-on tracks the live models
+
+        var one = Carry(sheet, unit, live: 1);
+        Assert.False(one.ContainsKey("Gauss destructor")); // both Gauss gone
+        Assert.Equal(1, one["Enmitic exterminator"]);
+        Assert.Equal(1, one["Close combat weapon"]);
+    }
 }

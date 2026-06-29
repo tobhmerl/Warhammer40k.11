@@ -1296,6 +1296,18 @@ html[data-scroll="up"] .hud.sticky {
     border-color: transparent;
 }
 
+/* How many models carry this weapon — shown for per-model loadouts (e.g. 2 of 3 Lokhust models). */
+.wcarry {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-3);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 /* ---- Detachment Shooting-phase ability selector ---- */
 .shoot-choice {
     display: flex;
