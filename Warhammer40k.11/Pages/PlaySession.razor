@@ -116,7 +116,10 @@ else
 		</div>
 
 		@{
-			var strats = UsableStratagems;
+			var allStrats = UsableStratagems;
+			// Only show stratagems you can pay for right now (hidden, not greyed). "My Will Be Done" reduces the
+			// effective cost by 1, so it can reveal an otherwise-unaffordable stratagem (see EffectiveCost).
+			var strats = allStrats.Where(CanAfford).ToList();
 		}
 		<section class="strats" aria-label="Stratagems usable now">
 			<button type="button" class="strats-head" @onclick="ToggleStrats" aria-expanded="@_stratsOpen">
@@ -129,7 +132,14 @@ else
 			{
 			@if (strats.Count == 0)
 			{
-				<p class="strats-empty">No stratagems for this phase and turn.</p>
+				@if (allStrats.Count > 0)
+				{
+					<p class="strats-empty">Not enough CP — @allStrats.Count stratagem@(allStrats.Count == 1 ? "" : "s") hidden for this phase and turn.</p>
+				}
+				else
+				{
+					<p class="strats-empty">No stratagems for this phase and turn.</p>
+				}
 			}
 			else
 			{
@@ -137,16 +147,24 @@ else
 					@foreach (var s in strats)
 					{
 						var open = IsStratOpen(s);
-						<li class="strat @(CanAfford(s) ? "" : "broke")" @key="(s.Source + s.Id)">
+						var cost = EffectiveCost(s);
+						<li class="strat" @key="(s.Source + s.Id)">
 							<div class="s-head">
 								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
 									<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
 									<span class="s-name">@s.Name</span>
 								</button>
-								<span class="s-cp">@s.Cost CP</span>
+								@if (cost < s.Cost)
+								{
+									<span class="s-cp discounted" title="My Will Be Done: @s.Cost CP − 1"><s class="s-cp-was">@s.Cost</s> @cost CP</span>
+								}
+								else
+								{
+									<span class="s-cp">@s.Cost CP</span>
+								}
 								<button class="btn small s-use" type="button"
-										disabled="@(!CanAfford(s))" @onclick="() => UseStratagem(s)"
-										title="@(CanAfford(s) ? $"Spend {s.Cost} CP" : "Not enough CP")">
+										@onclick="() => UseStratagem(s)"
+										title="@($"Spend {cost} CP")">
 									Use
 								</button>
 							</div>
@@ -1224,9 +1242,19 @@ else
 		return include.Count == 0 || include.Any(Has);
 	}
 
-	private bool CanAfford(StratView stratagem) => _cp >= stratagem.Cost;
+	// "My Will Be Done" (Overlord / Overlord with Translocation Shroud) lets you spend 1 CP less on a Stratagem.
+	// While a living model with that ability is on the battlefield, every Stratagem's effective cost drops by 1
+	// (floored at 0). This feeds both the affordability filter (so a 2 CP strat shows at 1 CP) and what Use spends.
+	private bool HasCpDiscount =>
+		_battle is not null
+		&& _battle.Units.Any(u => !IsDead(u) && u.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost));
 
-	private void UseStratagem(StratView stratagem) => StepCp(-stratagem.Cost);
+	private int EffectiveCost(StratView stratagem) =>
+		Math.Max(0, stratagem.Cost - (HasCpDiscount ? 1 : 0));
+
+	private bool CanAfford(StratView stratagem) => _cp >= EffectiveCost(stratagem);
+
+	private void UseStratagem(StratView stratagem) => StepCp(-EffectiveCost(stratagem));
 
 	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
 

@@ -1906,8 +1906,17 @@ html[data-scroll="up"] .hud.sticky {
     border-top: none;
 }
 
-.strat.broke {
+/* The reduced-cost pill ("My Will Be Done"): the original cost struck through, the discounted cost highlighted. */
+.s-cp.discounted {
+    background: rgba(74, 222, 128, 0.14);
+    border-color: #4ade80;
+    color: #4ade80;
+}
+
+.s-cp-was {
     opacity: 0.6;
+    font-weight: 600;
+    margin-right: 0.1rem;
 }
 
 .s-head {

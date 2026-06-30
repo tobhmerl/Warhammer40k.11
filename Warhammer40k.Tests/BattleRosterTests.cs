@@ -229,6 +229,22 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void My_Will_Be_Done_marks_its_part_as_reducing_stratagem_cp_cost()
+    {
+        var overlord = Sheet("overlord", "Overlord", abilities:
+        [
+            new Ability { Name = "My Will Be Done", Text = "Reduce the CP cost of that use of that Stratagem by 1CP." },
+        ]);
+        var warriors = Sheet("necron-warriors", "Necron Warriors");
+        var roster = new Roster { Units = [Unit("u1", "overlord"), Unit("u2", "necron-warriors", models: 10)] };
+
+        var units = BattleRoster.Build(roster, Catalogue(overlord, warriors)).Units;
+
+        Assert.True(units.Single(u => u.Primary.Datasheet.Id == "overlord").Primary.ReducesStratagemCpCost);
+        Assert.False(units.Single(u => u.Primary.Datasheet.Id == "necron-warriors").Primary.ReducesStratagemCpCost);
+    }
+
+    [Fact]
     public void Single_multi_wound_model_tracks_wounds_even_when_attached()
     {
         var catalogue = Catalogue(

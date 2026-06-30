@@ -831,6 +831,14 @@ public sealed class BattlePart
     /// </summary>
     public Enhancement? Enhancement { get; internal set; }
 
+    /// <summary>
+    /// True when this part has the "My Will Be Done" ability (Overlord / Overlord with Translocation Shroud).
+    /// That ability lets the player spend 1 CP less on a Stratagem used to target this part's unit, so Play
+    /// Mode shows the reduced cost and only hides a Stratagem when even the reduced cost is unaffordable.
+    /// </summary>
+    public bool ReducesStratagemCpCost =>
+        Datasheet.Abilities.Any(a => string.Equals(a.Name, "My Will Be Done", StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Models in this part.</summary>
     public int ModelCount => Unit.ModelCount;
 
