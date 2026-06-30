@@ -253,6 +253,16 @@ public class WargearResolverTests
         Assert.Equal(1, one["Close combat weapon"]);
     }
 
+    [Fact]
+    public void PerModelWeaponNames_lists_only_the_per_model_loadout_weapons()
+    {
+        var names = WargearResolver.PerModelWeaponNames(LokhustHeavy());
+
+        Assert.Contains("Gauss destructor", names);
+        Assert.Contains("Enmitic exterminator", names);
+        Assert.DoesNotContain("Close combat weapon", names); // always-on weapon, not part of the per-model group
+    }
+
     // ---- Wargear-gated abilities (an ability whose name matches a wargear option) ----
 
     private static Datasheet GearSheet() => new()

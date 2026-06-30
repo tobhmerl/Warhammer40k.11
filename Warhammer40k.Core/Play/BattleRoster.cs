@@ -804,9 +804,11 @@ public sealed class BattlePart
         ActiveSelfEffects = datasheet.SelfEffects
             .Where(e => WargearResolver.IsAbilityActive(datasheet, unit, e.SourceAbility))
             .ToList();
+        _perModelWeaponNames = WargearResolver.PerModelWeaponNames(datasheet);
     }
 
     private readonly Dictionary<WeaponProfile, int> _modelsCarrying;
+    private readonly IReadOnlySet<string> _perModelWeaponNames;
 
     /// <summary>
     /// This part's permanent self-effects currently in play: <see cref="Datasheet.SelfEffects"/> minus any whose
@@ -852,6 +854,15 @@ public sealed class BattlePart
         var resolved = WargearResolver.ResolveWeapons(Datasheet, Unit, liveModels);
         return resolved.FirstOrDefault(r => ReferenceEquals(r.Weapon, weapon))?.Models ?? 0;
     }
+
+    /// <summary>
+    /// True when this part's models can each carry a different weapon from a <see cref="WargearGroup.PerModel"/>
+    /// loadout group (e.g. Lokhust Heavy Destroyers' Gauss / Enmitic), so Play Mode tracks casualties per weapon.
+    /// </summary>
+    public bool IsPerModel => _perModelWeaponNames.Count > 0;
+
+    /// <summary>True when <paramref name="weapon"/> is one of this part's per-model loadout weapons.</summary>
+    public bool IsPerModelWeapon(WeaponProfile weapon) => weapon is not null && _perModelWeaponNames.Contains(weapon.Name);
 
     /// <summary>The full-health statline (first profile), or null when the datasheet has none.</summary>
     public StatProfile? Profile => Datasheet.StatProfiles.FirstOrDefault();

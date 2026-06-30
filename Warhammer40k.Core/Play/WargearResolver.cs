@@ -119,6 +119,17 @@ public static class WargearResolver
         return selection is not null && selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// The names of a datasheet's weapons governed by a <see cref="WargearGroup.PerModel"/> loadout group (e.g. a
+    /// Lokhust Heavy Destroyers' Gauss Destructor / Enmitic Exterminator). Lets Play Mode track casualties per
+    /// weapon when each model can carry a different one.
+    /// </summary>
+    public static IReadOnlySet<string> PerModelWeaponNames(Datasheet datasheet)
+    {
+        ArgumentNullException.ThrowIfNull(datasheet);
+        return WeaponNamesForGroups(datasheet, static g => g.PerModel);
+    }
+
     private static HashSet<string> WeaponNamesForGroups(Datasheet datasheet, Func<WargearGroup, bool> predicate)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

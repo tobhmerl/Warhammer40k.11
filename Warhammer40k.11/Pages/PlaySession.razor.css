@@ -353,6 +353,27 @@ html[data-scroll="up"] .hud.sticky {
     gap: 0.6rem;
 }
 
+/* ---- Per-model loadout casualty chooser ---- */
+.loadout-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Each weapon option: name on the left, live / total on the right. */
+.loadout-opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+}
+
+.lo-count {
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---- Phase tab bar ---- */
 .phases {
     display: flex;

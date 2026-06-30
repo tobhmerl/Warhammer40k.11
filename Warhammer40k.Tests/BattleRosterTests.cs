@@ -504,6 +504,21 @@ public class BattleRosterTests
         Assert.DoesNotContain("Nanoscarab amulet", abilityNames);
     }
 
+    [Fact]
+    public void Real_seed_Lokhust_Heavy_Destroyers_are_per_model_with_gauss_and_enmitic()
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var lhd = catalogue.Datasheets.Single(d => d.Name == "Lokhust Heavy Destroyers");
+        var roster = new Roster { Units = [Unit("u", lhd.Id, models: 3)] };
+
+        var battle = BattleRoster.Build(roster, catalogue);
+        var part = Assert.Single(battle.Units).Primary;
+
+        Assert.True(part.IsPerModel);
+        Assert.True(part.IsPerModelWeapon(part.Weapons.Single(w => w.Name == "Gauss destructor")));
+        Assert.False(part.IsPerModelWeapon(part.Weapons.Single(w => w.Name == "Close combat weapon")));
+    }
+
     // Builds a standalone Lokhust Lord with the given Equipment option(s) selected (none = bare).
     private static (BattleRoster Battle, BattleUnit Unit) BuildLokhustLord(params string[] equipmentOptionIds)
     {

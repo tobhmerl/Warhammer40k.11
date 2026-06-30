@@ -456,13 +456,13 @@ else
 													@{
 														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true).Concat(ActiveBuffModifiers(unit, ranged: true)).ToList();
 														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null; var rCarry = row.Part.ModelsCarrying(row.Weapon);
+														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null; var rCarry = WeaponModelsAlive(row.Part, row.Weapon);
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, rwMods) A</span>
 													</div>
-													@if (rCarry < row.Part.ModelCount || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
+													@if (row.Part.IsPerModelWeapon(row.Weapon) || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
@@ -473,7 +473,7 @@ else
 															{
 																<span class="wkw">@kw</span>
 															}
-															@if (rCarry < row.Part.ModelCount){<span class="wcarry" title="Models carrying this weapon">@rCarry @(rCarry == 1 ? "model" : "models")</span>} @foreach (var g in rGrants)
+															@if (row.Part.IsPerModelWeapon(row.Weapon)){<span class="wcarry" title="Models carrying this weapon">@rCarry @(rCarry == 1 ? "model" : "models")</span>} @foreach (var g in rGrants)
 															{
 																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
@@ -506,13 +506,13 @@ else
 												<li class="weapon @(IsMemberSelected(unit, row.Part) ? "member-on" : "") @(MemberDimmed(unit, row.Part) ? "member-off" : "")" @key="row.Weapon">
 													@{
 														var mwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: false).Concat(ActiveBuffModifiers(unit, ranged: false)).ToList();
-														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(); var mCarry = row.Part.ModelsCarrying(row.Weapon);
+														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(); var mCarry = WeaponModelsAlive(row.Part, row.Weapon);
 													}
 													<div class="w-top">
 														<span class="wname">@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, mwMods) A</span>
 													</div>
-													@if (mCarry < row.Part.ModelCount || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
+													@if (row.Part.IsPerModelWeapon(row.Weapon) || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)
 													{
 														<div class="w-meta">
 															@if (unit.Parts.Count > 1)
@@ -523,7 +523,7 @@ else
 															{
 																<span class="wkw">@kw</span>
 															}
-															@if (mCarry < row.Part.ModelCount){<span class="wcarry" title="Models carrying this weapon">@mCarry @(mCarry == 1 ? "model" : "models")</span>} @foreach (var g in mGrants)
+															@if (row.Part.IsPerModelWeapon(row.Weapon)){<span class="wcarry" title="Models carrying this weapon">@mCarry @(mCarry == 1 ? "model" : "models")</span>} @foreach (var g in mGrants)
 															{
 																<span class="wkw granted" title="Conferred by your detachment or an attached leader">@g</span>
 															}
@@ -708,6 +708,24 @@ else
 		</div>
 	</Sheet>
 
+	<Sheet Open="@(_loadoutPart is not null)"
+		   Eyebrow="@(_loadoutDelta < 0 ? "Casualty" : "Reinforce")"
+		   Title="@(_loadoutDelta < 0 ? "Remove which model?" : "Return which model?")"
+		   OnCloseRequested="CancelLoadoutChoice">
+		@if (_loadoutPart is { } lp)
+		{
+			<div class="loadout-pick">
+				@foreach (var opt in LoadoutOptions(lp, _loadoutDelta))
+				{
+					<button class="btn loadout-opt" type="button" @onclick="() => ApplyLoadoutChoice(opt.Weapon)">
+						<span class="lo-name">@opt.Weapon.Name</span>
+						<span class="lo-count">@opt.Alive / @opt.Setup</span>
+					</button>
+				}
+			</div>
+		}
+	</Sheet>
+
 	<Sheet Open="_detail is not null" Eyebrow="Datasheet" Title="@_detail?.Name" OnCloseRequested="CloseDetail">
 	@if (_detail is { } d)
 	{
@@ -823,6 +841,11 @@ else
 	// Per-part current tracked value (models for multi-model units, wounds for single multi-wound models),
 	// keyed by roster-unit id (in-memory, like the round/CP trackers).
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
+
+	// Models killed per weapon for a per-model loadout part (Lokhust Heavy Destroyers), keyed "partId|weaponName".
+	// Kept in lock-step with _track (its sum of kills = the part's lost models) so each weapon's attacks reflect
+	// which models the player chose to remove.
+	private readonly Dictionary<string, int> _weaponKills = new(StringComparer.Ordinal);
 	// Cards collapsed by the user, keyed by group id.
 	private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
 	// Abilities expanded by the user (collapsed by default), keyed by unit id + ability name.
@@ -1279,6 +1302,7 @@ else
 		_phase = BattlePhase.Command;
 		_turn = BattleTurn.Player;
 		_track.Clear();
+		_weaponKills.Clear();
 		_collapsed.Clear();
 		_openAbilities.Clear();
 		_openStrats.Clear();
@@ -1305,8 +1329,83 @@ else
 	private int PartCurrent(BattlePart part) =>
 		_track.TryGetValue(part.Unit.Id, out var v) ? v : part.TrackMax;
 
-	private void StepPart(BattlePart part, int delta) =>
+	private void StepPart(BattlePart part, int delta)
+	{
+		// A per-model loadout part (each model carries Gauss or Enmitic) needs to know WHICH model leaves, so that
+		// weapon's attacks reduce correctly. When there's a genuine choice we ask; otherwise apply it directly.
+		if (delta != 0 && part.IsPerModel)
+		{
+			var options = LoadoutOptions(part, delta);
+			if (options.Count >= 2)
+			{
+				_loadoutPart = part;
+				_loadoutDelta = delta;
+				return;
+			}
+			if (options.Count == 1)
+				AdjustWeapon(part, options[0].Weapon, delta);
+			return;
+		}
 		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+	}
+
+	private static string WeaponKillKey(BattlePart part, WeaponProfile weapon) => part.Unit.Id + "|" + weapon.Name;
+
+	// How many models in this part currently wield the weapon: for a per-model loadout it's the setup count minus
+	// the casualties the player assigned to it; otherwise it follows the part's live model count.
+	private int WeaponModelsAlive(BattlePart part, WeaponProfile weapon)
+	{
+		if (part.IsPerModelWeapon(weapon))
+			return Math.Max(0, part.ModelsCarrying(weapon) - _weaponKills.GetValueOrDefault(WeaponKillKey(part, weapon)));
+		return part.ModelsCarrying(weapon, PartModelsAlive(part));
+	}
+
+	// Apply one casualty (delta -1) or restoration (delta +1) to a specific per-model weapon, keeping the part's
+	// total model count (_track) in step with the per-weapon kill tally.
+	private void AdjustWeapon(BattlePart part, WeaponProfile weapon, int delta)
+	{
+		var key = WeaponKillKey(part, weapon);
+		var setup = part.ModelsCarrying(weapon);
+		var kills = _weaponKills.GetValueOrDefault(key);
+		var newKills = Math.Clamp(kills - delta, 0, setup); // delta -1 → +1 kill; delta +1 → -1 kill
+		if (newKills == kills)
+			return;
+		if (newKills <= 0)
+			_weaponKills.Remove(key);
+		else
+			_weaponKills[key] = newKills;
+		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+	}
+
+	// The per-model weapons eligible for a casualty (delta -1: those with a live model) or a restore (delta +1:
+	// those below their setup count), each with its current live count, for the chooser.
+	private IReadOnlyList<(WeaponProfile Weapon, int Alive, int Setup)> LoadoutOptions(BattlePart part, int delta)
+	{
+		var result = new List<(WeaponProfile, int, int)>();
+		foreach (var weapon in part.Weapons)
+		{
+			if (!part.IsPerModelWeapon(weapon))
+				continue;
+			var setup = part.ModelsCarrying(weapon);
+			var alive = WeaponModelsAlive(part, weapon);
+			if (delta < 0 ? alive > 0 : alive < setup)
+				result.Add((weapon, alive, setup));
+		}
+		return result;
+	}
+
+	// ---- Per-model loadout casualty chooser (which weapon's model leaves / returns) ----
+	private BattlePart? _loadoutPart;
+	private int _loadoutDelta;
+
+	private void ApplyLoadoutChoice(WeaponProfile weapon)
+	{
+		if (_loadoutPart is { } part)
+			AdjustWeapon(part, weapon, _loadoutDelta);
+		_loadoutPart = null;
+	}
+
+	private void CancelLoadoutChoice() => _loadoutPart = null;
 
 	private bool PartDown(BattlePart part) => PartCurrent(part) == 0;
 
@@ -1322,7 +1421,7 @@ else
 	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
 
 	private string TotalAttacks(BattlePart part, WeaponProfile weapon, IReadOnlyList<StatModifier> weaponMods) =>
-		WeaponMath.TotalAttacks(part.ModelsCarrying(weapon, PartModelsAlive(part)), BuffedRaw(weapon.Attacks, weaponMods, StatTarget.Attacks));
+		WeaponMath.TotalAttacks(WeaponModelsAlive(part, weapon), BuffedRaw(weapon.Attacks, weaponMods, StatTarget.Attacks));
 
 	// ---- Applied stat buffs (leader conferrals + detachment buffs) shown directly on the stat cells ----
 	private static string BuffedRaw(string? raw, IReadOnlyList<StatModifier> mods, StatTarget target)
