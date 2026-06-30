@@ -197,6 +197,60 @@ public static class DetachmentCatalogue
             },
         ];
 
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "protocol-of-the-sudden-storm", Name = "Protocol of the Sudden Storm", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                When = "Your Movement phase.",
+                Target = "One NECRONS unit from your army.",
+                Effect = "Until the end of the turn, ranged weapons equipped by models in your unit have the [ASSAULT] ability. In addition, if a NECRONS CHARACTER is leading your unit, until the end of the phase, you can re-roll Advance rolls made for your unit.",
+            },
+            new Stratagem
+            {
+                Id = "protocol-of-the-conquering-tyrant", Name = "Protocol of the Conquering Tyrant", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                When = "Your Shooting phase.",
+                Target = "One NECRONS unit from your army that has not been selected to shoot this phase.",
+                Effect = "Until the end of the phase, each time a model in your unit makes an attack that targets a unit within half range, re-roll a Hit roll of 1. If a NECRONS CHARACTER is leading your unit, until the end of the phase, you can re-roll the Hit roll for that attack instead.",
+            },
+            new Stratagem
+            {
+                Id = "protocol-of-the-vengeful-stars", Name = "Protocol of the Vengeful Stars", Type = "Strategic Ploy", CpCost = 2,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Character"],
+                When = "Your opponent's Shooting phase, just after an enemy unit destroys a NECRONS unit from your army.",
+                Target = "One NECRONS CHARACTER unit from your army that was within 6\" of that NECRONS unit when it was destroyed.",
+                Effect = "After the attacking unit has resolved its attacks, your unit can shoot as if it were your Shooting phase, but it must target only that enemy unit when doing so, and can only do so if that enemy unit is an eligible target.",
+            },
+            new Stratagem
+            {
+                Id = "protocol-of-the-eternal-revenant", Name = "Protocol of the Eternal Revenant", Type = "Epic Deed", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [],
+                RequiredUnitKeywords = ["Character"],
+                When = "Any phase.",
+                Target = "One NECRONS INFANTRY CHARACTER model from your army that was just destroyed. You can use this Stratagem on that model even though it was just destroyed.",
+                Effect = "At the end of the phase, set your model back up on the battlefield as close as possible to where it was destroyed and not within Engagement Range of any enemy units, with half of its starting number of wounds remaining. Each model can only be targeted with this Stratagem once per battle.",
+            },
+            new Stratagem
+            {
+                Id = "protocol-of-the-hungry-void", Name = "Protocol of the Hungry Void", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Fight],
+                When = "Fight phase.",
+                Target = "One NECRONS unit from your army that has not been selected to fight this phase.",
+                Effect = "Until the end of the phase, add 1 to the Strength characteristic of melee weapons equipped by models in your unit. In addition, if a NECRONS CHARACTER is leading your unit, until the end of the phase, improve the Armour Penetration characteristic of melee weapons equipped by models in your unit by 1 (this is not cumulative with any other modifiers that improve Armour Penetration).",
+            },
+            new Stratagem
+            {
+                Id = "protocol-of-the-undying-legions", Name = "Protocol of the Undying Legions", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has resolved its attacks.",
+                Target = "One NECRONS unit from your army that had one or more of its models destroyed as a result of the attacking unit's attacks.",
+                Effect = "Your unit activates its Reanimation Protocols and reanimates D3 wounds (or D3+1 wounds if a NECRONS CHARACTER is leading your unit).",
+            },
+        ];
+
         return d;
     }
 

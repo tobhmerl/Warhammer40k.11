@@ -419,4 +419,58 @@ public class DetachmentCatalogueTests
         Assert.False(reactive.AppliesInTurn(BattleTurn.Player));
         Assert.Empty(reactive.RequiredUnitKeywords);
     }
+
+    [Fact]
+    public void Awakened_Dynasty_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var awakened = DetachmentCatalogue.FindById("awakened-dynasty")!;
+        Assert.Equal(6, awakened.Stratagems.Count);
+        Assert.All(awakened.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(awakened.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Protocol of the Sudden Storm: 1CP, your Movement phase, any NECRONS unit.
+        var storm = awakened.Stratagems.Single(s => s.Name == "Protocol of the Sudden Storm");
+        Assert.Equal("Strategic Ploy", storm.Type);
+        Assert.Equal(1, storm.CpCost);
+        Assert.True(storm.AppliesInPhase(BattlePhase.Movement));
+        Assert.True(storm.AppliesInTurn(BattleTurn.Player));
+        Assert.False(storm.AppliesInTurn(BattleTurn.Opponent));
+        Assert.Empty(storm.RequiredUnitKeywords);
+
+        // Protocol of the Conquering Tyrant: 1CP Battle Tactic, your Shooting phase.
+        var tyrant = awakened.Stratagems.Single(s => s.Name == "Protocol of the Conquering Tyrant");
+        Assert.Equal("Battle Tactic", tyrant.Type);
+        Assert.True(tyrant.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(tyrant.AppliesInTurn(BattleTurn.Player));
+
+        // Protocol of the Vengeful Stars: 2CP, opponent's Shooting phase, CHARACTER-gated.
+        var vengeful = awakened.Stratagems.Single(s => s.Name == "Protocol of the Vengeful Stars");
+        Assert.Equal(2, vengeful.CpCost);
+        Assert.True(vengeful.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(vengeful.AppliesInTurn(BattleTurn.Player));
+        Assert.Equal(["Character"], vengeful.RequiredUnitKeywords);
+
+        // Protocol of the Eternal Revenant: 1CP Epic Deed, any phase, CHARACTER-gated.
+        var revenant = awakened.Stratagems.Single(s => s.Name == "Protocol of the Eternal Revenant");
+        Assert.Equal("Epic Deed", revenant.Type);
+        Assert.True(revenant.AppliesInPhase(BattlePhase.Command));
+        Assert.True(revenant.AppliesInPhase(BattlePhase.Fight));
+        Assert.True(revenant.AppliesInTurn(BattleTurn.Player));
+        Assert.True(revenant.AppliesInTurn(BattleTurn.Opponent));
+        Assert.Equal(["Character"], revenant.RequiredUnitKeywords);
+
+        // Protocol of the Hungry Void: 1CP Battle Tactic, Fight phase (either turn).
+        var hungry = awakened.Stratagems.Single(s => s.Name == "Protocol of the Hungry Void");
+        Assert.True(hungry.AppliesInPhase(BattlePhase.Fight));
+        Assert.False(hungry.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(hungry.AppliesInTurn(BattleTurn.Player));
+        Assert.True(hungry.AppliesInTurn(BattleTurn.Opponent));
+
+        // Protocol of the Undying Legions: 1CP, opponent's Shooting OR Fight phase.
+        var undying = awakened.Stratagems.Single(s => s.Name == "Protocol of the Undying Legions");
+        Assert.True(undying.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(undying.AppliesInPhase(BattlePhase.Fight));
+        Assert.True(undying.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(undying.AppliesInTurn(BattleTurn.Player));
+    }
 }
