@@ -42,11 +42,7 @@ public static class DetachmentCatalogue
             ("Eternal Madness", 20),
             ("Ingrained Superiority", 5),
             ("Soulless Reaper", 15)),
-        Make("Awakened Dynasty", 3,
-            ("Enaegic Dermal Bond", 30),
-            ("Nether-realm Casket", 20),
-            ("Phasal Subjugator", 35),
-            ("Veil of Darkness", 20)),
+        AwakenedDynasty(),
         Make("Canoptek Court", 3,
             ("Autodivinator", 15),
             ("Dimensional Sanctum", 20),
@@ -154,6 +150,53 @@ public static class DetachmentCatalogue
                 Effect = "Your unit shoots using snap shooting, but while doing so your unit can only target that enemy unit.",
             },
         ];
+        return d;
+    }
+
+    // Awakened Dynasty (3 DP, Take and Hold) — "Command Protocols".
+    private static Detachment AwakenedDynasty()
+    {
+        // Enhancement points are authored; their text/eligibility and the stratagems follow (§10/§11).
+        var d = Make("Awakened Dynasty", 3,
+            ("Enaegic Dermal Bond", 30),
+            ("Nether-realm Casket", 20),
+            ("Phasal Subjugator", 35),
+            ("Veil of Darkness", 20));
+        d.Enabled = true;
+        d.Tags = ["Dynasty"];
+
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Command Protocols",
+                Text =
+                    "While a NECRONS CHARACTER model is leading this unit, each time a model in this unit makes " +
+                    "an attack, add 1 to the Hit roll.\n" +
+                    "This detachment has the DYNASTY tag and cannot be taken with another DYNASTY detachment.",
+            },
+        ];
+
+        // The +1 to Hit is data-driven: every friendly unit that currently has a Leader attached gets +1 to its
+        // Hit roll (BS and WS), shown as a "(+1)" badge on the weapon's BS/WS cell in Play Mode. It is not baked
+        // into the BS/WS characteristic (which the Cover rule can lower independently).
+        d.StatBuffs =
+        [
+            new DetachmentStatBuff
+            {
+                Scope = GrantScope.Unit,
+                RequiresAttachedLeader = true,
+                Keywords = [],
+                Modifier = new StatModifier
+                {
+                    Target = StatTarget.Skill,
+                    Delta = 1,
+                    WeaponClass = WeaponClass.Any,
+                    Label = "+1 Hit",
+                },
+            },
+        ];
+
         return d;
     }
 

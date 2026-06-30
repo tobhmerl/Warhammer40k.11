@@ -280,8 +280,37 @@ public class DetachmentCatalogueTests
     [Fact]
     public void Points_only_detachments_stay_disabled_until_rules_are_authored()
     {
-        foreach (var id in new[] { "annihilation-legion", "awakened-dynasty", "canoptek-court", "hypercrypt-legion", "obeisance-phalanx", "skyshroud-spearhead", "the-phaerons-armoury" })
+        foreach (var id in new[] { "annihilation-legion", "canoptek-court", "hypercrypt-legion", "obeisance-phalanx", "skyshroud-spearhead", "the-phaerons-armoury" })
             Assert.False(DetachmentCatalogue.FindById(id)!.Enabled);
+    }
+
+    [Fact]
+    public void Awakened_Dynasty_is_3DP_enabled_Dynasty_with_Command_Protocols()
+    {
+        var awakened = DetachmentCatalogue.FindById("awakened-dynasty");
+
+        Assert.NotNull(awakened);
+        Assert.True(awakened!.Enabled);
+        Assert.Equal(3, awakened.DetachmentPoints);
+        Assert.Contains("Dynasty", awakened.Tags);
+
+        var rule = Assert.Single(awakened.Rules);
+        Assert.Equal("Command Protocols", rule.Name);
+    }
+
+    [Fact]
+    public void Command_Protocols_adds_plus1_hit_while_a_leader_is_attached()
+    {
+        var awakened = DetachmentCatalogue.FindById("awakened-dynasty")!;
+
+        var buff = Assert.Single(awakened.StatBuffs);
+        Assert.True(buff.RequiresAttachedLeader);
+        Assert.Equal(GrantScope.Unit, buff.Scope);
+        Assert.Empty(buff.Keywords);
+
+        Assert.Equal(StatTarget.Skill, buff.Modifier.Target);
+        Assert.Equal(1, buff.Modifier.Delta);
+        Assert.Equal(WeaponClass.Any, buff.Modifier.WeaponClass);
     }
 
     [Fact]
