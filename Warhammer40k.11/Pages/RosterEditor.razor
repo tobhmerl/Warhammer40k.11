@@ -727,6 +727,9 @@ else
 
 		_roster.DetachmentId = ids.FirstOrDefault() ?? "";
 		ResolveDetachments();
+		// Enhancements are detachment-specific: drop any assignment the new selection no longer offers so it
+		// can't trip R6 ("not part of your detachment(s)") and the slot frees up for the new detachment's picks.
+		EnhancementReconciler.Revoke(_roster, _detachments);
 		MarkChanged();
 	}
 
