@@ -519,22 +519,41 @@ html[data-scroll="up"] .hud.sticky {
     overflow: visible;
 }
 
-/* Count of abilities usable right now for this unit — mirrors the phase-button badge at the bottom. */
+/* Count badge on a deck pill: abilities usable now (green) | stratagems usable now (amber). A segment shows
+   "–" when its count is zero, so "2 | –" = two abilities and no stratagem, "– | 1" = one stratagem only. */
 .dd-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.18rem;
     min-width: 1.05rem;
     height: 1.05rem;
-    padding: 0 0.28rem;
+    padding: 0 0.32rem;
     border-radius: 999px;
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-line);
-    color: var(--accent-strong);
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
     font-size: 0.64rem;
     font-weight: 800;
     line-height: 1;
     letter-spacing: 0;
+}
+
+.dd-ability {
+    color: var(--accent-strong);
+}
+
+.dd-strat {
+    color: #fbbf24;
+}
+
+.dd-sep {
+    color: var(--text-faint);
+    font-weight: 600;
+}
+
+.dd-ability.none,
+.dd-strat.none {
+    color: var(--text-faint);
 }
 
 .deck-dot:hover {
@@ -553,6 +572,13 @@ html[data-scroll="up"] .hud.sticky {
 .deck-dot.on .dd-badge {
     background: rgba(4, 19, 13, 0.22);
     border-color: rgba(4, 19, 13, 0.3);
+    color: #04130d;
+}
+
+/* Against the bright active fill, force all three segments to the dark ink for legibility. */
+.deck-dot.on .dd-ability,
+.deck-dot.on .dd-strat,
+.deck-dot.on .dd-sep {
     color: #04130d;
 }
 

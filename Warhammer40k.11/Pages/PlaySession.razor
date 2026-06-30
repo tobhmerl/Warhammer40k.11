@@ -58,16 +58,22 @@ else
 						var index = i;
 						var u = ordered[index];
 						var dUsable = IsDead(u) ? 0 : AvailableNowCount(u);
+						var dStrat = IsDead(u) ? 0 : StratagemsNowCount(u);
 						var dShock = MyCommandPhase && NeedsBattleShock(u);
 						var dReanim = MyCommandPhase && !dShock && NeedsReanimation(u);
 						var dState = dShock ? " · battle-shock" : dReanim ? " · can reanimate" : "";
+						var dCounts = (dUsable > 0 || dStrat > 0) ? $" · {dUsable} ability/{dStrat} stratagem usable now" : "";
 						<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "") @(dShock ? "shocked" : "") @(dReanim ? "reanimate" : "")"
 								role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
-								title="@($"{u.Name}{(dUsable > 0 ? $" · {dUsable} usable now" : "")}{dState}")" @onclick="() => SelectCard(index)">
+								title="@($"{u.Name}{dCounts}{dState}")" @onclick="() => SelectCard(index)">
 							<span class="dd-label">@DeckLabel(u)</span>
-							@if (dUsable > 0)
+							@if (dUsable > 0 || dStrat > 0)
 							{
-								<span class="dd-badge" aria-hidden="true">@dUsable</span>
+								<span class="dd-badge" aria-hidden="true">
+									<span class="dd-ability @(dUsable > 0 ? "" : "none")">@(dUsable > 0 ? dUsable.ToString() : "–")</span>
+									<span class="dd-sep">|</span>
+									<span class="dd-strat @(dStrat > 0 ? "" : "none")">@(dStrat > 0 ? dStrat.ToString() : "–")</span>
+								</span>
 							}
 						</button>
 					}
@@ -1209,17 +1215,7 @@ else
 	{
 		get
 		{
-			var list = new List<StratView>();
-			if (_battle is not null)
-			{
-				foreach (var s in CoreStratagemCatalogue.All)
-					if (_battle.CoreStratagemUsable(s, _phase, _turn))
-						list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
-				foreach (var det in _battle.Detachments)
-					foreach (var s in det.Stratagems)
-						if (_battle.DetachmentStratagemUsable(det, s, _phase, _turn))
-							list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
-			}
+			var list = PhaseTurnStratagems();
 			// In swipe mode, narrow the list to stratagems the unit you're viewing can actually use, by matching
 			// its keywords against the Target's required/excluded keywords. (List mode shows them all.)
 			if (_cardSwipe && ActiveUnit is { } unit)
@@ -1227,6 +1223,30 @@ else
 			return list;
 		}
 	}
+
+	// All stratagems usable in the current phase + turn (Core plus every selected detachment), before any
+	// per-unit keyword narrowing or CP-affordability filtering. Shared by the panel and the per-pill counter.
+	private List<StratView> PhaseTurnStratagems()
+	{
+		var list = new List<StratView>();
+		if (_battle is not null)
+		{
+			foreach (var s in CoreStratagemCatalogue.All)
+				if (_battle.CoreStratagemUsable(s, _phase, _turn))
+					list.Add(new StratView(s.Id, s.Name, "Core", "", s.Cost, s.Flavour, s.When, s.Target, s.Effect, s.Restrictions));
+			foreach (var det in _battle.Detachments)
+				foreach (var s in det.Stratagems)
+					if (_battle.DetachmentStratagemUsable(det, s, _phase, _turn))
+						list.Add(new StratView(s.Id, s.Name, det.Name, s.Type, s.CpCost, "", s.When, s.Target, s.Effect, null));
+		}
+		return list;
+	}
+
+	// Stratagems available to this unit right now: usable in the phase/turn, affordable (respecting the CP
+	// discount), and applicable to the unit by keyword. Drives the deck-pill stratagem badge so you can spot a
+	// unit a stratagem applies to without flipping through every card.
+	private int StratagemsNowCount(BattleUnit unit) =>
+		PhaseTurnStratagems().Count(s => CanAfford(s) && StratagemAppliesTo(unit, s.Target));
 
 	private BattleUnit? ActiveUnit =>
 		_ordered.Count > 0 ? _ordered[Math.Clamp(_activeCard, 0, _ordered.Count - 1)] : null;
