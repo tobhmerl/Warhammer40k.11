@@ -220,11 +220,88 @@
     font-style: italic;
 }
 
-.dp-enh {
+/* ---- Expandable rule / enhancement rows in the detachment picker ---- */
+.dp-rules,
+.dp-enh-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0 0.7rem 0.5rem;
+}
+
+.dp-enh-list {
+    border-top: 1px solid var(--border);
+    padding-top: 0.45rem;
+}
+
+.dp-enh-label {
+    display: block;
+    color: var(--text-faint);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.15rem;
+}
+
+.dp-expand {
+    display: flex;
+    flex-direction: column;
+}
+
+.dp-expand-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
     margin: 0;
-    padding: 0 0.7rem 0.55rem;
+    padding: 0.2rem 0;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.dp-expand-btn .chev {
+    flex: none;
+    color: var(--accent);
+    font-size: 0.7rem;
+}
+
+.dp-rule-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--accent-strong);
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+
+.dp-enh-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--text);
+    font-size: 0.82rem;
+}
+
+.dp-enh-pts {
+    flex: none;
     color: var(--text-faint);
     font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.dp-expand-btn:hover .dp-rule-name,
+.dp-expand-btn:hover .dp-enh-name {
+    color: var(--accent);
+}
+
+.dp-expand-text {
+    margin: 0.1rem 0 0.35rem 1.05rem;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    white-space: pre-line;
 }
 
 /* ---- Detachment info sheet ---- */

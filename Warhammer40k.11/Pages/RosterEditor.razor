@@ -492,7 +492,23 @@ else
 				</button>
 				@if (d.Rules.Count > 0)
 				{
-					<p class="dp-rule-line">@string.Join(" · ", d.Rules.Select(r => r.Name))</p>
+					<div class="dp-rules">
+						@foreach (var r in d.Rules)
+						{
+							var rkey = $"rule|{d.Id}|{r.Name}";
+							var ropen = _openDetachInfo.Contains(rkey);
+							<div class="dp-expand" @key="rkey">
+								<button type="button" class="dp-expand-btn rule" @onclick="() => ToggleDetachInfo(rkey)" aria-expanded="@ropen" title="Show this rule's text">
+									<span class="chev" aria-hidden="true">@(ropen ? "▾" : "▸")</span>
+									<span class="dp-rule-name">@r.Name</span>
+								</button>
+								@if (ropen && !string.IsNullOrWhiteSpace(r.Text))
+								{
+									<p class="dp-expand-text">@CleanText(r.Text)</p>
+								}
+							</div>
+						}
+					</div>
 				}
 				@if (disabled && !selected)
 				{
@@ -500,7 +516,25 @@ else
 				}
 				@if (d.Enhancements.Count > 0)
 				{
-					<p class="dp-enh">Enhancements: @string.Join(", ", d.Enhancements.Select(e => $"{e.Name} (+{e.Points})"))</p>
+					<div class="dp-enh-list">
+						<span class="dp-enh-label">Enhancements</span>
+						@foreach (var e in d.Enhancements)
+						{
+							var ekey = $"enh|{d.Id}|{e.Id}";
+							var eopen = _openDetachInfo.Contains(ekey);
+							<div class="dp-expand" @key="ekey">
+								<button type="button" class="dp-expand-btn" @onclick="() => ToggleDetachInfo(ekey)" aria-expanded="@eopen" title="Show this enhancement's text">
+									<span class="chev" aria-hidden="true">@(eopen ? "▾" : "▸")</span>
+									<span class="dp-enh-name">@e.Name</span>
+									<span class="dp-enh-pts">+@e.Points</span>
+								</button>
+								@if (eopen)
+								{
+									<p class="dp-expand-text">@(string.IsNullOrWhiteSpace(e.Text) ? "No rules text yet." : CleanText(e.Text))</p>
+								}
+							</div>
+						}
+					</div>
 				}
 			</div>
 		}
@@ -989,6 +1023,17 @@ else
 	{
 		if (!_openSchedText.Remove(id))
 			_openSchedText.Add(id);
+	}
+
+	// Detachment-picker rule/enhancement rows the user expanded to read their text (UI-only, keyed by
+	// "rule|detachmentId|name" / "enh|detachmentId|enhancementId"). Lets you preview what a detachment grants
+	// before selecting it.
+	private readonly HashSet<string> _openDetachInfo = new(StringComparer.Ordinal);
+
+	private void ToggleDetachInfo(string id)
+	{
+		if (!_openDetachInfo.Remove(id))
+			_openDetachInfo.Add(id);
 	}
 
 	// Strips the seed's markdown/bullet artefacts so the rules text reads cleanly (mirrors Play Mode).
