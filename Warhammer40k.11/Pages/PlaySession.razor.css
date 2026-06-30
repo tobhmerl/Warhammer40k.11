@@ -1178,6 +1178,31 @@ html[data-scroll="up"] .hud.sticky {
     color: #04130d;
 }
 
+/* Hit-roll modifier badge: a "(+1)"/"(−1)" shown bottom-left, opposite the crit badge, so a
+   "+1 to Hit" reads as a roll modifier and stays separate from the base BS/WS number. */
+.st .hitmod {
+    position: absolute;
+    left: 0.16rem;
+    bottom: 0.05rem;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.st .hitmod.up {
+    color: #4ade80;
+}
+
+.st .hitmod.down {
+    color: #fbbf24;
+}
+
+/* Keep both badge colours legible when the cell is selected (bright-green fill). */
+.st.selected .hitmod {
+    color: #04130d;
+}
+
 /* ---- Weapon blocks (ranged / melee): name + Total A, then a wrapping stat-chip grid ---- */
 .weapon-block {
     border: 1px solid var(--border);
