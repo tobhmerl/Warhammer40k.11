@@ -314,6 +314,27 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Awakened_Dynasty_enhancements_carry_text_and_stay_unconstrained()
+    {
+        var awakened = DetachmentCatalogue.FindById("awakened-dynasty")!;
+
+        // All four are "NECRONS model only" — authored text, R6-unconstrained eligibility.
+        foreach (var (id, points) in new[]
+                 {
+                     ("enaegic-dermal-bond", 30),
+                     ("nether-realm-casket", 20),
+                     ("phasal-subjugator", 35),
+                     ("veil-of-darkness", 20),
+                 })
+        {
+            var enh = awakened.FindEnhancement(id)!;
+            Assert.Equal(points, enh.Points);
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+            Assert.True(enh.Eligibility.IsUnconstrained);
+        }
+    }
+
+    [Fact]
     public void Starshatter_Arsenal_is_3DP_enabled_with_Relentless_Onslaught_and_a_non_Titanic_Assault_grant()
     {
         var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal");

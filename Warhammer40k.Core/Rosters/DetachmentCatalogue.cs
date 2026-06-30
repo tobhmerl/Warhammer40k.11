@@ -197,6 +197,23 @@ public static class DetachmentCatalogue
             },
         ];
 
+        // Enhancement display text (bearer's Play card). All four are "NECRONS model only" — left R6-unconstrained
+        // (every model that can bear an enhancement is already NECRONS). Phasal Subjugator is a proximity Aura, so
+        // (like Starshatter's Dread Majesty) it stays reference text rather than a data-driven buff.
+        Author(d, "enaegic-dermal-bond",
+            "NECRONS model only. The bearer has the Feel No Pain 4+ ability.");
+        Author(d, "nether-realm-casket",
+            "NECRONS model only. While the bearer is leading a unit, models in that unit have the Stealth ability.");
+        Author(d, "phasal-subjugator",
+            "NECRONS model only. Aura. While a friendly NECRONS unit (excluding CHARACTER units) is within 6\" of " +
+            "the bearer, each time a model in that unit makes an attack, add 1 to the Hit roll.");
+        Author(d, "veil-of-darkness",
+            "NECRONS model only. Once per battle, at the end of your opponent's turn, if the bearer's unit is not " +
+            "within Engagement Range of one or more enemy units, the bearer can use this Enhancement. If it does, " +
+            "remove that unit from the battlefield. Then, in the Reinforcements step of your next Movement phase, " +
+            "set up that unit anywhere on the battlefield that is more than 9\" horizontally away from all enemy " +
+            "models.");
+
         d.Stratagems =
         [
             new Stratagem
