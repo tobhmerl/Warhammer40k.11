@@ -11,7 +11,8 @@ public static class WeaponMath
     /// <summary>
     /// The display string for a weapon's total attacks across <paramref name="models"/> models, given its
     /// per-model Attacks characteristic <paramref name="attacks"/>. Returns a plain number for fixed A
-    /// (e.g. 20), a multiplier formula for random A (e.g. "20×D6"), or the raw value when models &lt;= 1.
+    /// (e.g. 20), a multiplier formula for random A (e.g. "20×D6"), <c>"0"</c> when no models remain (a
+    /// destroyed unit makes no attacks), or the raw value when models == 1.
     /// </summary>
     public static string TotalAttacks(int models, string attacks)
     {
@@ -19,12 +20,15 @@ public static class WeaponMath
         if (a.Length == 0)
             return "–";
 
-        var count = Math.Max(1, models);
+        // No models left (destroyed unit, or no model still carries this weapon) => no attacks.
+        if (models <= 0)
+            return "0";
+
         if (int.TryParse(a, out var perModel))
-            return (perModel * count).ToString();
+            return (perModel * models).ToString();
 
         // Random characteristic — keep it honest as a formula rather than a wrong product.
-        return count > 1 ? $"{count}×{a}" : a;
+        return models > 1 ? $"{models}×{a}" : a;
     }
 
     /// <summary>True when the Attacks characteristic is a fixed integer (so a single total can be shown).</summary>

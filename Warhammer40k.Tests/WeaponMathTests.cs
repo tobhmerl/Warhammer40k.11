@@ -31,10 +31,12 @@ public class WeaponMathTests
     public void Empty_attacks_returns_dash() => Assert.Equal("–", WeaponMath.TotalAttacks(10, ""));
 
     [Fact]
-    public void Zero_or_negative_models_treated_as_one()
+    public void No_models_left_shows_zero_attacks()
     {
-        Assert.Equal("4", WeaponMath.TotalAttacks(0, "4"));
-        Assert.Equal("4", WeaponMath.TotalAttacks(-3, "4"));
+        // A destroyed unit (or a per-model weapon whose carriers are all dead) makes no attacks.
+        Assert.Equal("0", WeaponMath.TotalAttacks(0, "4"));
+        Assert.Equal("0", WeaponMath.TotalAttacks(-3, "4"));
+        Assert.Equal("0", WeaponMath.TotalAttacks(0, "D6"));
     }
 
     [Theory]
