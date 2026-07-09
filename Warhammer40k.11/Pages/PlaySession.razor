@@ -418,13 +418,13 @@ else
 											<div class="sl-top">
 												@if (unit.Parts.Count > 1)
 												{
-													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="Highlight this model's weapons; tap again to clear">
-														@part.Datasheet.Name@(part.IsLeader ? " (Leader)" : "")
+													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="@(part.Datasheet.Name) — highlight this model's weapons; tap again to clear">
+														@(ShortName(part.Datasheet.Name) + (part.IsLeader ? " (Leader)" : ""))
 													</button>
 												}
 												else
 												{
-													<span class="sname">@part.Datasheet.Name</span>
+													<span class="sname" title="@part.Datasheet.Name">@ShortName(part.Datasheet.Name)</span>
 												}
 												<span class="counter" title="@(part.TracksWounds ? "Wounds remaining" : "Models remaining")">
 													<button type="button" @onclick="() => StepPart(part, -1)" aria-label="@(part.TracksWounds ? "Lose a wound" : "Remove a model")">−</button>
