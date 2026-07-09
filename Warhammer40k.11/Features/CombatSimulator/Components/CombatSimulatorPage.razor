@@ -25,6 +25,19 @@
 	}
 	else
 	{
+		@if (_rosters.Count > 0)
+		{
+			<div class="csim-army" role="group" aria-label="Choose your army">
+				<label class="csim-army-label" for="csim-army-select">My army</label>
+				<select id="csim-army-select" class="csim-select" value="@_selectedRosterId" @onchange="OnRosterChanged">
+					@foreach (var roster in _rosters)
+					{
+						<option value="@roster.Id">@roster.Name</option>
+					}
+				</select>
+			</div>
+		}
+
 		<div class="csim-direction" role="group" aria-label="Who is attacking">
 			<button type="button" class="csim-dir @(_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(true)">My attacks ▸</button>
 			<button type="button" class="csim-dir @(!_myArmyAttacks ? "on" : "")" @onclick="() => SetDirection(false)">Opp attacks ◂</button>
@@ -150,6 +163,12 @@
 	private CombatUnit? _target;
 	private readonly WeaponSelectionState _weaponSelection = new();
 
+	// The user's saved rosters (id + name), and the one whose units populate the "my army" pool. Selecting an
+	// army means only that roster's units appear — mixing every roster's units made the same unit look duplicated.
+	private readonly List<Roster> _rosters = [];
+	private string? _selectedRosterId;
+	private CatalogueData _catalogue = new();
+
 	private AttackerModifiers _attackerMods = new();
 	private DefenderModifiers _defenderMods = new();
 
@@ -188,9 +207,11 @@
 	private string EmptyPoolHint(bool attacker)
 	{
 		var isOpponentPool = attacker ? !_myArmyAttacks : _myArmyAttacks;
-		return isOpponentPool
-			? "No opponent units yet — import an enemy army (button above the Target box)."
-			: "No units in your army — add a roster in Rosters first.";
+		if (isOpponentPool)
+			return "No opponent units yet — import an enemy army (button above the Target box).";
+		return _rosters.Count == 0
+			? "No units in your army — add a roster in Rosters first."
+			: "This army has no units — pick another army above or add units in Rosters.";
 	}
 
 	protected override async Task OnInitializedAsync()
@@ -198,12 +219,8 @@
 		try
 		{
 			var rosters = await Api.GetRostersAsync();
-			var catalogue = await Api.GetCatalogueAsync();
-			foreach (var roster in rosters)
-			{
-				var battle = BattleRoster.Build(roster, catalogue);
-				_native.AddRange(NativeNecronSource.FromBattleRoster(battle));
-			}
+			_catalogue = await Api.GetCatalogueAsync();
+			_rosters.AddRange(rosters);
 		}
 		catch
 		{
@@ -214,10 +231,35 @@
 		_loading = false;
 	}
 
+	// Rebuilds the "my army" unit pool from the selected roster only. Clears it when no roster is chosen.
+	private void BuildNativeUnits()
+	{
+		_native.Clear();
+		var roster = _rosters.FirstOrDefault(r => r.Id == _selectedRosterId);
+		if (roster is null)
+			return;
+		try
+		{
+			var battle = BattleRoster.Build(roster, _catalogue);
+			_native.AddRange(NativeNecronSource.FromBattleRoster(battle));
+		}
+		catch
+		{
+			// A roster that can't be built (missing datasheet, etc.) leaves the pool empty.
+		}
+	}
+
 	// Rebuilds the whole page state from the persisted snapshot (imported army, selections, modifiers).
 	private async Task RestoreAsync()
 	{
 		var snap = await Store.LoadAsync();
+
+		// Pick the saved roster if it still exists, otherwise default to the first available one.
+		_selectedRosterId = snap?.RosterId is { } id && _rosters.Any(r => r.Id == id)
+			? id
+			: _rosters.FirstOrDefault()?.Id;
+		BuildNativeUnits();
+
 		if (snap is null)
 			return;
 
@@ -250,6 +292,7 @@
 		{
 			MyArmyAttacks = _myArmyAttacks,
 			ShowMelee = _weaponSelection.ShowMelee,
+			RosterId = _selectedRosterId,
 			ImportedJson = [.. Imported.RawJson],
 			AttackerName = _attacker?.Name,
 			TargetName = _target?.Name,
@@ -273,6 +316,22 @@
 		_attacker = null;
 		_target = null;
 		_weaponSelection.Reset(null);
+		_result = null;
+		_ = SaveAsync();
+	}
+
+	// Switching army rebuilds the "my army" pool from that roster only, and clears any selection that belonged
+	// to the previous army (attacker or target, whichever side is currently "my army").
+	private void OnRosterChanged(ChangeEventArgs e)
+	{
+		_selectedRosterId = e.Value?.ToString() is { Length: > 0 } id ? id : null;
+		BuildNativeUnits();
+
+		if (_myArmyAttacks)
+			_attacker = null;
+		else
+			_target = null;
+		_weaponSelection.Reset(_myArmyAttacks ? _attacker : null);
 		_result = null;
 		_ = SaveAsync();
 	}

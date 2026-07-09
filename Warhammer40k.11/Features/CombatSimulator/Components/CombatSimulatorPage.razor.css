@@ -117,6 +117,22 @@
     box-shadow: 0 0 0 3px rgba(92, 201, 154, 0.18);
 }
 
+/* ---- Army selector: choose which roster's units populate the "my army" pool ---- */
+.csim-army {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.csim-army-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-dim, #9fb4a8);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
 /* ---- Direction / weapon-class segmented toggle ---- */
 .csim-direction {
     display: flex;

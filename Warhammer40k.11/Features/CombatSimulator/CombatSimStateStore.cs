@@ -14,6 +14,9 @@ public sealed class CombatSimSnapshot
     public bool MyArmyAttacks { get; set; } = true;
     public bool ShowMelee { get; set; }
 
+    /// <summary>The roster whose units populate the "my army" pool (only one army's units are shown at a time).</summary>
+    public string? RosterId { get; set; }
+
     /// <summary>The raw imported army JSON exports (re-parsed on load, avoiding polymorphic (de)serialization).</summary>
     public List<string> ImportedJson { get; set; } = [];
 
