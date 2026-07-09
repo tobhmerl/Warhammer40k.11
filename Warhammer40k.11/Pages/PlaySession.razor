@@ -418,8 +418,8 @@ else
 											<div class="sl-top">
 												@if (unit.Parts.Count > 1)
 												{
-													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="@(part.Datasheet.Name) — highlight this model's weapons; tap again to clear">
-														@(ShortName(part.Datasheet.Name) + (part.IsLeader ? " (Leader)" : ""))
+													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="@($"{part.Datasheet.Name}{(part.IsLeader ? " (Leader)" : "")} — highlight this model's weapons; tap again to clear")">
+														@(ShortName(part.Datasheet.Name) + (part.IsLeader ? " *" : ""))
 													</button>
 												}
 												else
