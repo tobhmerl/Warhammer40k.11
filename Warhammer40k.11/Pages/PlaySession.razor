@@ -124,8 +124,9 @@ else
 		@{
 			var allStrats = UsableStratagems;
 			// Only show stratagems you can pay for right now (hidden, not greyed). "My Will Be Done" reduces the
-			// effective cost by 1, so it can reveal an otherwise-unaffordable stratagem (see EffectiveCost).
-			var strats = allStrats.Where(CanAfford).ToList();
+			// effective cost by 1 for the bearer's own unit, so it can reveal an otherwise-unaffordable stratagem.
+			var stratUnit = StratContextUnit;
+			var strats = allStrats.Where(s => CanAfford(s, stratUnit)).ToList();
 		}
 		<section class="strats" aria-label="Stratagems usable now">
 			<button type="button" class="strats-head" @onclick="ToggleStrats" aria-expanded="@_stratsOpen">
@@ -153,7 +154,7 @@ else
 					@foreach (var s in strats)
 					{
 						var open = IsStratOpen(s);
-						var cost = EffectiveCost(s);
+						var cost = EffectiveCost(s, stratUnit);
 						<li class="strat" @key="(s.Source + s.Id)">
 							<div class="s-head">
 								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
@@ -169,7 +170,7 @@ else
 									<span class="s-cp">@s.Cost CP</span>
 								}
 								<button class="btn small s-use" type="button"
-										@onclick="() => UseStratagem(s)"
+										@onclick="() => UseStratagem(s, stratUnit)"
 										title="@($"Spend {cost} CP")">
 									Use
 								</button>
@@ -1246,7 +1247,7 @@ else
 	// discount), and applicable to the unit by keyword. Drives the deck-pill stratagem badge so you can spot a
 	// unit a stratagem applies to without flipping through every card.
 	private int StratagemsNowCount(BattleUnit unit) =>
-		PhaseTurnStratagems().Count(s => CanAfford(s) && StratagemAppliesTo(unit, s.Target));
+		PhaseTurnStratagems().Count(s => CanAfford(s, unit) && StratagemAppliesTo(unit, s.Target));
 
 	private BattleUnit? ActiveUnit =>
 		_ordered.Count > 0 ? _ordered[Math.Clamp(_activeCard, 0, _ordered.Count - 1)] : null;
@@ -1262,19 +1263,28 @@ else
 		return include.Count == 0 || include.Any(Has);
 	}
 
-	// "My Will Be Done" (Overlord / Overlord with Translocation Shroud) lets you spend 1 CP less on a Stratagem.
-	// While a living model with that ability is on the battlefield, every Stratagem's effective cost drops by 1
-	// (floored at 0). This feeds both the affordability filter (so a 2 CP strat shows at 1 CP) and what Use spends.
-	private bool HasCpDiscount =>
-		_battle is not null
-		&& _battle.Units.Any(u => !IsDead(u) && u.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost));
+	// "My Will Be Done" (Overlord / Overlord with Translocation Shroud) reduces a Stratagem's cost by 1 CP, but
+	// ONLY when that Stratagem is used to target the bearer's own unit. So the discount is scoped to a specific
+	// target unit: a unit gets it when it (or a Leader attached to it — i.e. any live part of the group) has the
+	// ability. Other units pay the normal cost even while an Overlord leads a different unit.
+	private bool UnitHasCpDiscount(BattleUnit unit) =>
+		unit.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost);
 
-	private int EffectiveCost(StratView stratagem) =>
-		Math.Max(0, stratagem.Cost - (HasCpDiscount ? 1 : 0));
+	// The unit the Stratagem panel is currently scoped to: in swipe mode the active card (the target), otherwise
+	// none — list mode isn't unit-targeted, so a row is discounted only when some eligible bearer unit exists.
+	private BattleUnit? StratContextUnit => _cardSwipe ? ActiveUnit : null;
 
-	private bool CanAfford(StratView stratagem) => _cp >= EffectiveCost(stratagem);
+	private int EffectiveCost(StratView stratagem, BattleUnit? forUnit)
+	{
+		var discount = forUnit is not null
+			? UnitHasCpDiscount(forUnit)
+			: _battle is not null && _battle.Units.Any(u => !IsDead(u) && UnitHasCpDiscount(u) && StratagemAppliesTo(u, stratagem.Target));
+		return Math.Max(0, stratagem.Cost - (discount ? 1 : 0));
+	}
 
-	private void UseStratagem(StratView stratagem) => StepCp(-EffectiveCost(stratagem));
+	private bool CanAfford(StratView stratagem, BattleUnit? forUnit) => _cp >= EffectiveCost(stratagem, forUnit);
+
+	private void UseStratagem(StratView stratagem, BattleUnit? forUnit) => StepCp(-EffectiveCost(stratagem, forUnit));
 
 	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
 
