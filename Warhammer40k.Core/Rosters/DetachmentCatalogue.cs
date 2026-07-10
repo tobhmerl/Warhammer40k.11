@@ -23,41 +23,17 @@ public static class DetachmentCatalogue
     public static IReadOnlyList<Detachment> BuiltIn { get; } =
     [
         HandOfTheDynasty(),
-        Make("Skyshroud Spearhead", 1,
-            ("Deepening Madness", 20),
-            ("Recursive Reanimation", 5)),
-        Make("The Phaeron's Armoury", 1,
-            ("Mortality Shroud", 10),
-            ("Prelocational Optimiser", 25)),
+        SkyshroudSpearhead(),
+        PhaeronsArmoury(),
         StarshatterArsenal(),
         Cryptek(),
-        Make("Cursed Legion", 2,
-            ("Cursed Circlet", 25),
-            ("Destroyer Ankh", 20),
-            ("Mark of the Nekrosor", 20),
-            ("Murdermind", 15)),
-        MakePantheon("Pantheon of Woe"),
-        Make("Annihilation Legion", 2,
-            ("Eldritch Nightmare", 10),
-            ("Eternal Madness", 20),
-            ("Ingrained Superiority", 5),
-            ("Soulless Reaper", 15)),
+        CursedLegion(),
+        PantheonOfWoe(),
+        AnnihilationLegion(),
         AwakenedDynasty(),
-        Make("Canoptek Court", 3,
-            ("Autodivinator", 15),
-            ("Dimensional Sanctum", 20),
-            ("Hyperphasic Fulcrum", 15),
-            ("Metalodermal Tesla Weave", 10)),
-        Make("Hypercrypt Legion", 2,
-            ("Arisen Tyrant", 25),
-            ("Dimensional Overseer", 25),
-            ("Hyperspatial Transfer Node", 15),
-            ("Osteoclave Fulcrum", 20)),
-        Make("Obeisance Phalanx", 2,
-            ("Eternal Conqueror", 25),
-            ("Honourable Combatant", 10),
-            ("Unflinching Will", 20),
-            ("Warrior Noble", 15)),
+        CanoptekCourt(),
+        HypercryptLegion(),
+        ObeisancePhalanx(),
     ];
 
     /// <summary>Finds a built-in detachment by its derived id, or <c>null</c>.</summary>
@@ -268,6 +244,240 @@ public static class DetachmentCatalogue
             },
         ];
 
+        return d;
+    }
+
+    // Annihilation Legion (2 DP) — "Annihilation Protocol". Charge re-rolls and the closest-target AP bonus are
+    // board-state dependent, so the rule stays reference prose (no data-driven buff).
+    private static Detachment AnnihilationLegion()
+    {
+        var d = Make("Annihilation Legion", 2,
+            ("Eldritch Nightmare", 10),
+            ("Eternal Madness", 20),
+            ("Ingrained Superiority", 5),
+            ("Soulless Reaper", 15));
+        d.Enabled = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Annihilation Protocol",
+                Text =
+                    "Each time a DESTROYER CULT or FLAYED ONES unit from your army declares a charge, you can " +
+                    "re-roll the Charge roll. If one or more targets of that charge are Below Half-strength, add 1 " +
+                    "to the Charge roll as well.\n" +
+                    "Each time a DESTROYER CULT unit from your army makes a ranged attack that targets the closest " +
+                    "eligible target, add 1 to the Armour Penetration characteristic of that attack.",
+            },
+        ];
+        return d;
+    }
+
+    // Canoptek Court (3 DP) — "Power Matrix". Entirely board-state (objective control / zones), so prose only.
+    private static Detachment CanoptekCourt()
+    {
+        var d = Make("Canoptek Court", 3,
+            ("Autodivinator", 15),
+            ("Dimensional Sanctum", 20),
+            ("Hyperphasic Fulcrum", 15),
+            ("Metalodermal Tesla Weave", 10));
+        d.Enabled = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Power Matrix",
+                Text =
+                    "Certain areas of the battlefield are within your army's Power Matrix:\n" +
+                    "• Your Deployment zone is always within your Power Matrix.\n" +
+                    "• At the start of any phase, if you control at least half of the objective markers within No " +
+                    "Man's Land, until the end of that phase No Man's Land is within your Power Matrix.\n" +
+                    "• At the start of any phase, if you control at least half of the objective markers within your " +
+                    "opponent's Deployment zone, until the end of that phase that zone is within your Power Matrix.\n" +
+                    "Each time a model in a CRYPTEK or CANOPTEK unit from your army makes an attack, re-roll a Hit " +
+                    "roll of 1. If such a unit is wholly within your Power Matrix, you can re-roll the Hit roll instead.",
+            },
+        ];
+        return d;
+    }
+
+    // Cursed Legion (2 DP) — "Cold Fervour". The always-on +2 Strength for DESTROYER CULT weapons is wired as a
+    // data-driven buff; the "first kill each turn" army-wide boost is board-state, so it stays prose.
+    private static Detachment CursedLegion()
+    {
+        var d = Make("Cursed Legion", 2,
+            ("Cursed Circlet", 25),
+            ("Destroyer Ankh", 20),
+            ("Mark of the Nekrosor", 20),
+            ("Murdermind", 15));
+        d.Enabled = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Cold Fervour",
+                Text =
+                    "Add 2 to the Strength characteristic of weapons equipped by DESTROYER CULT models from your army.\n" +
+                    "The first time each turn that a DESTROYER CULT unit from your army makes attacks that destroy a " +
+                    "unit or cause it to become Below Half-strength, after that unit has finished resolving its " +
+                    "attacks, until the end of the turn add 2 to the Strength characteristic of weapons equipped by " +
+                    "friendly NECRONS models (excluding DESTROYER CULT, MONSTER and TITANIC models).",
+            },
+        ];
+        // Always-on half: DESTROYER CULT models' weapons get +2 Strength (both ranged and melee).
+        d.StatBuffs =
+        [
+            new DetachmentStatBuff
+            {
+                Scope = GrantScope.Model,
+                Keywords = ["Destroyer Cult"],
+                Modifier = new StatModifier
+                {
+                    Target = StatTarget.Strength,
+                    Delta = 2,
+                    WeaponClass = WeaponClass.Any,
+                    Label = "+2 Str",
+                },
+            },
+        ];
+        return d;
+    }
+
+    // Hypercrypt Legion (2 DP, HYPERCRYPT) — "Hyperphasing". Redeploy into Strategic Reserves is a manual action,
+    // so prose only. Tagged HYPERCRYPT: mutually exclusive with The Phaeron's Armoury.
+    private static Detachment HypercryptLegion()
+    {
+        var d = Make("Hypercrypt Legion", 2,
+            ("Arisen Tyrant", 25),
+            ("Dimensional Overseer", 25),
+            ("Hyperspatial Transfer Node", 15),
+            ("Osteoclave Fulcrum", 20));
+        d.Enabled = true;
+        d.Tags = ["Hypercrypt"];
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Hyperphasing",
+                Text =
+                    "At the end of your opponent's turn, you can select a number of NECRONS units from your army " +
+                    "(excluding units within Engagement Range of one or more enemy units). The maximum depends on " +
+                    "battle size: Incursion — up to 1 unit; Strike Force — up to 2 units; Onslaught — up to 3 units. " +
+                    "Remove those units from the battlefield and place them into Strategic Reserves.\n" +
+                    "This detachment has the HYPERCRYPT tag and cannot be taken with another HYPERCRYPT detachment.",
+            },
+        ];
+        return d;
+    }
+
+    // Obeisance Phalanx (2 DP) — "Worthy Foes". Command-phase target selection is manual, so prose only.
+    private static Detachment ObeisancePhalanx()
+    {
+        var d = Make("Obeisance Phalanx", 2,
+            ("Eternal Conqueror", 25),
+            ("Honourable Combatant", 10),
+            ("Unflinching Will", 20),
+            ("Warrior Noble", 15));
+        d.Enabled = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Worthy Foes",
+                Text =
+                    "In your Command phase, select one enemy unit. Until the start of your next Command phase, each " +
+                    "time a NOBLE, LYCHGUARD or TRIARCH unit from your army makes an attack against that unit, add 1 " +
+                    "to the Wound roll.",
+            },
+        ];
+        return d;
+    }
+
+    // Pantheon of Woe (2 DP) — "Cosmic Distortion". Keeps its auto-applied Necrodermal Bindings (rule R10); the
+    // Distortion Fields aura is proximity/board-state, so prose only.
+    private static Detachment PantheonOfWoe()
+    {
+        var d = Make("Pantheon of Woe");
+        d.DetachmentPoints = 2;
+        d.Enabled = true;
+        d.AppliesPantheonBindings = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Cosmic Distortion",
+                Text =
+                    "NECRONS MONSTER units from your army have the Distortion Fields ability:\n" +
+                    "Distortion Fields (Aura): While an enemy unit is within 6\" of this unit, it is unravelling. " +
+                    "While an enemy unit is unravelling, each time an attack targets that unit, improve the Armour " +
+                    "Penetration characteristic of that attack by 1.\n" +
+                    "At the start of each phase, for each NECRONS MONSTER unit from your army, that unit can suffer " +
+                    "3 mortal wounds. If it does, until the end of the phase the range of that unit's Distortion " +
+                    "Fields aura is increased to 9\".\n" +
+                    "When mustering, each NECRONS MONSTER unit takes its relevant Necrodermal Binding and pays the " +
+                    "Munitorum Field Manual surcharge.",
+            },
+        ];
+        return d;
+    }
+
+    // Skyshroud Spearhead (1 DP) — "Transdimensional Deployment". Deep Strike and the ingress +1 Hit are both
+    // conditional on a manual move, so the rule stays prose.
+    private static Detachment SkyshroudSpearhead()
+    {
+        var d = Make("Skyshroud Spearhead", 1,
+            ("Deepening Madness", 20),
+            ("Recursive Reanimation", 5));
+        d.Enabled = true;
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Transdimensional Deployment",
+                Text =
+                    "Friendly TOMB BLADES units have Deep Strike.\n" +
+                    "When a friendly TOMB BLADES unit is selected to shoot, if that unit made an ingress move this " +
+                    "turn, that unit's ranged attacks have +1 to Hit rolls.",
+            },
+        ];
+        return d;
+    }
+
+    // The Phaeron's Armoury (1 DP, HYPERCRYPT) — "Empowered Engines". The +6" Move for NECRONS TITANIC is wired
+    // as a data-driven buff. Tagged HYPERCRYPT: mutually exclusive with Hypercrypt Legion (per rules text).
+    private static Detachment PhaeronsArmoury()
+    {
+        var d = Make("The Phaeron's Armoury", 1,
+            ("Mortality Shroud", 10),
+            ("Prelocational Optimiser", 25));
+        d.Enabled = true;
+        d.Tags = ["Hypercrypt"];
+        d.Rules =
+        [
+            new DetachmentRule
+            {
+                Name = "Empowered Engines",
+                Text =
+                    "Friendly NECRONS TITANIC FLY units have +6\" Move.\n" +
+                    "This detachment has the HYPERCRYPT tag and cannot be taken with another HYPERCRYPT detachment.",
+            },
+        ];
+        // Always-on: NECRONS TITANIC models gain +6" Move. Keyword match is any-of, so "Titanic" is used (Necrons
+        // Titanic units are also FLY); the AND with FLY isn't expressible here but no non-FLY Titanic exists.
+        d.StatBuffs =
+        [
+            new DetachmentStatBuff
+            {
+                Scope = GrantScope.Unit,
+                Keywords = ["Titanic"],
+                Modifier = new StatModifier
+                {
+                    Target = StatTarget.Move,
+                    Delta = 6,
+                    Label = "+6\" M",
+                },
+            },
+        ];
         return d;
     }
 

@@ -26,8 +26,9 @@ public class DetachmentCatalogueTests
         Assert.All(DetachmentCatalogue.Selectable, d => Assert.True(d.Enabled));
         Assert.Contains(DetachmentCatalogue.Selectable, d => d.Id == "cryptek-conclave");
         Assert.Contains(DetachmentCatalogue.Selectable, d => d.Id == "hand-of-the-dynasty");
-        // The others are still disabled (hidden) until their rules are authored.
-        Assert.DoesNotContain(DetachmentCatalogue.Selectable, d => d.Id == "skyshroud-spearhead");
+        // All twelve detachments now carry authored rules, so every one is selectable.
+        Assert.Equal(DetachmentCatalogue.BuiltIn.Count, DetachmentCatalogue.Selectable.Count);
+        Assert.Contains(DetachmentCatalogue.Selectable, d => d.Id == "skyshroud-spearhead");
     }
 
     [Fact]
@@ -278,10 +279,13 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
-    public void Points_only_detachments_stay_disabled_until_rules_are_authored()
+    public void Every_built_in_detachment_is_enabled_and_carries_a_rule()
     {
-        foreach (var id in new[] { "annihilation-legion", "canoptek-court", "hypercrypt-legion", "obeisance-phalanx", "skyshroud-spearhead", "the-phaerons-armoury" })
-            Assert.False(DetachmentCatalogue.FindById(id)!.Enabled);
+        Assert.All(DetachmentCatalogue.BuiltIn, d =>
+        {
+            Assert.True(d.Enabled, $"{d.Name} should be enabled");
+            Assert.NotEmpty(d.Rules);
+        });
     }
 
     [Fact]
@@ -332,6 +336,62 @@ public class DetachmentCatalogueTests
             Assert.False(string.IsNullOrWhiteSpace(enh.Text));
             Assert.True(enh.Eligibility.IsUnconstrained);
         }
+    }
+
+    [Theory]
+    [InlineData("annihilation-legion", "Annihilation Protocol")]
+    [InlineData("canoptek-court", "Power Matrix")]
+    [InlineData("cursed-legion", "Cold Fervour")]
+    [InlineData("hypercrypt-legion", "Hyperphasing")]
+    [InlineData("obeisance-phalanx", "Worthy Foes")]
+    [InlineData("pantheon-of-woe", "Cosmic Distortion")]
+    [InlineData("skyshroud-spearhead", "Transdimensional Deployment")]
+    [InlineData("the-phaerons-armoury", "Empowered Engines")]
+    public void Newly_authored_detachments_carry_their_named_rule(string id, string ruleName)
+    {
+        var d = DetachmentCatalogue.FindById(id)!;
+        Assert.True(d.Enabled);
+        var rule = Assert.Single(d.Rules);
+        Assert.Equal(ruleName, rule.Name);
+        Assert.False(string.IsNullOrWhiteSpace(rule.Text));
+    }
+
+    [Fact]
+    public void Cold_Fervour_adds_plus2_strength_to_Destroyer_Cult_weapons()
+    {
+        var buff = Assert.Single(DetachmentCatalogue.FindById("cursed-legion")!.StatBuffs);
+        Assert.Equal(GrantScope.Model, buff.Scope);
+        Assert.Contains("Destroyer Cult", buff.Keywords);
+        Assert.False(buff.RequiresAttachedLeader);
+        Assert.Equal(StatTarget.Strength, buff.Modifier.Target);
+        Assert.Equal(2, buff.Modifier.Delta);
+    }
+
+    [Fact]
+    public void Empowered_Engines_adds_plus6_move_to_Titanic_units()
+    {
+        var buff = Assert.Single(DetachmentCatalogue.FindById("the-phaerons-armoury")!.StatBuffs);
+        Assert.Contains("Titanic", buff.Keywords);
+        Assert.Equal(StatTarget.Move, buff.Modifier.Target);
+        Assert.Equal(6, buff.Modifier.Delta);
+    }
+
+    [Fact]
+    public void Hypercrypt_and_Phaerons_Armoury_share_a_mutually_exclusive_tag()
+    {
+        var hypercrypt = DetachmentCatalogue.FindById("hypercrypt-legion")!;
+        var phaeron = DetachmentCatalogue.FindById("the-phaerons-armoury")!;
+        Assert.Contains("Hypercrypt", hypercrypt.Tags);
+        Assert.Contains("Hypercrypt", phaeron.Tags);
+    }
+
+    [Fact]
+    public void Pantheon_of_Woe_is_enabled_and_still_applies_bindings()
+    {
+        var pantheon = DetachmentCatalogue.FindById("pantheon-of-woe")!;
+        Assert.True(pantheon.Enabled);
+        Assert.True(pantheon.AppliesPantheonBindings);
+        Assert.Equal(2, pantheon.DetachmentPoints);
     }
 
     [Fact]
