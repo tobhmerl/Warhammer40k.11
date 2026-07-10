@@ -367,6 +367,75 @@ public static class DetachmentCatalogue
                     "This detachment has the HYPERCRYPT tag and cannot be taken with another HYPERCRYPT detachment.",
             },
         ];
+
+        // Enhancement display text (bearer's Play card). All four are "NECRONS model only" — R6-unconstrained.
+        Author(d, "arisen-tyrant",
+            "NECRONS model only. Each time a model in the bearer's unit makes an attack, re-roll a Hit roll of 1. " +
+            "If the bearer's unit was set up on the battlefield this turn, you can re-roll the Hit roll instead.");
+        Author(d, "dimensional-overseer",
+            "NECRONS model only. While the bearer is on the battlefield or in Strategic Reserves, add 1 to the " +
+            "number of units from your army that you can select for the Hyperphasing rule.");
+        Author(d, "hyperspatial-transfer-node",
+            "NECRONS model only. Each time the bearer's unit Advances, do not make an Advance roll for it. Instead, " +
+            "until the end of the phase, add 6\" to the Move characteristic of models in the bearer's unit.");
+        Author(d, "osteoclave-fulcrum",
+            "NECRONS model only. Models in the bearer's unit have the Deep Strike ability.");
+
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "dimensional-corridor", Name = "Dimensional Corridor", Type = "Strategic Ploy", CpCost = 2,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Charge],
+                When = "Your Charge phase.",
+                Target = "One NECRONS unit from your army that was set up on the battlefield this turn using the Eternity Gate ability of a MONOLITH model that started the turn on the battlefield.",
+                Effect = "Your unit is eligible to charge this phase.",
+            },
+            new Stratagem
+            {
+                Id = "reanimation-crypts", Name = "Reanimation Crypts", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Command],
+                When = "Your Command phase.",
+                Target = "Your NECRONS WARLORD.",
+                Effect = "For each of your NECRONS units in Reserves, that Reserves unit's Reanimation Protocols activate.",
+            },
+            new Stratagem
+            {
+                Id = "cosmic-precision", Name = "Cosmic Precision", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Movement],
+                When = "Your Movement phase.",
+                Target = "One NECRONS unit from your army (excluding MONSTER units) that is arriving using the Deep Strike or Hyperphasing abilities this phase.",
+                Effect = "Your unit can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy models. A unit targeted with this Stratagem is not eligible to declare a charge in the same turn.",
+            },
+            new Stratagem
+            {
+                Id = "entropic-damping", Name = "Entropic Damping", Type = "Wargear", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Titanic"],
+                When = "Your opponent's Shooting phase, just after an enemy unit has selected its targets.",
+                Target = "One TITANIC model from your army that was selected as the target of one or more of the attacking unit's attacks and is within 18\" of the attacking unit.",
+                Effect = "Until the end of the phase, weapons equipped by models in the attacking unit have the [HAZARDOUS] ability.",
+            },
+            new Stratagem
+            {
+                Id = "hyperphasic-recall", Name = "Hyperphasic Recall", Type = "Strategic Ploy", CpCost = 2,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Infantry"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has shot or fought.",
+                Target = "One NECRONS INFANTRY unit from your army that had one or more of its models destroyed as a result of the attacking unit's attacks, and one friendly MONOLITH model.",
+                Effect = "Remove your INFANTRY unit from the battlefield and then set it back up anywhere on the battlefield that is wholly within 6\" of your MONOLITH model and not within Engagement Range of one or more enemy units.",
+            },
+            new Stratagem
+            {
+                Id = "quantum-deflection", Name = "Quantum Deflection", Type = "Wargear", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Vehicle"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One NECRONS VEHICLE unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, models in your unit have a 4+ invulnerable save.",
+            },
+        ];
+
         return d;
     }
 

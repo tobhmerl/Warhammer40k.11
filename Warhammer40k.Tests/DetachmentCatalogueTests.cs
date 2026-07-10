@@ -395,6 +395,54 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Hypercrypt_Legion_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var hypercrypt = DetachmentCatalogue.FindById("hypercrypt-legion")!;
+        Assert.Equal(6, hypercrypt.Stratagems.Count);
+        Assert.All(hypercrypt.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(hypercrypt.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Dimensional Corridor: 2CP Strategic Ploy, your Charge phase, no keyword gate.
+        var corridor = hypercrypt.Stratagems.Single(s => s.Name == "Dimensional Corridor");
+        Assert.Equal("Strategic Ploy", corridor.Type);
+        Assert.Equal(2, corridor.CpCost);
+        Assert.True(corridor.AppliesInPhase(BattlePhase.Charge));
+        Assert.True(corridor.AppliesInTurn(BattleTurn.Player));
+        Assert.Empty(corridor.RequiredUnitKeywords);
+
+        // Entropic Damping: 1CP Wargear, opponent's Shooting phase, TITANIC-gated.
+        var entropic = hypercrypt.Stratagems.Single(s => s.Name == "Entropic Damping");
+        Assert.Equal("Wargear", entropic.Type);
+        Assert.True(entropic.AppliesInTurn(BattleTurn.Opponent));
+        Assert.False(entropic.AppliesInTurn(BattleTurn.Player));
+        Assert.Equal(["Titanic"], entropic.RequiredUnitKeywords);
+
+        // Quantum Deflection: VEHICLE-gated; Hyperphasic Recall: INFANTRY-gated.
+        Assert.Equal(["Vehicle"], hypercrypt.Stratagems.Single(s => s.Name == "Quantum Deflection").RequiredUnitKeywords);
+        Assert.Equal(["Infantry"], hypercrypt.Stratagems.Single(s => s.Name == "Hyperphasic Recall").RequiredUnitKeywords);
+    }
+
+    [Fact]
+    public void Hypercrypt_Legion_enhancements_carry_text_and_stay_unconstrained()
+    {
+        var hypercrypt = DetachmentCatalogue.FindById("hypercrypt-legion")!;
+
+        foreach (var (id, points) in new[]
+                 {
+                     ("arisen-tyrant", 25),
+                     ("dimensional-overseer", 25),
+                     ("hyperspatial-transfer-node", 15),
+                     ("osteoclave-fulcrum", 20),
+                 })
+        {
+            var enh = hypercrypt.FindEnhancement(id)!;
+            Assert.Equal(points, enh.Points);
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+            Assert.True(enh.Eligibility.IsUnconstrained);
+        }
+    }
+
+    [Fact]
     public void Starshatter_Arsenal_is_3DP_enabled_with_Relentless_Onslaught_and_a_non_Titanic_Assault_grant()
     {
         var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal");
