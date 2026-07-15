@@ -459,6 +459,79 @@ public static class DetachmentCatalogue
                     "to the Wound roll.",
             },
         ];
+
+        // Enhancement display text (bearer's Play card) + R6 eligibility — all four are OVERLORD model only.
+        Author(d, "eternal-conqueror",
+            "OVERLORD model only. Each time a model in the bearer's unit makes an attack that targets an enemy unit " +
+            "within range of an objective marker, you can re-roll the Hit roll.",
+            "Overlord");
+        Author(d, "honourable-combatant",
+            "OVERLORD model only. Each time the bearer's unit destroys an enemy CHARACTER unit, your opponent loses " +
+            "1CP if they have any.",
+            "Overlord");
+        Author(d, "unflinching-will",
+            "OVERLORD model only. The bearer's melee weapons have the [PRECISION] and [ANTI-INFANTRY 5+] abilities.",
+            "Overlord");
+        Author(d, "warrior-noble",
+            "OVERLORD model only. Each time a melee attack targets the bearer's unit, subtract 1 from the Hit roll.",
+            "Overlord");
+
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "territorial-obsession", Name = "Territorial Obsession", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Command],
+                RequiredUnitKeywords = ["Lychguard", "Triarch"],
+                When = "Your Command phase.",
+                Target = "One LYCHGUARD or TRIARCH unit from your army.",
+                Effect = "Until the start of your next Command phase, add 1 to the Objective Control characteristic of models in your unit. If your unit has the VEHICLE keyword, add 3 to the Objective Control characteristic instead.",
+            },
+            new Stratagem
+            {
+                Id = "your-time-is-nigh", Name = "Your Time Is Nigh", Type = "Epic Deed", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [],
+                When = "Any phase, just after your opponent's WARLORD is destroyed.",
+                Target = "Your NECRONS WARLORD.",
+                Effect = "Until the end of the battle, each time an enemy unit takes a Battle-shock or Leadership test, subtract 1 from the result.",
+            },
+            new Stratagem
+            {
+                Id = "suffer-no-rival", Name = "Suffer No Rival", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Fight],
+                RequiredUnitKeywords = ["Lychguard", "Triarch"],
+                When = "Fight phase.",
+                Target = "One LYCHGUARD or TRIARCH unit from your army that has not been selected to fight this phase.",
+                Effect = "Until the end of the phase, melee weapons equipped by models in your unit have the [PRECISION] ability.",
+            },
+            new Stratagem
+            {
+                Id = "sentinels-of-eternity", Name = "Sentinels of Eternity", Type = "Epic Deed", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Fight],
+                RequiredUnitKeywords = ["Lychguard", "Triarch Praetorians"],
+                When = "Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One LYCHGUARD or TRIARCH PRAETORIANS unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6: on a 4+, do not remove it from play. The destroyed model can fight after the attacking model's unit has finished making attacks, and is then removed from play.",
+            },
+            new Stratagem
+            {
+                Id = "nanoassembly-protocols", Name = "Nanoassembly Protocols", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Vehicle"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One NECRONS VEHICLE unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, each time an attack is allocated to a model in your unit, subtract 1 from the Damage characteristic of that attack.",
+            },
+            new Stratagem
+            {
+                Id = "enslaved-artifice", Name = "Enslaved Artifice", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase.",
+                Target = "One NECRONS unit from your army (excluding TITANIC units) that has not been selected to shoot or fight this phase.",
+                Effect = "Until the end of the phase, each time a model in your unit makes an attack, an unmodified Hit roll of 5+ scores a Critical Hit.",
+            },
+        ];
+
         return d;
     }
 

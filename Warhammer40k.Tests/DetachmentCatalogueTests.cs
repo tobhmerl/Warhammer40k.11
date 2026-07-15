@@ -443,6 +443,54 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Obeisance_Phalanx_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var obeisance = DetachmentCatalogue.FindById("obeisance-phalanx")!;
+        Assert.Equal(6, obeisance.Stratagems.Count);
+        Assert.All(obeisance.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(obeisance.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Territorial Obsession: 1CP Strategic Ploy, your Command phase, LYCHGUARD/TRIARCH-gated.
+        var territorial = obeisance.Stratagems.Single(s => s.Name == "Territorial Obsession");
+        Assert.Equal("Strategic Ploy", territorial.Type);
+        Assert.True(territorial.AppliesInPhase(BattlePhase.Command));
+        Assert.True(territorial.AppliesInTurn(BattleTurn.Player));
+        Assert.Equal(["Lychguard", "Triarch"], territorial.RequiredUnitKeywords);
+
+        // Your Time Is Nigh: Epic Deed, any phase, either turn, no keyword gate.
+        var nigh = obeisance.Stratagems.Single(s => s.Name == "Your Time Is Nigh");
+        Assert.Equal("Epic Deed", nigh.Type);
+        Assert.True(nigh.AppliesInPhase(BattlePhase.Command));
+        Assert.True(nigh.AppliesInPhase(BattlePhase.Fight));
+        Assert.Empty(nigh.RequiredUnitKeywords);
+
+        // Nanoassembly Protocols: VEHICLE-gated, opponent's turn.
+        var nano = obeisance.Stratagems.Single(s => s.Name == "Nanoassembly Protocols");
+        Assert.Equal(["Vehicle"], nano.RequiredUnitKeywords);
+        Assert.True(nano.AppliesInTurn(BattleTurn.Opponent));
+    }
+
+    [Fact]
+    public void Obeisance_Phalanx_enhancements_are_Overlord_only_with_text()
+    {
+        var obeisance = DetachmentCatalogue.FindById("obeisance-phalanx")!;
+
+        foreach (var (id, points) in new[]
+                 {
+                     ("eternal-conqueror", 25),
+                     ("honourable-combatant", 10),
+                     ("unflinching-will", 20),
+                     ("warrior-noble", 15),
+                 })
+        {
+            var enh = obeisance.FindEnhancement(id)!;
+            Assert.Equal(points, enh.Points);
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+            Assert.Contains("Overlord", enh.Eligibility.RequiredKeywords);
+        }
+    }
+
+    [Fact]
     public void Starshatter_Arsenal_is_3DP_enabled_with_Relentless_Onslaught_and_a_non_Titanic_Assault_grant()
     {
         var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal");
