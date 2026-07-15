@@ -273,7 +273,8 @@ else
 							<option value="">None</option>
 							@foreach (var enh in EligibleEnhancements(sheet, u))
 							{
-								<option value="@enh.Id">@enh.Name (+@enh.Points)</option>
+								var taken = IsEnhancementTakenElsewhere(enh.Id, u);
+								<option value="@enh.Id" disabled="@taken">@enh.Name (+@enh.Points)@(taken ? " — already taken" : "")</option>
 							}
 						</select>
 					}
@@ -901,6 +902,13 @@ else
 		unit.AssignedEnhancementId = string.IsNullOrEmpty(enhancementId) ? null : enhancementId;
 		MarkChanged();
 	}
+
+	// True when an enhancement is already assigned to a DIFFERENT unit (each may be taken once — R6). Such an
+	// option is disabled in the picker so it can't be double-assigned.
+	private bool IsEnhancementTakenElsewhere(string enhancementId, RosterUnit unit) =>
+		_roster is not null && _roster.Units.Any(u =>
+			!ReferenceEquals(u, unit)
+			&& string.Equals(u.AssignedEnhancementId, enhancementId, StringComparison.OrdinalIgnoreCase));
 
 	private IEnumerable<Enhancement> EligibleEnhancements(Datasheet sheet, RosterUnit unit) =>
 		// Offer Character Enhancements to eligible characters, and unit Upgrades to eligible non-character units
