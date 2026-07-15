@@ -745,13 +745,27 @@
     color: var(--text);
     border-color: var(--border-strong);
     background: var(--surface-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
-.chip.wargear::before {
-    content: "?";
-    margin-right: 0.3rem;
+.chip.wargear .wg-icon {
     color: var(--accent);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.chip.wargear .wg-name {
+    font-weight: 600;
+}
+
+/* Compact weapon stat summary trailing the name (range/attacks/S/AP/D). */
+.chip.wargear .wg-detail {
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 /* ---- Buttons ---- */
