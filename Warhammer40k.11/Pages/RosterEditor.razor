@@ -215,15 +215,22 @@ else
 					else
 					{
 						<span class="cfg-label">@group.Name <span class="cfg-hint">choose @WargearRangeLabel(group)</span></span>
-						<div class="sizes">
-							@foreach (var opt in group.Options)
+						@foreach (var (cls, opts) in WargearOptionsByClass(sheet, group))
+						{
+							@if (!string.IsNullOrEmpty(cls))
 							{
-								<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
-										@onclick="() => ToggleWargear(u, group.Id, opt.Id)">
-									@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
-								</button>
+								<span class="wargear-class">@cls</span>
 							}
-						</div>
+							<div class="sizes">
+								@foreach (var opt in opts)
+								{
+									<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
+											@onclick="() => ToggleWargear(u, group.Id, opt.Id, group.Max)">
+										@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
+									</button>
+								}
+							</div>
+						}
 					}
 				</div>
 			}
@@ -920,7 +927,37 @@ else
 		return selection is not null && selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase);
 	}
 
-	private void ToggleWargear(RosterUnit unit, string groupId, string optionId)
+	// The weapon class ("Ranged" / "Melee") of a wargear option, resolved by matching the option's name to one
+	// of the datasheet's weapons (an option label can name a weapon, e.g. "Gauss reaper"). Returns "" when no
+	// weapon matches, so such options render without a class sub-heading.
+	private static string OptionWeaponType(Datasheet sheet, Warhammer40k.Core.Catalogue.WargearOption option)
+	{
+		var name = (option.Name ?? "").Trim();
+		if (name.Length == 0)
+			return "";
+		var weapon = sheet.Weapons.FirstOrDefault(w =>
+			string.Equals(w.Name, name, StringComparison.OrdinalIgnoreCase)
+			|| name.Contains(w.Name, StringComparison.OrdinalIgnoreCase)
+			|| w.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+		if (weapon is null)
+			return "";
+		return string.Equals(weapon.Type, "Melee", StringComparison.OrdinalIgnoreCase) ? "Melee" : "Ranged";
+	}
+
+	// Options of a choice group split by weapon class, in display order: Ranged first, then Melee, then any
+	// unmatched options (no class heading).
+	private static IEnumerable<(string Label, IReadOnlyList<Warhammer40k.Core.Catalogue.WargearOption> Options)> WargearOptionsByClass(
+		Datasheet sheet, Warhammer40k.Core.Catalogue.WargearGroup group)
+	{
+		foreach (var cls in new[] { "Ranged", "Melee", "" })
+		{
+			var opts = group.Options.Where(o => OptionWeaponType(sheet, o) == cls).ToList();
+			if (opts.Count > 0)
+				yield return (cls, opts);
+		}
+	}
+
+	private void ToggleWargear(RosterUnit unit, string groupId, string optionId, int max)
 	{
 		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, groupId, StringComparison.OrdinalIgnoreCase));
 		if (selection is null)
@@ -930,9 +967,19 @@ else
 		}
 
 		if (selection.OptionIds.Contains(optionId, StringComparer.OrdinalIgnoreCase))
+		{
+			// Re-tapping the selected option clears it (allows deselect-to-none for optional Min=0 groups).
 			selection.OptionIds.RemoveAll(id => string.Equals(id, optionId, StringComparison.OrdinalIgnoreCase));
+		}
 		else
+		{
 			selection.OptionIds.Add(optionId);
+			// Enforce the group's Max: a Max=1 group behaves as radio (new pick replaces the old); a larger Max
+			// drops the oldest picks so the group never exceeds Max.
+			if (max > 0)
+				while (selection.OptionIds.Count > max)
+					selection.OptionIds.RemoveAt(0);
+		}
 
 		if (selection.OptionIds.Count == 0)
 			unit.Wargear.Remove(selection);

@@ -1003,6 +1003,17 @@
     gap: 0.5rem;
 }
 
+/* Ranged / Melee sub-heading above a wargear choice group's option buttons. */
+.wargear-class {
+    display: block;
+    margin: 0.5rem 0 0.3rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
 .size {
     padding: 0.5rem 0.85rem;
     min-height: 40px;

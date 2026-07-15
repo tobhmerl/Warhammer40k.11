@@ -64,6 +64,35 @@ public class CatalogueProviderTests
         Assert.Equal(escalated, sheet.PointsOptions.Single(o => o.Models == models).EscalatedPoints);
     }
 
+    [Fact]
+    public void Monolith_always_has_particle_whip_and_portal_of_exile_and_picks_one_ranged_weapon()
+    {
+        var monolith = Get("monolith");
+
+        // Particle whip (ranged) and Portal of exile (melee) are always-on: no wargear option references them.
+        var group = Assert.Single(monolith.WargearGroups);
+        Assert.DoesNotContain(group.Options, o => o.Name.Contains("Particle whip", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(group.Options, o => o.Name.Contains("Portal of exile", StringComparison.OrdinalIgnoreCase));
+
+        // The one choice is exactly one of Death ray / Gauss flux arc (both ranged).
+        Assert.Equal(1, group.Min);
+        Assert.Equal(1, group.Max);
+        Assert.Contains(group.Options, o => o.Id == "death-ray");
+        Assert.Contains(group.Options, o => o.Id == "gauss-flux-arc");
+
+        // Resolve: always-on weapons present; exactly one chosen ranged weapon.
+        var unit = new Warhammer40k.Core.Rosters.RosterUnit
+        {
+            Id = "u1", DatasheetId = "monolith", ModelCount = 1,
+            Wargear = [new Warhammer40k.Core.Rosters.WargearSelection { GroupId = group.Id, OptionIds = ["death-ray"] }],
+        };
+        var names = Warhammer40k.Core.Play.WargearResolver.SelectedWeapons(monolith, unit).Select(w => w.Name).ToList();
+        Assert.Contains("Particle whip", names);
+        Assert.Contains("Portal of exile", names);
+        Assert.Contains("Death ray", names);
+        Assert.DoesNotContain("Gauss flux arc", names);
+    }
+
     [Theory]
     // Crypteks (Orikan/Chronomancer/…) may co-lead a unit that already has a Royal Warden or Noble — their
     // seed text uses non-breaking spaces ("been\u00A0attached"), so the flag must survive whitespace quirks.
