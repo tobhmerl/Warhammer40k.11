@@ -1113,6 +1113,10 @@ else
 				continue;
 			if (PhaseClassifier.IsOwnSaveRule(ability))
 				continue;
+			// Wargear-granted abilities (name matches a wargear option, e.g. "Shadowloom" / "Nebuloscope")
+			// only show when that option is actually selected in the loadout above.
+			if (!WargearResolver.IsAbilityActive(sheet, unit, ability.Name))
+				continue;
 			if (!seen.Add(ability.Name))
 				continue;
 			result.Add(new SchedAbility(
