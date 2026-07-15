@@ -395,6 +395,33 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Pantheon_of_Woe_has_six_stratagems_and_no_enhancements()
+    {
+        var pantheon = DetachmentCatalogue.FindById("pantheon-of-woe")!;
+        Assert.Equal(6, pantheon.Stratagems.Count);
+        Assert.All(pantheon.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(pantheon.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+        Assert.Empty(pantheon.Enhancements);
+
+        // Molecular Erosion: 1CP Strategic Ploy, Command phase, MONSTER-gated.
+        var erosion = pantheon.Stratagems.Single(s => s.Name == "Molecular Erosion");
+        Assert.Equal("Strategic Ploy", erosion.Type);
+        Assert.True(erosion.AppliesInPhase(BattlePhase.Command));
+        Assert.Equal(["Monster"], erosion.RequiredUnitKeywords);
+
+        // Disharmonisation Cascade: Epic Deed, any phase, MONSTER-gated.
+        var cascade = pantheon.Stratagems.Single(s => s.Name == "Disharmonisation Cascade");
+        Assert.Equal("Epic Deed", cascade.Type);
+        Assert.True(cascade.AppliesInPhase(BattlePhase.Fight));
+        Assert.Equal(["Monster"], cascade.RequiredUnitKeywords);
+
+        // Entrophasic Aura Targeting: no keyword gate, your Shooting/Fight.
+        var aura = pantheon.Stratagems.Single(s => s.Name == "Entrophasic Aura Targeting");
+        Assert.Empty(aura.RequiredUnitKeywords);
+        Assert.True(aura.AppliesInTurn(BattleTurn.Player));
+    }
+
+    [Fact]
     public void Hypercrypt_Legion_has_six_stratagems_filtered_by_phase_turn_and_keyword()
     {
         var hypercrypt = DetachmentCatalogue.FindById("hypercrypt-legion")!;

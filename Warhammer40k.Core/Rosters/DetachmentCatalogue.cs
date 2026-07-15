@@ -560,6 +560,61 @@ public static class DetachmentCatalogue
                     "Munitorum Field Manual surcharge.",
             },
         ];
+
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "phase-melding", Name = "Phase Melding", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Movement],
+                When = "Your opponent's Movement phase, when an unravelling enemy unit is selected to Fall Back.",
+                Target = "One NECRONS unit from your army that is within Engagement Range of that enemy unit.",
+                Effect = "When that enemy unit Falls Back, all models in that enemy unit must take a Desperate Escape test. When doing so, if that enemy unit is Battle-shocked, subtract 1 from each of those tests.",
+            },
+            new Stratagem
+            {
+                Id = "disharmonisation-cascade", Name = "Disharmonisation Cascade", Type = "Epic Deed", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [],
+                RequiredUnitKeywords = ["Monster"],
+                When = "Any phase, just after a NECRONS MONSTER model from your army is destroyed, before making its Deadly Demise roll.",
+                Target = "That NECRONS MONSTER model. You can use this Stratagem on that model even though it was just destroyed.",
+                Effect = "Until the end of the phase, your model's Deadly Demise ability inflicts mortal wounds on a D6 roll of 3+ instead of on a 6.",
+            },
+            new Stratagem
+            {
+                Id = "molecular-erosion", Name = "Molecular Erosion", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Command],
+                RequiredUnitKeywords = ["Monster"],
+                When = "Command phase.",
+                Target = "One NECRONS MONSTER unit from your army.",
+                Effect = "Select one unravelling enemy unit visible to your unit. That enemy unit must take a Battle-shock test, subtracting 1 from the result. If that test is failed, that enemy unit suffers D3+1 mortal wounds. You can only use this Stratagem once per battle round.",
+            },
+            new Stratagem
+            {
+                Id = "chronodistortion", Name = "Chronodistortion", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Either, Phases = [BattlePhase.Fight],
+                When = "Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One NECRONS unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, each time a model in your unit is destroyed, if that model has not fought this phase, roll one D6, adding 1 if the attacking unit is unravelling: on a 4+, do not remove the destroyed model from play; it can fight after the attacking unit has finished making its attacks, and is then removed from play.",
+            },
+            new Stratagem
+            {
+                Id = "entrophasic-aura-targeting", Name = "Entrophasic Aura Targeting", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase.",
+                Target = "One NECRONS unit (excluding MONSTER units) from your army that has not been selected to shoot or fight this phase.",
+                Effect = "Until the end of the phase, each time a model in your unit makes an attack that targets an enemy unit, re-roll a Hit roll of 1. If the target of that attack is unravelling, re-roll a Wound roll of 1 as well.",
+            },
+            new Stratagem
+            {
+                Id = "mass-transmogrification", Name = "Mass Transmogrification", Type = "Epic Deed", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase, just after a NECRONS MONSTER unit from your army destroys an enemy unit.",
+                Target = "One friendly NECRONS unit (excluding MONSTER units) within 6\" of that MONSTER unit.",
+                Effect = "If that enemy unit was unravelling at the start of the phase, your friendly unit's Reanimation Protocols activate. You can only use this Stratagem once per turn.",
+            },
+        ];
+
         return d;
     }
 
