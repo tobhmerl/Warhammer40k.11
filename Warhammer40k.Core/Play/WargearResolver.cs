@@ -58,7 +58,7 @@ public static class WargearResolver
         // 1) Always-on weapons (named by no option) are carried by every model.
         foreach (var weapon in datasheet.Weapons)
             if (!perModelNames.Contains(weapon.Name) && !toggleNames.Contains(weapon.Name))
-                counts[weapon.Name] = models;
+                counts[weapon.Name] = models * PerModelCount(weapon);
 
         // 2) Per-model groups distribute the unit's models across their options.
         foreach (var group in datasheet.WargearGroups.Where(g => g.PerModel))
@@ -171,7 +171,7 @@ public static class WargearResolver
                 continue;
             foreach (var weapon in datasheet.Weapons)
                 if (NameMatches(weapon.Name, option.Name))
-                    counts[weapon.Name] = n;
+                    counts[weapon.Name] = n * PerModelCount(weapon);
         }
     }
 
@@ -187,9 +187,13 @@ public static class WargearResolver
                 continue;
             foreach (var weapon in datasheet.Weapons)
                 if (NameMatches(weapon.Name, option.Name))
-                    counts[weapon.Name] = models;
+                    counts[weapon.Name] = models * PerModelCount(weapon);
         }
     }
+
+    // Weapons a model carries more than one of (e.g. the Monolith's 4 Gauss flux arcs) scale the resolved
+    // count; clamped to at least 1 so an unset / bad value never zeroes a weapon out.
+    private static int PerModelCount(WeaponProfile weapon) => Math.Max(1, weapon.Count);
 
     // A weapon matches an option label when the label (or one of its "and"/comma-separated tokens) contains
     // the weapon name, case-insensitively. Substring (not equality) handles "Overlord's blade and tachyon

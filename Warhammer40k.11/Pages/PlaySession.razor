@@ -484,7 +484,7 @@ else
 														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null; var rCarry = WeaponModelsAlive(row.Part, row.Weapon);
 													}
 													<div class="w-top">
-														<span class="wname">@row.Weapon.Name</span>
+														<span class="wname">@(row.Weapon.Count > 1 ? $"{row.Weapon.Count}× " : "")@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, rwMods) A</span>
 													</div>
 													@if (row.Part.IsPerModelWeapon(row.Weapon) || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || rGrants.Count > 0 || rChosen is not null)
@@ -534,7 +534,7 @@ else
 														var mGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: false).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(); var mCarry = WeaponModelsAlive(row.Part, row.Weapon);
 													}
 													<div class="w-top">
-														<span class="wname">@row.Weapon.Name</span>
+														<span class="wname">@(row.Weapon.Count > 1 ? $"{row.Weapon.Count}× " : "")@row.Weapon.Name</span>
 														<span class="w-total" title="Total attacks at current model count">@TotalAttacks(row.Part, row.Weapon, mwMods) A</span>
 													</div>
 													@if (row.Part.IsPerModelWeapon(row.Weapon) || unit.Parts.Count > 1 || row.Weapon.Keywords.Count > 0 || mGrants.Count > 0)

@@ -4528,6 +4528,7 @@
           "strength": "6",
           "ap": "-1",
           "damage": "1",
+          "count": 4,
           "keywords": [
             "Lethal Hits",
             "Rapid Fire 3"
@@ -4542,6 +4543,7 @@
           "strength": "12",
           "ap": "-4",
           "damage": "D6+1",
+          "count": 4,
           "keywords": [
             "Sustained Hits D3"
           ]

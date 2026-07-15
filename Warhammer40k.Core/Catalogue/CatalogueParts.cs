@@ -26,6 +26,13 @@ public sealed class WeaponProfile
     [JsonPropertyName("ap")] public string ArmourPenetration { get; set; } = "";
     [JsonPropertyName("damage")] public string Damage { get; set; } = "";
     [JsonPropertyName("keywords")] public List<string> Keywords { get; set; } = [];
+
+    /// <summary>
+    /// How many of this weapon each model carries (default 1). Used for single-model vehicles that field
+    /// several identical guns (e.g. the Monolith's 4 Gauss flux arcs), so Play totals and the Combat
+    /// Simulator scale by the true count rather than assuming one weapon per model.
+    /// </summary>
+    [JsonPropertyName("count")] public int Count { get; set; } = 1;
 }
 
 /// <summary>A named datasheet ability. Leader targets and "cannot be your Warlord" are parsed from <see cref="Text"/>.</summary>

@@ -226,7 +226,7 @@ else
 								{
 									<button type="button" class="size @(IsWargearSelected(u, group.Id, opt.Id) ? "on" : "")"
 											@onclick="() => ToggleWargear(u, group.Id, opt.Id, group.Max)">
-										@(string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name)
+										@WargearOptionLabel(sheet, opt)
 									</button>
 								}
 							</div>
@@ -1061,6 +1061,19 @@ else
 		group.Min == group.Max ? $"exactly {group.Min}"
 		: group.Max > 0 ? $"{group.Min}–{group.Max}"
 		: $"{group.Min}+";
+
+	// The label for a wargear option button — its name plus an "×N" suffix when the option's weapon is fielded
+	// more than once per model (e.g. the Monolith's 4 Gauss flux arcs), so setup mirrors the datasheet count.
+	private static string WargearOptionLabel(Warhammer40k.Core.Catalogue.Datasheet sheet, Warhammer40k.Core.Catalogue.WargearOption opt)
+	{
+		var name = string.IsNullOrWhiteSpace(opt.Name) ? "(unnamed)" : opt.Name;
+		var count = sheet.Weapons
+			.Where(w => w.Count > 1 && opt.Name.Contains(w.Name, StringComparison.OrdinalIgnoreCase))
+			.Select(w => w.Count)
+			.DefaultIfEmpty(1)
+			.Max();
+		return count > 1 ? $"{name} ×{count}" : name;
+	}
 
 	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
 

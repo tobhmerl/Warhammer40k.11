@@ -87,7 +87,7 @@
 							{
 								<tr @key="w.Name">
 									<td class="lcell">
-										<span class="wname">@w.Name</span>
+										<span class="wname">@(w.Count > 1 ? $"{w.Count}× " : "")@w.Name</span>
 										@if (w.Keywords.Count > 0)
 										{
 											<span class="wkw">@string.Join(", ", w.Keywords)</span>
