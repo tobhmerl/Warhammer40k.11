@@ -361,21 +361,10 @@
     box-shadow: var(--glow-sm), var(--shadow-inset);
 }
 
-/* Valid attachment target while a unit is selected — highlighted. */
+/* Valid attachment target while a unit is selected ï¿½ highlighted. */
 .unit-card.partner {
     border-color: var(--accent-line);
     box-shadow: var(--glow-sm), var(--shadow-inset);
-}
-
-/* Not a valid target while a unit is selected — greyed out (still clickable to re-anchor). */
-.unit-card.dimmed {
-    opacity: 0.4;
-    filter: grayscale(0.7);
-}
-
-.unit-card.dimmed:hover {
-    opacity: 0.7;
-    transform: none;
 }
 
 /* ---- Attachment filter banner ---- */

@@ -55,7 +55,7 @@
 			<div class="filter-banner" role="status">
 				<span class="fb-mark" aria-hidden="true"></span>
 				<span class="fb-text">
-					Highlighting units <strong>@_filter.Name</strong> can attach to
+					Showing units <strong>@_filter.Name</strong> can attach to
 					<span class="fb-count">@PartnerCount</span>
 				</span>
 				<button class="fb-clear" type="button" @onclick="ClearFilter">Clear ✕</button>
@@ -147,8 +147,8 @@
 
 	private void FilterBy(Datasheet d)
 	{
-		// Clicking the anchored unit again clears the highlight; otherwise anchor on the clicked unit
-		// and highlight its attachment partners (every other card is dimmed via CardState).
+		// Clicking the anchored unit again clears the filter; otherwise anchor on the clicked unit
+		// and show only its attachment partners (every other card is hidden via IsVisible).
 		if (IsAnchor(d))
 		{
 			ClearFilter();
@@ -177,15 +177,13 @@
 
 	private int PartnerCount => _partnerIds.Count;
 
-	// Card CSS state under an active highlight: the clicked unit is the anchor, its valid
-	// attachment targets are highlighted partners, everything else is dimmed.
+	// Card CSS state under an active filter: the clicked unit is the anchor and its valid
+	// attachment targets are highlighted partners. Non-partners are hidden (see IsVisible).
 	private string CardState(Datasheet d)
 	{
 		if (_filter is null)
 			return "";
-		if (IsAnchor(d))
-			return "anchor";
-		return IsPartner(d) ? "partner" : "dimmed";
+		return IsAnchor(d) ? "anchor" : "partner";
 	}
 
 	private string CardLabel(Datasheet d)
@@ -197,13 +195,17 @@
 		return IsPartner(d) ? $"{d.Name} can attach with {_filter.Name}" : d.Name;
 	}
 
-	private int MatchCount => _catalogue.Datasheets.Count(d => Matches(d, _query.Trim()));
+	private int MatchCount => _catalogue.Datasheets.Count(d => Matches(d, _query.Trim()) && IsVisible(d));
+
+	// Under an active highlight, only the anchor and its valid attachment partners are shown;
+	// every other unit is hidden entirely rather than dimmed.
+	private bool IsVisible(Datasheet d) => _filter is null || IsAnchor(d) || IsPartner(d);
 
 	private IEnumerable<RoleGroup> Groups()
 	{
 		var q = _query.Trim();
 		return _catalogue.Datasheets
-			.Where(d => Matches(d, q))
+			.Where(d => Matches(d, q) && IsVisible(d))
 			.GroupBy(d => string.IsNullOrWhiteSpace(d.PrimaryRole) ? "Other" : d.PrimaryRole)
 			.OrderBy(g => RoleRank(g.Key))
 			.ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
