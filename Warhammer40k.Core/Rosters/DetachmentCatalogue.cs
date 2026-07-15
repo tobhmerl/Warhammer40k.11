@@ -340,6 +340,80 @@ public static class DetachmentCatalogue
                 },
             },
         ];
+
+        // Enhancement display text (bearer's Play card). R6-unconstrained — several confer the DESTROYER CULT
+        // keyword or reposition the bearer, so they are not tied to a fixed model keyword.
+        Author(d, "cursed-circlet",
+            "Each time an enemy unit is selected to shoot, after that unit has shot, if any models from the " +
+            "bearer's unit were destroyed as a result of those attacks, the bearer's unit can make a Surge move. " +
+            "Roll one D6: the unit can be moved up to that many inches but must finish as close as possible to the " +
+            "closest enemy unit (excluding AIRCRAFT), and can move within Engagement Range of it. A unit cannot " +
+            "make a Surge move while it is Battle-shocked.");
+        Author(d, "mark-of-the-nekrosor",
+            "Each time a model in the bearer's unit makes an attack, add 1 to the Hit roll.");
+        Author(d, "destroyer-ankh",
+            "The bearer has the DESTROYER CULT keyword. Add 2\" to the Move characteristic of models in the " +
+            "bearer's unit and add 2 to the Attacks characteristic of melee weapons equipped by the bearer.");
+        Author(d, "murdermind",
+            "The bearer has the DESTROYER CULT keyword and, during the Declare Battle Formations step, can be " +
+            "attached to a DESTROYER CULT unit (excluding CHARACTER units). If you do, the bearer's unit cannot " +
+            "contain any models without the DESTROYER CULT keyword. Add 3\" to the Move characteristic of the bearer.");
+
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "spreading-madness", Name = "Spreading Madness", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Charge],
+                When = "Your Charge phase.",
+                Target = "One NECRONS unit (excluding MONSTER and VEHICLE units) from your army that has not declared a charge this phase.",
+                Effect = "Until the end of the phase, each time your unit declares a charge, if one or more targets of that charge are within Engagement Range of one or more friendly units, add 2 to the Charge roll.",
+            },
+            new Stratagem
+            {
+                Id = "driven-to-butchery", Name = "Driven to Butchery", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Charge],
+                RequiredUnitKeywords = ["Destroyer Cult"],
+                When = "Your Shooting phase or your Charge phase.",
+                Target = "One DESTROYER CULT unit from your army.",
+                Effect = "Until the end of the turn, your unit is eligible to shoot and declare a charge in a turn in which it Advanced. You can only use this Stratagem once per turn.",
+            },
+            new Stratagem
+            {
+                Id = "methodical-murder", Name = "Methodical Murder", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                When = "Your Shooting phase or the Fight phase.",
+                Target = "One NECRONS unit (excluding MONSTER and VEHICLE units) from your army that has not been selected to shoot or fight this phase.",
+                Effect = "Until the end of the phase, weapons equipped by models in your unit have the [SUSTAINED HITS 1] ability.",
+            },
+            new Stratagem
+            {
+                Id = "mortis-protocols", Name = "Mortis Protocols", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Destroyer Cult"],
+                When = "Your Shooting phase or the Fight phase, just after the first time a DESTROYER CULT unit from your army destroys an enemy unit this turn.",
+                Target = "One friendly NECRONS unit (excluding MONSTER and VEHICLE units) within 9\" of that DESTROYER CULT unit.",
+                Effect = "The friendly unit's Reanimation Protocols activate.",
+            },
+            new Stratagem
+            {
+                Id = "unnatural-aggression", Name = "Unnatural Aggression", Type = "Strategic Ploy", CpCost = 2,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Charge],
+                When = "End of your opponent's Charge phase.",
+                Target = "One NECRONS unit (excluding MONSTER and VEHICLE units) from your army that is within 6\" of one or more enemy units and would be eligible to declare a charge against one or more of those enemy units if it were your Charge phase.",
+                Effect = "Your unit now declares a charge that only targets one or more of those enemy units, and you resolve that charge. Even if this charge is successful, your unit does not receive any Charge bonus this turn.",
+            },
+            new Stratagem
+            {
+                Id = "image-of-death", Name = "Image of Death", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Destroyer Cult"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has selected its targets.",
+                Target = "One DESTROYER CULT unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, each time an attack targets your unit, subtract 1 from the Hit roll.",
+            },
+        ];
+
         return d;
     }
 

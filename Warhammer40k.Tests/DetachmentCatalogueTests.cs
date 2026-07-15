@@ -368,6 +368,50 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Cursed_Legion_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var cursed = DetachmentCatalogue.FindById("cursed-legion")!;
+        Assert.Equal(6, cursed.Stratagems.Count);
+        Assert.All(cursed.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(cursed.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Spreading Madness: 1CP Strategic Ploy, your Charge phase, no keyword gate.
+        var madness = cursed.Stratagems.Single(s => s.Name == "Spreading Madness");
+        Assert.Equal("Strategic Ploy", madness.Type);
+        Assert.True(madness.AppliesInPhase(BattlePhase.Charge));
+        Assert.True(madness.AppliesInTurn(BattleTurn.Player));
+        Assert.Empty(madness.RequiredUnitKeywords);
+
+        // Driven to Butchery & Image of Death: DESTROYER CULT-gated.
+        Assert.Equal(["Destroyer Cult"], cursed.Stratagems.Single(s => s.Name == "Driven to Butchery").RequiredUnitKeywords);
+        Assert.Equal(["Destroyer Cult"], cursed.Stratagems.Single(s => s.Name == "Image of Death").RequiredUnitKeywords);
+
+        // Unnatural Aggression: 2CP, opponent's Charge phase.
+        var aggression = cursed.Stratagems.Single(s => s.Name == "Unnatural Aggression");
+        Assert.Equal(2, aggression.CpCost);
+        Assert.True(aggression.AppliesInTurn(BattleTurn.Opponent));
+        Assert.True(aggression.AppliesInPhase(BattlePhase.Charge));
+    }
+
+    [Fact]
+    public void Cursed_Legion_enhancements_carry_text()
+    {
+        var cursed = DetachmentCatalogue.FindById("cursed-legion")!;
+        foreach (var (id, points) in new[]
+                 {
+                     ("cursed-circlet", 25),
+                     ("destroyer-ankh", 20),
+                     ("mark-of-the-nekrosor", 20),
+                     ("murdermind", 15),
+                 })
+        {
+            var enh = cursed.FindEnhancement(id)!;
+            Assert.Equal(points, enh.Points);
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+        }
+    }
+
+    [Fact]
     public void Empowered_Engines_adds_plus6_move_to_Titanic_units()
     {
         var buff = Assert.Single(DetachmentCatalogue.FindById("the-phaerons-armoury")!.StatBuffs);
