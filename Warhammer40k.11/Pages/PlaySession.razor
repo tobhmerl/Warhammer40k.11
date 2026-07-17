@@ -523,10 +523,15 @@ else
 								}
 
 								@{
-									var referenceAbilities = unit.CombinedAbilities
-										.Where(a => !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn) && !a.IsAlwaysAvailable)
-										.ToList();
-								}
+										// The card body lists only abilities that belong on the card: those applied straight to the
+										// unit ("Applied: …") and unscheduled reference text. Phase-scheduled abilities (any windows
+										// ticked) surface exclusively in the Now ribbon during their window, so they are excluded here
+										// — otherwise a Command-phase ability like Grand Strategist would show while viewing Movement.
+										var referenceAbilities = unit.CombinedAbilities
+											.Where(a => a.AppliedSummary is not null
+												|| (!a.IsAlwaysAvailable && !a.HasManualKeyword && a.Windows.Count == 0))
+											.ToList();
+									}
 								@if (referenceAbilities.Count > 0)
 								{
 									<ul class="abilities">

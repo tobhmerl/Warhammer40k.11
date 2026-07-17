@@ -1,3 +1,4 @@
+using Warhammer40k.Core.Catalogue;
 using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
@@ -89,5 +90,38 @@ public class AbilityScheduleTests
         Assert.True(roster.IsApplied("k"));
         Assert.True(roster.IsScheduledNow("k", BattlePhase.Fight, BattleTurn.Opponent));
         Assert.False(roster.IsScheduledNow("k", BattlePhase.Fight, BattleTurn.Player));
+    }
+
+    // A phase-limited ability (e.g. Grand Strategist, scheduled only in the player's Command phase) must not
+    // be treated as always-available: it belongs in the Now ribbon during its window, never as a permanent
+    // reference row on the unit card. Only an ability ticked for every phase + turn is "always available".
+    [Fact]
+    public void Single_phase_ability_is_not_always_available_and_active_only_in_its_window()
+    {
+        var ability = new BattleAbility(new Ability { Name = "Grand Strategist", Text = "At the start of your Command phase, gain 1CP." }, "Imotekh the Stormlord")
+        {
+            Windows = [new AbilityWindow(BattlePhase.Command, BattleTurn.Player)],
+        };
+
+        Assert.False(ability.IsAlwaysAvailable);
+        Assert.True(BattleUnit.IsAbilityActiveInPhase(ability, BattlePhase.Command, BattleTurn.Player));
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(ability, BattlePhase.Movement, BattleTurn.Player));
+    }
+
+    // An ability the player ticked for all ten phase + turn cells is genuinely always-on, so it stays on the
+    // card (as a calm chip) and is excluded from the per-phase "usable now" markers.
+    [Fact]
+    public void Every_window_ticked_marks_an_ability_always_available()
+    {
+        var windows = new List<AbilityWindow>();
+        foreach (var phase in BattlePhases.Ordered)
+        {
+            windows.Add(new AbilityWindow(phase, BattleTurn.Player));
+            windows.Add(new AbilityWindow(phase, BattleTurn.Opponent));
+        }
+        var ability = new BattleAbility(new Ability { Name = "Ever Vigilant", Text = "Always." }, "Unit") { Windows = windows };
+
+        Assert.True(ability.IsAlwaysAvailable);
+        Assert.False(BattleUnit.IsAbilityActiveInPhase(ability, BattlePhase.Command, BattleTurn.Player));
     }
 }
