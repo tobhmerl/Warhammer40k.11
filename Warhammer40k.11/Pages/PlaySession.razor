@@ -141,7 +141,7 @@ else
 			}
 			else
 			{
-				<div class="now-actions">
+				<div class="now-actions" style="@($"--now-columns: {Math.Min(AvailableNowTotal, 3)}")">
 					@foreach (var reminder in nowReminders)
 					{
 						<button type="button" class="now-action must" @onclick="() => FocusReminder(reminder.Unit)">
@@ -152,10 +152,14 @@ else
 					}
 					@foreach (var action in nowAbilities)
 					{
+						var modelContext = AbilityModelContext(action.Unit, action.Ability);
 						<button type="button" class="now-action ability" @onclick="() => OpenAbilityCard(action.Unit, action.Ability)">
 							<span class="na-type">@(HasEffectKeywords(action.Ability) ? "Effect" : action.Ability.IsEnhancement ? "Enhancement" : "Ability")</span>
 							<strong>@action.Ability.Ability.Name</strong>
-							<small>@action.Unit.Name</small>
+							@if (modelContext is not null)
+							{
+								<small>@modelContext</small>
+							}
 						</button>
 					}
 					@foreach (var action in nowBuffs)
@@ -163,7 +167,6 @@ else
 						<button type="button" class="now-action ability" @onclick="() => OpenBuffCard(action.Unit, action.Buff)">
 							<span class="na-type">Detachment</span>
 							<strong>@action.Buff.Label</strong>
-							<small>@action.Unit.Name</small>
 						</button>
 					}
 					@foreach (var rule in nowRules)
@@ -171,16 +174,19 @@ else
 						<button type="button" class="now-action rule" @onclick="() => OpenNowRule(rule)">
 							<span class="na-type">Army rule</span>
 							<strong>@rule.Name</strong>
-							<small>@BattlePhases.Label(_phase) phase</small>
 						</button>
 					}
 					@foreach (var strat in nowStrats)
 					{
 						var cost = EffectiveCost(strat, StratContextUnit);
+						var modelContext = StratagemModelContext(strat);
 						<button type="button" class="now-action stratagem" @onclick="() => OpenNowStratagem(strat)">
 							<span class="na-type">Stratagem · @cost CP</span>
 							<strong>@strat.Name</strong>
-							<small>@StratagemContext(strat)</small>
+							@if (modelContext is not null)
+							{
+								<small>@modelContext</small>
+							}
 						</button>
 					}
 				</div>
@@ -1315,9 +1321,38 @@ else
 
 	private void CloseNowStratagem() => _nowStratagem = null;
 
-	private string StratagemContext(StratView stratagem) => NowUnit is { } unit
-		? unit.Name
-		: string.IsNullOrWhiteSpace(stratagem.Source) ? "Army" : stratagem.Source;
+	private static string? AbilityModelContext(BattleUnit unit, BattleAbility ability)
+	{
+		if (unit.Parts.Count <= 1 || ability.ApplyToUnit)
+			return null;
+
+		var text = ability.Ability.Text ?? "";
+		if (text.Contains("this unit", StringComparison.OrdinalIgnoreCase)
+			|| text.Contains("bearer's unit", StringComparison.OrdinalIgnoreCase)
+			|| text.Contains("bearer’s unit", StringComparison.OrdinalIgnoreCase))
+			return null;
+
+		return text.Contains("this model", StringComparison.OrdinalIgnoreCase)
+			|| text.Contains("bearer", StringComparison.OrdinalIgnoreCase)
+			? ability.Source
+			: null;
+	}
+
+	private string? StratagemModelContext(StratView stratagem)
+	{
+		if (NowUnit is not { Parts.Count: > 1 } unit
+			|| string.IsNullOrWhiteSpace(stratagem.Target)
+			|| !stratagem.Target.Contains("model", StringComparison.OrdinalIgnoreCase)
+			|| stratagem.Target.Contains("unit", StringComparison.OrdinalIgnoreCase))
+			return null;
+
+		var (include, exclude) = TargetKeywords(stratagem.Target);
+		var matches = unit.Parts
+			.Where(p => !exclude.Any(kw => p.Datasheet.Keywords.Any(k => KeywordMatches(k, kw))))
+			.Where(p => include.Count == 0 || include.Any(kw => p.Datasheet.Keywords.Any(k => KeywordMatches(k, kw))))
+			.ToList();
+		return matches.Count == 1 ? matches[0].Datasheet.Name : null;
+	}
 
 	private void UseNowStratagem()
 	{

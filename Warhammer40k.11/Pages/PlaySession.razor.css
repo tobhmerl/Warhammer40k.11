@@ -162,14 +162,9 @@ html[data-scroll="up"] .hud.sticky {
 
 .now-actions {
     display: grid;
-    grid-auto-columns: minmax(9.5rem, 42%);
-    grid-auto-flow: column;
+    grid-template-columns: repeat(var(--now-columns, 3), minmax(0, 1fr));
     gap: 0.45rem;
     margin-top: 0.55rem;
-    padding-bottom: 0.15rem;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scroll-snap-type: inline proximity;
 }
 
 .now-action {
@@ -186,7 +181,6 @@ html[data-scroll="up"] .hud.sticky {
     font: inherit;
     text-align: left;
     cursor: pointer;
-    scroll-snap-align: start;
 }
 
 .now-action:hover {
@@ -1451,9 +1445,6 @@ html[data-scroll="up"] .hud.sticky {
         padding: 0.35rem;
     }
 
-    .now-actions {
-        grid-auto-columns: minmax(9rem, 72%);
-    }
 }
 
 .weapon-list {
