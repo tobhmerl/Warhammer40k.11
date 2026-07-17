@@ -605,9 +605,12 @@ else
 								</ul>
 							}
 
-								<div class="u-foot">
-									<button class="ds-link" type="button" @onclick="() => OpenDetail(unit)">Full datasheet →</button>
-								</div>
+								@if (!_cardSwipe)
+									{
+										<div class="u-foot">
+											<button class="ds-link" type="button" @onclick="() => OpenDetail(unit)">Full datasheet →</button>
+										</div>
+									}
 						</div>
 					}
 					</li>
@@ -622,6 +625,10 @@ else
 					<button class="btn small ghost" type="button" @onclick="ToggleCollapseAll" title="Collapse or expand all cards">
 						@(AllCollapsed ? "Expand all" : "Collapse all")
 					</button>
+				}
+				else if (ActiveUnit is { } focused)
+				{
+					<button class="btn small ghost" type="button" @onclick="() => OpenDetail(focused)" title="Full datasheet for the focused unit">Datasheet</button>
 				}
 				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
