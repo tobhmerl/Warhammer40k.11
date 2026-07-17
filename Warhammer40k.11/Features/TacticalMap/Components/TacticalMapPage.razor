@@ -1,0 +1,249 @@
+@page "/tactical-map"
+@using Warhammer40k.Core
+@using Warhammer40k.Core.Catalogue
+@using Warhammer40k.Core.Rosters
+@using Warhammer40k.Core.Tactical
+@inject IApiClient Api
+
+@* Tactical Map — plan a deployment by dragging per-model tokens on a battlefield.
+   Part of the removable Tactical Map feature — see ../DELETE.md. *@
+
+<PageTitle>TombWorld — Tactical Map</PageTitle>
+
+<div class="tmap">
+	@if (_loading)
+	{
+		<div class="card pad"><p class="status"><span class="pulse" aria-hidden="true"></span> Loading&hellip;</p></div>
+	}
+	else if (!_authenticated)
+	{
+		<div class="card pad">
+			<p class="status">Sign in to plan tactical setups with your rosters.</p>
+			<a class="btn primary" href="/.auth/login/github">Sign in with GitHub</a>
+		</div>
+	}
+	else if (_plan is null)
+	{
+		<div class="tmap-head">
+			<h1>Tactical Map</h1>
+			<p class="sub">Plan a deployment on <strong>@_map.Name</strong> by dragging your models around the board.</p>
+		</div>
+
+		<div class="card pad new-plan">
+			<h2>New plan</h2>
+			@if (_rosters.Count == 0)
+			{
+				<p class="status">You have no rosters yet. Build one first, then come back to plan its deployment.</p>
+			}
+			else
+			{
+				<label class="fld">
+					<span>Roster</span>
+					<select @bind="_newRosterId">
+						<option value="">Choose a roster&hellip;</option>
+						@foreach (var r in _rosters)
+						{
+							<option value="@r.Id">@r.Name (@r.PointsLimit pts)</option>
+						}
+					</select>
+				</label>
+				<button class="btn primary" type="button" disabled="@(string.IsNullOrEmpty(_newRosterId) || _busy)" @onclick="CreatePlanAsync">Create plan</button>
+			}
+		</div>
+
+		@if (_plans.Count > 0)
+		{
+			<div class="card pad">
+				<h2>Saved plans</h2>
+				<ul class="plan-list">
+					@foreach (var p in _plans)
+					{
+						<li>
+							<button class="plan-open" type="button" @onclick="() => OpenPlanAsync(p.Id)">
+								<span class="pl-name">@p.Name</span>
+								<span class="pl-meta">@p.Tokens.Count tokens · @TacticalMaps.Resolve(p.MapId).Name</span>
+							</button>
+							<button class="btn small ghost reset" type="button" @onclick="() => DeletePlanAsync(p.Id)" title="Delete plan">Delete</button>
+						</li>
+					}
+				</ul>
+			</div>
+		}
+	}
+	else
+	{
+		<div class="tmap-bar">
+			<button class="btn small ghost" type="button" @onclick="ClosePlan">&larr; Plans</button>
+			<input class="plan-name" @bind="_plan.Name" @bind:event="oninput" @onchange="SavePlanAsync" aria-label="Plan name" />
+			<span class="tmap-legend">
+				<span class="lg player">You</span>
+				<span class="lg opponent">Opponent</span>
+			</span>
+			<button class="btn small ghost" type="button" @onclick="AddOpponentMarker">+ Opponent marker</button>
+			<button class="btn small primary" type="button" disabled="@_busy" @onclick="SavePlanAsync">@(_busy ? "Saving…" : "Save")</button>
+		</div>
+
+		<TacticalBoard Map="_map" Tokens="_plan.Tokens" OnChanged="SavePlanAsync" />
+
+		@if (_error is not null)
+		{
+			<p class="tmap-error">@_error</p>
+		}
+	}
+</div>
+
+@code {
+	private bool _loading = true;
+	private bool _authenticated;
+	private bool _busy;
+	private string? _error;
+
+	private CatalogueData _catalogue = new();
+	private List<Roster> _rosters = [];
+	private List<TacticalPlan> _plans = [];
+	private TacticalPlan? _plan;
+	private MapDefinition _map = TacticalMaps.Resolve(TacticalMaps.DefaultMapId);
+	private string _newRosterId = "";
+
+	protected override async Task OnInitializedAsync()
+	{
+		var user = await Api.GetCurrentUserAsync();
+		_authenticated = user.IsAuthenticated;
+		if (_authenticated)
+		{
+			_catalogue = await Api.GetCatalogueAsync();
+			_rosters = (await Api.GetRostersAsync()).ToList();
+			_plans = (await Api.GetTacticalPlansAsync()).ToList();
+		}
+		_loading = false;
+	}
+
+	private async Task CreatePlanAsync()
+	{
+		var roster = _rosters.FirstOrDefault(r => r.Id == _newRosterId);
+		if (roster is null)
+			return;
+
+		_busy = true;
+		_error = null;
+		try
+		{
+			var plan = new TacticalPlan
+			{
+				Name = $"{roster.Name} — plan",
+				RosterId = roster.Id,
+				MapId = _map.Id,
+				Tokens = SeedTokens(roster),
+			};
+			var saved = await Api.SaveTacticalPlanAsync(plan);
+			_plan = saved;
+			_plans.Insert(0, saved);
+		}
+		catch (Exception)
+		{
+			_error = "Could not create the plan. Please try again.";
+		}
+		finally
+		{
+			_busy = false;
+		}
+	}
+
+	// One token per model, arranged in tidy rows along the player's (bottom) edge as a starting point.
+	private List<MapToken> SeedTokens(Roster roster)
+	{
+		var tokens = new List<MapToken>();
+		double cursorX = 2, cursorY = _map.HeightInches - 6, rowMaxY = cursorY;
+		foreach (var unit in roster.Units)
+		{
+			var sheet = _catalogue.Datasheets.FirstOrDefault(d => d.Id == unit.DatasheetId);
+			var name = sheet?.Name ?? "Unit";
+			var baseMm = sheet is null ? BaseSizeDefaults.Default : BaseSizeDefaults.ForDatasheet(sheet);
+			var diameter = baseMm / 25.4;
+			var count = Math.Max(1, unit.ModelCount);
+			for (var i = 0; i < count; i++)
+			{
+				if (cursorX + diameter > _map.WidthInches - 2)
+				{
+					cursorX = 2;
+					cursorY = rowMaxY + diameter + 0.3;
+					rowMaxY = cursorY;
+				}
+				tokens.Add(new MapToken
+				{
+					RosterUnitId = unit.Id,
+					Label = name,
+					Side = MapSide.Player,
+					BaseMm = baseMm,
+					XInches = cursorX + diameter / 2,
+					YInches = cursorY,
+				});
+				cursorX += diameter + 0.3;
+				rowMaxY = Math.Max(rowMaxY, cursorY);
+			}
+		}
+		return tokens;
+	}
+
+	private void AddOpponentMarker()
+	{
+		if (_plan is null)
+			return;
+		_plan.Tokens.Add(new MapToken
+		{
+			Label = "Opponent",
+			Side = MapSide.Opponent,
+			BaseMm = 40,
+			XInches = _map.WidthInches / 2,
+			YInches = 6,
+		});
+		_ = SavePlanAsync();
+	}
+
+	private async Task OpenPlanAsync(string id)
+	{
+		_busy = true;
+		var plan = await Api.GetTacticalPlanAsync(id);
+		if (plan is not null)
+		{
+			_plan = plan;
+			_map = TacticalMaps.Resolve(plan.MapId);
+		}
+		_busy = false;
+	}
+
+	private void ClosePlan() => _plan = null;
+
+	private async Task SavePlanAsync()
+	{
+		if (_plan is null || _busy)
+			return;
+		_busy = true;
+		_error = null;
+		try
+		{
+			var saved = await Api.SaveTacticalPlanAsync(_plan);
+			_plan.Id = saved.Id;
+			_plan.ModifiedUtc = saved.ModifiedUtc;
+			var idx = _plans.FindIndex(p => p.Id == saved.Id);
+			if (idx >= 0)
+				_plans[idx] = saved;
+		}
+		catch (Exception)
+		{
+			_error = "Could not save the plan. Your changes are still on screen — try Save again.";
+		}
+		finally
+		{
+			_busy = false;
+		}
+	}
+
+	private async Task DeletePlanAsync(string id)
+	{
+		await Api.DeleteTacticalPlanAsync(id);
+		_plans.RemoveAll(p => p.Id == id);
+		if (_plan?.Id == id)
+			_plan = null;
+	}
+}

@@ -1,0 +1,82 @@
+@inject IJSRuntime JS
+
+@* The battlefield: the map image as a background with an SVG overlay (viewBox in board inches) of one
+   draggable token per model. Positions are inches, so the board scales to any width while staying accurate.
+   Part of the removable Tactical Map feature — see ../DELETE.md. *@
+
+<div class="board" @ref="_boardRef">
+	<img class="board-bg" src="@Map.BackgroundUrl" alt="@Map.Name" draggable="false" />
+	<svg class="board-svg" viewBox="@ViewBox" preserveAspectRatio="none"
+		 @onpointermove="OnPointerMove" @onpointerup="OnPointerUp" @onpointerleave="OnPointerUp">
+		@foreach (var token in Tokens)
+		{
+			var r = RadiusInches(token);
+			<g class="tok @(token.Side == MapSide.Player ? "player" : "opponent") @(_draggingId == token.Id ? "drag" : "")"
+			   transform="@Translate(token)"
+			   @onpointerdown="e => OnPointerDown(e, token)" @onpointerdown:stopPropagation="true">
+				<circle class="tok-base" r="@Inv(r)" />
+				<title>@token.Label</title>
+			</g>
+		}
+	</svg>
+</div>
+
+@code {
+	/// <summary>The map being planned on (board size + background).</summary>
+	[Parameter, EditorRequired] public MapDefinition Map { get; set; } = default!;
+
+	/// <summary>The tokens currently on the board (mutated in place as they are dragged).</summary>
+	[Parameter, EditorRequired] public List<MapToken> Tokens { get; set; } = [];
+
+	/// <summary>Raised after a token finishes moving, so the page can persist the plan.</summary>
+	[Parameter] public EventCallback OnChanged { get; set; }
+
+	private ElementReference _boardRef;
+	private string? _draggingId;
+
+	private string ViewBox => $"0 0 {Fmt(Map.WidthInches)} {Fmt(Map.HeightInches)}";
+
+	// A model's on-board radius in inches, from its base diameter (mm → inches).
+	private static double RadiusInches(MapToken token) => token.BaseMm / 25.4 / 2.0;
+
+	private static string Translate(MapToken token) =>
+		$"translate({Fmt(token.XInches)} {Fmt(token.YInches)})";
+
+	private void OnPointerDown(PointerEventArgs e, MapToken token) => _draggingId = token.Id;
+
+	private async Task OnPointerMove(PointerEventArgs e)
+	{
+		if (_draggingId is null)
+			return;
+		var token = Tokens.FirstOrDefault(t => t.Id == _draggingId);
+		if (token is null)
+			return;
+
+		var rect = await JS.InvokeAsync<BoardRect>("tombworld.rect", _boardRef);
+		if (rect.Width <= 0 || rect.Height <= 0)
+			return;
+
+		// Map the pointer's viewport position to board inches, clamped to the play area.
+		var x = (e.ClientX - rect.Left) / rect.Width * Map.WidthInches;
+		var y = (e.ClientY - rect.Top) / rect.Height * Map.HeightInches;
+		var r = RadiusInches(token);
+		token.XInches = Math.Clamp(x, r, Map.WidthInches - r);
+		token.YInches = Math.Clamp(y, r, Map.HeightInches - r);
+		StateHasChanged();
+	}
+
+	private async Task OnPointerUp(PointerEventArgs e)
+	{
+		if (_draggingId is null)
+			return;
+		_draggingId = null;
+		if (OnChanged.HasDelegate)
+			await OnChanged.InvokeAsync();
+	}
+
+	// Invariant-culture number formatting for SVG attributes (never a comma decimal separator).
+	private static string Fmt(double value) => value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+	private static string Inv(double value) => Fmt(value);
+
+	private readonly record struct BoardRect(double Left, double Top, double Width, double Height);
+}

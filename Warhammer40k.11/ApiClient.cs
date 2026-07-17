@@ -276,6 +276,64 @@ internal sealed class ApiClient(HttpClient http) : IApiClient
         return saved ?? library;
     }
 
+    public async Task<IReadOnlyList<Warhammer40k.Core.Tactical.TacticalPlan>> GetTacticalPlansAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var plans = await http.GetFromJsonAsync<List<Warhammer40k.Core.Tactical.TacticalPlan>>("api/tactical-plans", cancellationToken);
+            return plans ?? new List<Warhammer40k.Core.Tactical.TacticalPlan>();
+        }
+        catch (HttpRequestException)
+        {
+            return Array.Empty<Warhammer40k.Core.Tactical.TacticalPlan>();
+        }
+        catch (NotSupportedException)
+        {
+            return Array.Empty<Warhammer40k.Core.Tactical.TacticalPlan>();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<Warhammer40k.Core.Tactical.TacticalPlan>();
+        }
+    }
+
+    public async Task<Warhammer40k.Core.Tactical.TacticalPlan?> GetTacticalPlanAsync(string id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await http.GetFromJsonAsync<Warhammer40k.Core.Tactical.TacticalPlan>($"api/tactical-plans/{id}", cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<Warhammer40k.Core.Tactical.TacticalPlan> SaveTacticalPlanAsync(Warhammer40k.Core.Tactical.TacticalPlan plan, CancellationToken cancellationToken = default)
+    {
+        using var response = string.IsNullOrWhiteSpace(plan.Id)
+            ? await http.PostAsJsonAsync("api/tactical-plans", plan, cancellationToken)
+            : await http.PutAsJsonAsync($"api/tactical-plans/{plan.Id}", plan, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var saved = await response.Content.ReadFromJsonAsync<Warhammer40k.Core.Tactical.TacticalPlan>(cancellationToken);
+        return saved ?? plan;
+    }
+
+    public async Task DeleteTacticalPlanAsync(string id, CancellationToken cancellationToken = default)
+    {
+        using var response = await http.DeleteAsync($"api/tactical-plans/{id}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<BackupBundle?> GetBackupAsync(CancellationToken cancellationToken = default)
     {
         try

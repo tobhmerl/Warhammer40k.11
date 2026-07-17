@@ -65,6 +65,13 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             },
+            // Returns an element's viewport rectangle (Tactical Map uses it to map pointer coordinates to
+            // board inches while dragging tokens, so movement stays accurate at any zoom/screen size).
+            rect: function (element) {
+                if (!element) return { left: 0, top: 0, width: 0, height: 0 };
+                const r = element.getBoundingClientRect();
+                return { left: r.left, top: r.top, width: r.width, height: r.height };
+            },
             // Reflects scroll direction on <html data-scroll="top|down|up"> so CSS can float/auto-hide the
             // Play HUD: shown at the top and while scrolling down, hidden while scrolling up. Idempotent.
             initScroll: function () {

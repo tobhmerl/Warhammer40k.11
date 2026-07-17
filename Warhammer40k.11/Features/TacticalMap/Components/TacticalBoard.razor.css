@@ -1,0 +1,58 @@
+.board {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    aspect-ratio: 44 / 60;
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0b0f0d;
+    touch-action: none; /* let pointer drags work on touch without the page scrolling */
+    user-select: none;
+}
+
+.board-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+}
+
+.board-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.tok {
+    cursor: grab;
+}
+
+.tok.drag {
+    cursor: grabbing;
+}
+
+.tok-base {
+    stroke-width: 0.25;
+    fill-opacity: 0.85;
+    transition: fill-opacity .1s ease;
+}
+
+.tok.player .tok-base {
+    fill: #2bd47a;
+    stroke: #0b3c24;
+}
+
+.tok.opponent .tok-base {
+    fill: #e0563b;
+    stroke: #4a1109;
+}
+
+.tok.drag .tok-base {
+    fill-opacity: 1;
+    stroke-width: 0.4;
+}

@@ -85,6 +85,21 @@ public interface IApiClient
     /// <summary>Saves the signed-in user's scheduling library and returns the persisted copy.</summary>
     Task<Play.ScheduleLibrary> SaveScheduleLibraryAsync(Play.ScheduleLibrary library, CancellationToken cancellationToken = default);
 
+    /// <summary>Lists the signed-in user's tactical plans (newest first). Empty when not signed in or unreachable.</summary>
+    Task<IReadOnlyList<Tactical.TacticalPlan>> GetTacticalPlansAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Gets a single tactical plan owned by the signed-in user, or <c>null</c> if it does not exist.</summary>
+    Task<Tactical.TacticalPlan?> GetTacticalPlanAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates (when <see cref="Tactical.TacticalPlan.Id"/> is empty) or updates a tactical plan for the
+    /// signed-in user and returns the persisted copy (with server-assigned id and timestamps).
+    /// </summary>
+    Task<Tactical.TacticalPlan> SaveTacticalPlanAsync(Tactical.TacticalPlan plan, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a tactical plan owned by the signed-in user. No-op if it does not exist.</summary>
+    Task DeleteTacticalPlanAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary>Exports the signed-in user's data (settings + catalogue + rosters) as a bundle, or <c>null</c> when unreachable.</summary>
     Task<BackupBundle?> GetBackupAsync(CancellationToken cancellationToken = default);
 

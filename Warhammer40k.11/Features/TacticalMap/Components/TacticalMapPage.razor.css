@@ -1,0 +1,168 @@
+.tmap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tmap-head h1 {
+    margin: 0 0 .25rem;
+}
+
+.tmap-head .sub {
+    margin: 0;
+    color: var(--muted, #9fb3aa);
+}
+
+.card.pad {
+    background: var(--panel, #121a16);
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.new-plan {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: end;
+}
+
+.fld {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    min-width: 240px;
+}
+
+.fld > span {
+    font-size: .8rem;
+    color: var(--muted, #9fb3aa);
+}
+
+.fld select {
+    padding: .45rem .5rem;
+    background: #0d1512;
+    color: inherit;
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 8px;
+}
+
+.plan-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+}
+
+.plan-list li {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.plan-open {
+    flex: 1;
+    text-align: left;
+    background: #0d1512;
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 8px;
+    padding: .5rem .7rem;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+
+.plan-open:hover {
+    border-color: var(--accent, #2bd47a);
+}
+
+.pl-name {
+    font-weight: 600;
+}
+
+.pl-meta {
+    font-size: .78rem;
+    color: var(--muted, #9fb3aa);
+}
+
+.tmap-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.plan-name {
+    flex: 1;
+    min-width: 160px;
+    background: #0d1512;
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 8px;
+    padding: .4rem .6rem;
+    color: inherit;
+    font-weight: 600;
+}
+
+.tmap-legend {
+    display: inline-flex;
+    gap: .5rem;
+}
+
+.lg {
+    font-size: .72rem;
+    padding: .12rem .5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.lg.player {
+    color: #2bd47a;
+    border-color: #1c6a43;
+}
+
+.lg.opponent {
+    color: #e0563b;
+    border-color: #7a2a1c;
+}
+
+.tmap-error {
+    color: #e0563b;
+    margin: 0;
+}
+
+.btn {
+    padding: .45rem .8rem;
+    border-radius: 8px;
+    border: 1px solid var(--line, #2a3b34);
+    background: #0d1512;
+    color: inherit;
+    cursor: pointer;
+}
+
+.btn.primary {
+    background: var(--accent, #2bd47a);
+    color: #06110b;
+    border-color: transparent;
+    font-weight: 600;
+}
+
+.btn.small {
+    font-size: .8rem;
+    padding: .3rem .6rem;
+}
+
+.btn.ghost {
+    background: transparent;
+}
+
+.btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
