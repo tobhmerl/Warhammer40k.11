@@ -1,8 +1,10 @@
 @page "/tactical-map"
+@using Microsoft.AspNetCore.Components.Forms
 @using Warhammer40k.Core
 @using Warhammer40k.Core.Catalogue
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k.Core.Tactical
+@using Warhammer40k._11.Features.CombatSimulator.Import
 @inject IApiClient Api
 
 @* Tactical Map — plan a deployment by dragging per-model tokens on a battlefield.
@@ -49,6 +51,13 @@
 				</label>
 				<button class="btn primary" type="button" disabled="@(string.IsNullOrEmpty(_newRosterId) || _busy)" @onclick="CreatePlanAsync">Create plan</button>
 			}
+			<div class="new-import">
+				<span class="ni-or">or</span>
+				<label class="btn ghost file" title="Create a plan from a New Recruit JSON export">
+					Import from New Recruit
+					<InputFile class="hidden-file" accept=".json" OnChange="CreateFromImportAsync" />
+				</label>
+			</div>
 		</div>
 
 		@if (_plans.Count > 0)
@@ -80,6 +89,14 @@
 				<span class="lg opponent">Opponent</span>
 			</span>
 			<button class="btn small ghost" type="button" @onclick="AddOpponentMarker">+ Opponent marker</button>
+			<label class="btn small ghost file" title="Add your units from a New Recruit JSON export">
+				Import You
+				<InputFile class="hidden-file" accept=".json" OnChange="e => ImportAsync(e, MapSide.Player)" />
+			</label>
+			<label class="btn small ghost file" title="Add the opponent's units from a New Recruit JSON export">
+				Import Opp
+				<InputFile class="hidden-file" accept=".json" OnChange="e => ImportAsync(e, MapSide.Opponent)" />
+			</label>
 			<button class="btn small ghost @(_measureMode ? "on" : "")" type="button" @onclick="ToggleMeasure" title="Measure distances in inches">@(_measureMode ? "Measuring…" : "Measure")</button>
 			<button class="btn small primary" type="button" disabled="@_busy" @onclick="SavePlanAsync">@(_busy ? "Saving…" : "Save")</button>
 		</div>
@@ -87,6 +104,23 @@
 		<TacticalBoard Map="_map" Tokens="_plan.Tokens" MeasureMode="_measureMode" OnChanged="SavePlanAsync" />
 
 		<p class="tmap-hint">Drag models to plan your setup. Coherency is enforced — a move that would break a unit's coherency (within 2″, or two models for units of 7+) snaps back. Use <strong>Measure</strong> to check ranges.</p>
+
+		@if (UnitGroups() is { Count: > 0 } groups)
+		{
+			<div class="legend" aria-label="Units">
+				@foreach (var g in groups)
+				{
+					<div class="legend-row">
+						<span class="legend-swatch" style="background:@TokenStyle.Color(g.Side, g.ColorIndex)"></span>
+						<input class="legend-abbrev @(g.Side == MapSide.Player ? "player" : "opponent")"
+							   value="@g.Abbrev" maxlength="3"
+							   @onchange="e => RenameUnitAsync(g.Key, (string?)e.Value)" aria-label="@($"Abbreviation for {g.Name}")" />
+						<span class="legend-name">@g.Name</span>
+						<span class="legend-count">@g.Count @(g.Count == 1 ? "model" : "models")</span>
+					</div>
+				}
+			</div>
+		}
 
 		@if (_error is not null)
 		{
@@ -160,10 +194,12 @@
 	{
 		var tokens = new List<MapToken>();
 		double cursorX = 2, cursorY = _map.HeightInches - 6, rowMaxY = cursorY;
+		var colorIndex = 0;
 		foreach (var unit in roster.Units)
 		{
 			var sheet = _catalogue.Datasheets.FirstOrDefault(d => d.Id == unit.DatasheetId);
 			var name = sheet?.Name ?? "Unit";
+			var abbrev = TokenStyle.Abbreviate(name);
 			var baseMm = sheet is null ? BaseSizeDefaults.Default : BaseSizeDefaults.ForDatasheet(sheet);
 			var diameter = baseMm / 25.4;
 			var count = Math.Max(1, unit.ModelCount);
@@ -179,7 +215,9 @@
 				{
 					RosterUnitId = unit.Id,
 					Label = name,
+					Abbrev = abbrev,
 					Side = MapSide.Player,
+					ColorIndex = colorIndex,
 					BaseMm = baseMm,
 					XInches = cursorX + diameter / 2,
 					YInches = cursorY,
@@ -187,6 +225,7 @@
 				cursorX += diameter + 0.3;
 				rowMaxY = Math.Max(rowMaxY, cursorY);
 			}
+			colorIndex++;
 		}
 		return tokens;
 	}
@@ -195,15 +234,156 @@
 	{
 		if (_plan is null)
 			return;
+		var colorIndex = _plan.Tokens.Where(t => t.Side == MapSide.Opponent).Select(t => t.ColorIndex).DefaultIfEmpty(-1).Max() + 1;
 		_plan.Tokens.Add(new MapToken
 		{
-			Label = "Opponent",
+			RosterUnitId = Guid.NewGuid().ToString("n"),
+			Label = "Opponent unit",
+			Abbrev = "OP",
 			Side = MapSide.Opponent,
+			ColorIndex = colorIndex,
 			BaseMm = 40,
 			XInches = _map.WidthInches / 2,
 			YInches = 6,
 		});
 		_ = SavePlanAsync();
+	}
+
+	// A distinct unit on the board (its models share a RosterUnitId), for the legend.
+	private sealed record UnitGroupView(string Key, string Name, string Abbrev, MapSide Side, int ColorIndex, int Count);
+
+	private List<UnitGroupView> UnitGroups()
+	{
+		if (_plan is null)
+			return [];
+		return _plan.Tokens
+			.Where(t => !string.IsNullOrEmpty(t.RosterUnitId))
+			.GroupBy(t => t.RosterUnitId, StringComparer.Ordinal)
+			.Select(grp =>
+			{
+				var first = grp.First();
+				return new UnitGroupView(grp.Key, first.Label, first.Abbrev, first.Side, first.ColorIndex, grp.Count());
+			})
+			.OrderBy(g => g.Side)
+			.ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+	}
+
+	// Renames a whole unit's abbreviation (applies to every model of that unit), then persists.
+	private async Task RenameUnitAsync(string rosterUnitId, string? abbrev)
+	{
+		if (_plan is null)
+			return;
+		var trimmed = (abbrev ?? string.Empty).Trim().ToUpperInvariant();
+		if (trimmed.Length > 3)
+			trimmed = trimmed[..3];
+		foreach (var token in _plan.Tokens.Where(t => string.Equals(t.RosterUnitId, rosterUnitId, StringComparison.Ordinal)))
+			token.Abbrev = trimmed;
+		await SavePlanAsync();
+	}
+
+	// ---- New Recruit import ----
+
+	// Creates a fresh plan from an uploaded New Recruit JSON (your units), then persists it.
+	private async Task CreateFromImportAsync(InputFileChangeEventArgs e)
+	{
+		var json = await ReadFileAsync(e);
+		if (json is null)
+			return;
+		var result = NewRecruitImporter.Import(json);
+		if (result.Units.Count == 0)
+		{
+			_error = result.Warnings.FirstOrDefault() ?? "No units found in that file.";
+			return;
+		}
+
+		_plan = new TacticalPlan
+		{
+			Name = $"{e.File.Name.Replace(".json", "", StringComparison.OrdinalIgnoreCase)} — plan",
+			MapId = _map.Id,
+		};
+		AppendImported(result.Units, MapSide.Player);
+		var saved = await Api.SaveTacticalPlanAsync(_plan);
+		_plan = saved;
+		_plans.Insert(0, saved);
+	}
+
+	// Adds the uploaded units to the open plan for the given side, then persists.
+	private async Task ImportAsync(InputFileChangeEventArgs e, MapSide side)
+	{
+		if (_plan is null)
+			return;
+		var json = await ReadFileAsync(e);
+		if (json is null)
+			return;
+		var result = NewRecruitImporter.Import(json);
+		if (result.Units.Count == 0)
+		{
+			_error = result.Warnings.FirstOrDefault() ?? "No units found in that file.";
+			return;
+		}
+		AppendImported(result.Units, side);
+		await SavePlanAsync();
+	}
+
+	private async Task<string?> ReadFileAsync(InputFileChangeEventArgs e)
+	{
+		_error = null;
+		try
+		{
+			using var reader = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 8 * 1024 * 1024));
+			return await reader.ReadToEndAsync();
+		}
+		catch (Exception)
+		{
+			_error = "Could not read that file.";
+			return null;
+		}
+	}
+
+	// Lays out imported units as per-model tokens along the given side's edge (player = bottom, opponent = top).
+	private void AppendImported(IReadOnlyList<Warhammer40k._11.Features.CombatSimulator.Domain.CombatUnit> units, MapSide side)
+	{
+		if (_plan is null)
+			return;
+
+		var colorIndex = _plan.Tokens.Where(t => t.Side == side).Select(t => t.ColorIndex).DefaultIfEmpty(-1).Max() + 1;
+		var downward = side == MapSide.Opponent;
+		double cursorX = 2;
+		double cursorY = side == MapSide.Player ? _map.HeightInches - 6 : 6;
+		var rowMaxY = cursorY;
+
+		foreach (var unit in units)
+		{
+			var models = Math.Max(1, unit.ModelGroups.Sum(g => g.Count));
+			var baseMm = models == 1 ? 40 : 32; // heuristic: lone models are usually characters/monsters
+			var diameter = baseMm / 25.4;
+			var abbrev = TokenStyle.Abbreviate(unit.Name);
+			var unitId = Guid.NewGuid().ToString("n");
+
+			for (var i = 0; i < models; i++)
+			{
+				if (cursorX + diameter > _map.WidthInches - 2)
+				{
+					cursorX = 2;
+					cursorY = downward ? rowMaxY + diameter + 0.3 : rowMaxY - diameter - 0.3;
+					rowMaxY = cursorY;
+				}
+				_plan.Tokens.Add(new MapToken
+				{
+					RosterUnitId = unitId,
+					Label = unit.Name,
+					Abbrev = abbrev,
+					Side = side,
+					ColorIndex = colorIndex,
+					BaseMm = baseMm,
+					XInches = cursorX + diameter / 2,
+					YInches = cursorY,
+				});
+				cursorX += diameter + 0.3;
+			}
+			colorIndex++;
+		}
 	}
 
 	private async Task OpenPlanAsync(string id)

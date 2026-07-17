@@ -28,8 +28,14 @@ public sealed class MapToken
     /// <summary>Short label shown on/under the token (usually the unit name).</summary>
     public string Label { get; set; } = string.Empty;
 
-    /// <summary>Which side the token belongs to (drives its color).</summary>
+    /// <summary>Which side the token belongs to (drives its color family).</summary>
     public MapSide Side { get; set; }
+
+    /// <summary>Short unit abbreviation shown on the token (e.g. "WR", "TB"). Editable per unit.</summary>
+    public string Abbrev { get; set; } = string.Empty;
+
+    /// <summary>Index into the side's color palette; one per distinct unit so units read apart.</summary>
+    public int ColorIndex { get; set; }
 
     /// <summary>The model's round-base diameter in millimetres (drives on-board size and spacing).</summary>
     public int BaseMm { get; set; } = 32;

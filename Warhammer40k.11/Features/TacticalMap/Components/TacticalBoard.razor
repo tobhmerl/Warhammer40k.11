@@ -19,7 +19,7 @@
 				{
 					<circle class="tok-warn" r="@Fmt(r + 0.35)" />
 				}
-				<circle class="tok-base" r="@Fmt(r)" />
+				<circle class="tok-base" r="@Fmt(r)" fill="@TokenStyle.Color(token.Side, token.ColorIndex)" />
 				<title>@token.Label</title>
 			</g>
 		}
@@ -30,6 +30,13 @@
 			<circle class="ruler-end" cx="@Fmt(b.X)" cy="@Fmt(b.Y)" r="0.5" />
 		}
 	</svg>
+	@foreach (var token in Tokens)
+	{
+		if (!string.IsNullOrEmpty(token.Abbrev))
+		{
+			<span class="tok-label" style="@TokenLabelStyle(token)">@token.Abbrev</span>
+		}
+	}
 	@if (_measureFrom is { } ma && _measureTo is { } mb)
 	{
 		<span class="ruler-label" style="@RulerLabelStyle(ma, mb)">@MeasureLabel</span>
@@ -177,6 +184,16 @@
 	{
 		var left = (a.X + b.X) / 2 / Map.WidthInches * 100;
 		var top = (a.Y + b.Y) / 2 / Map.HeightInches * 100;
+		var l = left.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+		var t = top.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+		return $"left:{l}%;top:{t}%;";
+	}
+
+	// Positions a token's abbreviation label at the token center, in percent of the board size.
+	private string TokenLabelStyle(MapToken token)
+	{
+		var left = token.XInches / Map.WidthInches * 100;
+		var top = token.YInches / Map.HeightInches * 100;
 		var l = left.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 		var t = top.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 		return $"left:{l}%;top:{t}%;";

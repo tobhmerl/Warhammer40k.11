@@ -10,9 +10,13 @@ The interactive board lives entirely here; server persistence reuses the shared 
 
 ## Shared (Core/Api) support this feature relies on
 - `Warhammer40k.Core/Tactical/TacticalPlan.cs` — plan/token/map models + base-size defaults
+- `Warhammer40k.Core/Tactical/Coherency.cs` — unit-coherency math
+- `Warhammer40k.Core/Tactical/TokenStyle.cs` — abbreviations + color palettes
 - `Warhammer40k.Api/TacticalPlanRepository.cs` + `TacticalPlanFunctions.cs` — `/api/tactical-plans` CRUD
 - `IApiClient` / `ApiClient` — `Get/Save/Delete TacticalPlan(s)Async`
 - `wwwroot/maps/Layout A.jpg` — the board background
+- **Combat Simulator's `NewRecruitImporter`** (`Features/CombatSimulator/Import`) — reused to import units from
+  New Recruit JSON. If you remove the Combat Simulator feature, remove the import buttons here too.
 
 ## To remove the feature
 Delete this folder, remove the three touch-points above, and (optionally) the Core/Api tactical files,

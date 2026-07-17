@@ -156,4 +156,39 @@ public class TacticalMapTests
         Assert.All(tokens.Where(t => t.RosterUnitId == "b"), t => Assert.Contains(t.Id, broken));
         Assert.DoesNotContain(tokens.First(t => t.RosterUnitId == "a").Id, broken);
     }
+
+    // ---- Token style: abbreviations + colors ----
+
+    [Theory]
+    [InlineData("Tomb Blades", "TB")]
+    [InlineData("Lokhust Heavy Destroyers", "LHD")]
+    [InlineData("Necron Warriors", "WA")]   // leading faction word "Necron" is skipped -> single word "Warriors"
+    [InlineData("Wraiths", "WR")]
+    [InlineData("Overlord", "OV")]
+    public void Abbreviate_produces_short_uppercase_initials(string name, string expected)
+    {
+        Assert.Equal(expected, TokenStyle.Abbreviate(name));
+    }
+
+    [Fact]
+    public void Abbreviate_handles_empty_and_symbols()
+    {
+        Assert.Equal(string.Empty, TokenStyle.Abbreviate(""));
+        Assert.Equal(string.Empty, TokenStyle.Abbreviate("   "));
+        Assert.Equal(string.Empty, TokenStyle.Abbreviate(null));
+    }
+
+    [Fact]
+    public void Colors_come_from_the_side_palette_and_wrap_by_index()
+    {
+        Assert.Equal(TokenStyle.PlayerColors[0], TokenStyle.Color(MapSide.Player, 0));
+        Assert.Equal(TokenStyle.OpponentColors[1], TokenStyle.Color(MapSide.Opponent, 1));
+
+        // Player and opponent palettes are distinct at the same index.
+        Assert.NotEqual(TokenStyle.Color(MapSide.Player, 0), TokenStyle.Color(MapSide.Opponent, 0));
+
+        // Index wraps around the palette length and never throws for large/negative indices.
+        Assert.Equal(TokenStyle.Color(MapSide.Player, 0), TokenStyle.Color(MapSide.Player, TokenStyle.PlayerColors.Count));
+        Assert.Equal(TokenStyle.PlayerColors[^1], TokenStyle.Color(MapSide.Player, -1));
+    }
 }
