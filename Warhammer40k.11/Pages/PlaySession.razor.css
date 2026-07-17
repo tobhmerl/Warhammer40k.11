@@ -2,8 +2,8 @@
     max-width: 46rem;
     margin: 0 auto;
     padding-top: 0.5rem;
-    /* Clear the fixed battle-window HUD. */
-    padding-bottom: calc(11.5rem + env(safe-area-inset-bottom));
+    /* Clear the compact fixed HUD. */
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
 .back {
@@ -61,101 +61,6 @@
     transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
 }
 
-.battle-window {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: stretch;
-    gap: 0.45rem;
-}
-
-.round-step,
-.next-window {
-    min-height: 2.65rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--surface-2);
-}
-
-.round-step {
-    display: flex;
-    align-items: stretch;
-}
-
-.round-step button {
-    width: 1.8rem;
-    border: 0;
-    background: transparent;
-    color: var(--accent);
-    font: inherit;
-    font-size: 1rem;
-    cursor: pointer;
-}
-
-.round-step span {
-    min-width: 2.15rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-}
-
-.round-step small,
-.next-window span {
-    color: var(--text-faint);
-    font-size: 0.55rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.round-step strong {
-    color: var(--accent-strong);
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-}
-
-.window-title {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.window-title strong,
-.window-title span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.window-title strong {
-    color: var(--text);
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-}
-
-.window-title span {
-    color: var(--text-faint);
-    font-size: 0.67rem;
-}
-
-.next-window {
-    min-width: 3.35rem;
-    padding: 0.25rem 0.65rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-strong);
-    cursor: pointer;
-}
-
-.next-window strong {
-    font-size: 1.15rem;
-    line-height: 1;
-}
-
 /* Row 1: CP stepper (left) + the YOU/OPP turn toggle (fills the rest). */
 .hud-top {
     display: flex;
@@ -192,7 +97,7 @@ html[data-scroll="up"] .hud.sticky {
 .play-rail {
     position: fixed;
     top: auto;
-    bottom: calc(11.5rem + env(safe-area-inset-bottom));
+    bottom: calc(7rem + env(safe-area-inset-bottom));
     right: calc(0.5rem + env(safe-area-inset-right));
     z-index: 7;
     display: flex;
@@ -1544,14 +1449,6 @@ html[data-scroll="up"] .hud.sticky {
     .hud {
         gap: 0.3rem;
         padding: 0.35rem;
-    }
-
-    .first-turn {
-        font-size: 0.58rem;
-    }
-
-    .window-title span {
-        display: none;
     }
 
     .now-actions {

@@ -91,22 +91,8 @@ else
 			}
 		</div>
 
-		@* Battle-window HUD: round + next progression, resources/turn, then direct phase correction. *@
+		@* Minimal in-game HUD: resources, turn ownership, and direct phase selection. *@
 		<div class="hud @(_hudSticky ? "sticky" : null)">
-			<div class="battle-window">
-				<div class="round-step" aria-label="Battle round">
-					<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous battle round">−</button>
-					<span><small>Round</small><strong>@_round</strong></span>
-					<button type="button" @onclick="() => StepRound(1)" aria-label="Next battle round">+</button>
-				</div>
-				<div class="window-title">
-					<strong>@(_turn == BattleTurn.Player ? "Your" : "Opponent's") @BattlePhases.Label(_phase)</strong>
-					<span>@CurrentWindowSummary</span>
-				</div>
-				<button class="next-window" type="button" @onclick="NextBattleWindow" title="Advance to @NextWindowLabel">
-					<span>Next</span><strong>→</strong>
-				</button>
-			</div>
 			<div class="hud-top">
 				<div class="cp" aria-label="Command points">
 					<button class="cp-btn" type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
@@ -124,10 +110,6 @@ else
 						OPP
 					</button>
 				</div>
-				<button type="button" class="first-turn" @onclick="ToggleFirstTurn"
-						title="Set who takes the first turn each battle round">
-					First: @(_firstTurn == BattleTurn.Player ? "YOU" : "OPP")
-				</button>
 			</div>
 
 			<nav class="phases" aria-label="Battle phases">
@@ -1247,41 +1229,6 @@ else
 		if (phase != _phase)
 			_shootingChoice.Clear();
 		_phase = phase;
-		ScheduleBattleSave();
-	}
-
-	private string CurrentWindowSummary => $"{AvailableNowTotal} thing{(AvailableNowTotal == 1 ? "" : "s")} available now";
-
-	private string NextWindowLabel
-	{
-		get
-		{
-			var next = BattleSequence.Next(_round, _turn, _phase, _firstTurn);
-			return $"{(next.Turn == BattleTurn.Player ? "your" : "opponent's")} {BattlePhases.Label(next.Phase)} phase"
-				+ (next.Round != _round ? $" in round {next.Round}" : "");
-		}
-	}
-
-	private void NextBattleWindow()
-	{
-		var next = BattleSequence.Next(_round, _turn, _phase, _firstTurn);
-		if (next.Phase != _phase)
-			_shootingChoice.Clear();
-		_round = next.Round;
-		_turn = next.Turn;
-		_phase = next.Phase;
-		ScheduleBattleSave();
-	}
-
-	private void StepRound(int delta)
-	{
-		_round = Math.Clamp(_round + delta, 1, 99);
-		ScheduleBattleSave();
-	}
-
-	private void ToggleFirstTurn()
-	{
-		_firstTurn = _firstTurn == BattleTurn.Player ? BattleTurn.Opponent : BattleTurn.Player;
 		ScheduleBattleSave();
 	}
 
