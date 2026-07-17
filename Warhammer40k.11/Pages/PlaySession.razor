@@ -1099,6 +1099,11 @@ else
 			}
 			else
 			{
+				// Scheduling lives in the user's cross-roster library now: merge it over anything the roster still
+				// carries (library wins) so timing is consistent everywhere, then build the battle from that.
+				var library = await Api.GetScheduleLibraryAsync();
+				roster.AbilitySchedules = library.EffectiveFor(roster);
+
 				_roster = roster;
 				_battle = BattleRoster.Build(roster, _catalogue);
 				_byId = _battle.Units.ToDictionary(u => u.Id, StringComparer.Ordinal);

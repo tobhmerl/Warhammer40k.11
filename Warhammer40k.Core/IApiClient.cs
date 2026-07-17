@@ -76,6 +76,15 @@ public interface IApiClient
     /// <summary>Saves the signed-in user's settings and returns the persisted copy.</summary>
     Task<UserSettings> SaveSettingsAsync(UserSettings settings, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the signed-in user's cross-roster scheduling library, or an empty
+    /// <see cref="Play.ScheduleLibrary"/> when unsaved/unreachable.
+    /// </summary>
+    Task<Play.ScheduleLibrary> GetScheduleLibraryAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the signed-in user's scheduling library and returns the persisted copy.</summary>
+    Task<Play.ScheduleLibrary> SaveScheduleLibraryAsync(Play.ScheduleLibrary library, CancellationToken cancellationToken = default);
+
     /// <summary>Exports the signed-in user's data (settings + catalogue + rosters) as a bundle, or <c>null</c> when unreachable.</summary>
     Task<BackupBundle?> GetBackupAsync(CancellationToken cancellationToken = default);
 

@@ -1,4 +1,5 @@
 using Warhammer40k.Core.Catalogue;
+using Warhammer40k.Core.Play;
 using Warhammer40k.Core.Rosters;
 
 namespace Warhammer40k.Core;
@@ -19,6 +20,9 @@ public sealed class BackupBundle
 
     /// <summary>The user's customized catalogue, or <c>null</c> when they are on the embedded default.</summary>
     public CatalogueData? Catalogue { get; set; }
+
+    /// <summary>The user's cross-roster Play-Mode scheduling library (null on older backups made before it existed).</summary>
+    public ScheduleLibrary? ScheduleLibrary { get; set; }
 
     public List<Roster> Rosters { get; set; } = [];
 }

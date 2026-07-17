@@ -24,6 +24,7 @@ builder.Services.AddSingleton<IArmyRepository, TableArmyRepository>();
 builder.Services.AddSingleton<IRosterRepository, TableRosterRepository>();
 builder.Services.AddSingleton<ICatalogueRepository, TableCatalogueRepository>();
 builder.Services.AddSingleton<ISettingsRepository, TableSettingsRepository>();
+builder.Services.AddSingleton<IScheduleLibraryRepository, TableScheduleLibraryRepository>();
 
 // Catalogue: read-only reference data parsed and enriched once from the embedded seed.
 builder.Services.AddSingleton<CatalogueProvider>();

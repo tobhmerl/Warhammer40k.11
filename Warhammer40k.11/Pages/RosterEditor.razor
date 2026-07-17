@@ -581,6 +581,12 @@ else
 	private DotNetObjectReference<RosterEditor>? _selfRef;
 	private bool _flushHookInstalled;
 
+	// The signed-in user's cross-roster scheduling library (persisted separately from any roster). It is the
+	// single source of truth for Play-Mode timing, so ticking a box here defines that ability/stratagem for
+	// every current and future roster. Saved on the same debounce as the roster.
+	private ScheduleLibrary _library = ScheduleLibrary.Empty;
+	private bool _libraryDirty;
+
 	// Sheet state (markup added alongside the editor body).
 	private bool _picking;
 	private string _pickQuery = "";
@@ -631,7 +637,7 @@ else
 
 	private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
 	{
-		if (_dirty)
+		if (_dirty || _libraryDirty)
 			_ = SaveAsync();
 	}
 
@@ -640,7 +646,7 @@ else
 	public async Task FlushSave()
 	{
 		_autoSaveCts?.Cancel();
-		if (_dirty)
+		if (_dirty || _libraryDirty)
 			await SaveAsync();
 	}
 
@@ -665,6 +671,19 @@ else
 			else
 			{
 				_roster = roster;
+
+				// Scheduling is now global: pull the user's library and migrate any schedules this roster still
+				// carries from before (so old definitions become defaults), then stop the roster keeping its own
+				// copy — every read/write below goes through the library.
+				_library = await Api.GetScheduleLibraryAsync();
+				var migrated = _library.SeedMissingFrom(roster);
+				roster.AbilitySchedules = [];
+				if (migrated)
+				{
+					try { _library = await Api.SaveScheduleLibraryAsync(_library); }
+					catch (Exception) { _libraryDirty = true; }
+				}
+
 				ResolveDetachments();
 				_panelOpen = false;
 				Recompute();
@@ -785,25 +804,34 @@ else
 
 	private async Task SaveAsync()
 	{
-		if (_roster is null || _saving || !_dirty)
+		if (_roster is null || _saving || (!_dirty && !_libraryDirty))
 			return;
 
 		_saving = true;
 		_error = null;
-		// Clear the flag up front so edits made during the save mark the roster dirty again (and reschedule).
+		// Clear the flags up front so edits made during the save mark things dirty again (and reschedule).
+		var savingRoster = _dirty;
+		var savingLibrary = _libraryDirty;
 		_dirty = false;
+		_libraryDirty = false;
 		try
 		{
-			var saved = await Api.SaveRosterAsync(_roster);
-			// Keep our in-memory instance (open sheets reference its units); just sync server-assigned fields.
-			_roster.Id = saved.Id;
-			_roster.CreatedUtc = saved.CreatedUtc;
-			_roster.ModifiedUtc = saved.ModifiedUtc;
+			if (savingRoster)
+			{
+				var saved = await Api.SaveRosterAsync(_roster);
+				// Keep our in-memory instance (open sheets reference its units); just sync server-assigned fields.
+				_roster.Id = saved.Id;
+				_roster.CreatedUtc = saved.CreatedUtc;
+				_roster.ModifiedUtc = saved.ModifiedUtc;
+			}
+			if (savingLibrary)
+				_library = await Api.SaveScheduleLibraryAsync(_library);
 		}
 		catch (Exception)
 		{
-			_error = "Could not save the roster. Auto-save will retry on the next change.";
-			_dirty = true; // keep it dirty so the next change (or manual Save) retries
+			_error = "Could not save your changes. Auto-save will retry on the next change.";
+			_dirty = savingRoster || _dirty; // keep dirty so the next change (or manual Save) retries
+			_libraryDirty = savingLibrary || _libraryDirty;
 		}
 		finally
 		{
@@ -1183,27 +1211,23 @@ else
 	}
 
 	private bool IsScheduled(string key, BattlePhase phase, BattleTurn turn) =>
-		_roster?.FindSchedule(key)?.Covers(phase, turn) ?? false;
+		_library.Find(key)?.Covers(phase, turn) ?? false;
 
 	private void ToggleWindow(string key, BattlePhase phase, BattleTurn turn, bool on)
 	{
-		if (_roster is null)
-			return;
-		_roster.GetOrCreateSchedule(key).SetWindow(phase, turn, on);
-		MarkChanged();
+		_library.GetOrCreate(key).SetWindow(phase, turn, on);
+		MarkLibraryChanged();
 	}
 
-	private bool IsApplied(string key) => _roster?.FindSchedule(key)?.ApplyToUnit ?? false;
+	private bool IsApplied(string key) => _library.Find(key)?.ApplyToUnit ?? false;
 
 	private void SetApplied(string key, bool on)
 	{
-		if (_roster is null)
-			return;
-		_roster.GetOrCreateSchedule(key).ApplyToUnit = on;
-		MarkChanged();
+		_library.GetOrCreate(key).ApplyToUnit = on;
+		MarkLibraryChanged();
 	}
 
-	private string? KeywordText(string key) => _roster?.FindSchedule(key)?.ManualKeyword;
+	private string? KeywordText(string key) => _library.Find(key)?.ManualKeyword;
 
 	// The keyword box is shown when the user opened it, or when a keyword is already saved for this ability.
 	private bool ShowKeyword(string key) =>
@@ -1217,20 +1241,26 @@ else
 			return;
 		}
 		_keywordEditing.Remove(key);
-		var schedule = _roster?.FindSchedule(key);
+		var schedule = _library.Find(key);
 		if (schedule is { ManualKeyword: not null })
 		{
 			schedule.ManualKeyword = null;
-			MarkChanged();
+			MarkLibraryChanged();
 		}
 	}
 
 	private void SetKeyword(string key, string? text)
 	{
-		if (_roster is null)
-			return;
-		_roster.GetOrCreateSchedule(key).ManualKeyword = TrimToWords(text, 3);
-		MarkChanged();
+		_library.GetOrCreate(key).ManualKeyword = TrimToWords(text, 3);
+		MarkLibraryChanged();
+	}
+
+	// A scheduling checkbox changed: the change lives on the global library, so mark it dirty and reuse the
+	// roster's debounce so a burst of ticks results in a single library save once you pause.
+	private void MarkLibraryChanged()
+	{
+		_libraryDirty = true;
+		ScheduleAutoSave();
 	}
 
 	// Keeps a manual keyword short by taking only the first few words; returns null when empty.
@@ -1562,7 +1592,7 @@ else
 		_autoSaveCts?.Dispose();
 
 		// Best-effort final flush + JS listener teardown (skipped if the circuit is already gone).
-		if (_dirty)
+		if (_dirty || _libraryDirty)
 		{
 			try { await SaveAsync(); } catch { }
 		}

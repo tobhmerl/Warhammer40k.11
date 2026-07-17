@@ -14,6 +14,7 @@ namespace Warhammer40k.Api;
 public class Backup(
     ISettingsRepository settings,
     ICatalogueRepository catalogue,
+    IScheduleLibraryRepository scheduleLibrary,
     IRosterRepository rosters)
 {
     [Function("GetBackup")]
@@ -30,6 +31,7 @@ public class Backup(
             CreatedUtc = DateTimeOffset.UtcNow,
             Settings = await settings.GetAsync(userId, cancellationToken) ?? UserSettings.Default,
             Catalogue = await catalogue.GetAsync(userId, cancellationToken), // null when on the default
+            ScheduleLibrary = await scheduleLibrary.GetAsync(userId, cancellationToken),
             Rosters = (await rosters.ListAsync(userId, cancellationToken)).ToList(),
         };
 
@@ -64,6 +66,9 @@ public class Backup(
             await catalogue.SaveAsync(userId, customCatalogue, cancellationToken);
         else
             await catalogue.ResetAsync(userId, cancellationToken);
+
+        if (bundle.ScheduleLibrary is { } library)
+            await scheduleLibrary.SaveAsync(userId, library, cancellationToken);
 
         // Replace rosters: clear the user's current set, then recreate the bundle's with fresh server ids.
         foreach (var existing in await rosters.ListAsync(userId, cancellationToken))
