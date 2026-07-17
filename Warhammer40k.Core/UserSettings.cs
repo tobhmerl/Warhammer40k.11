@@ -22,10 +22,10 @@ public sealed class UserSettings
     public bool PlayHudSticky { get; set; }
 
     /// <summary>
-    /// Play Mode unit layout. <c>false</c> (default) = a vertical scrolling list of cards; <c>true</c> = a
-    /// horizontal deck showing one card at a time that you swipe left/right (with prev/next buttons).
+    /// Play Mode unit layout. <c>true</c> (default) = a horizontal deck showing one focused card at a time;
+    /// <c>false</c> = a vertical scrolling army overview.
     /// </summary>
-    public bool PlayCardSwipe { get; set; }
+    public bool PlayCardSwipe { get; set; } = true;
 
     /// <summary>A fresh settings object with built-in defaults.</summary>
     public static UserSettings Default => new();

@@ -92,6 +92,23 @@
             scrollBottom: function () {
                 window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
             },
+            // Transient Play Mode state is local to this browser and roster. Storage failures (private mode,
+            // quota, blocked storage) deliberately degrade to an in-memory-only session.
+            battleState: {
+                key: function (rosterId) { return 'tombworld:battle:v1:' + rosterId; },
+                get: function (rosterId) {
+                    try { return window.localStorage.getItem(this.key(rosterId)); }
+                    catch (_) { return null; }
+                },
+                set: function (rosterId, json) {
+                    try { window.localStorage.setItem(this.key(rosterId), json); return true; }
+                    catch (_) { return false; }
+                },
+                remove: function (rosterId) {
+                    try { window.localStorage.removeItem(this.key(rosterId)); return true; }
+                    catch (_) { return false; }
+                }
+            },
             // Horizontal swipe deck for Play Mode: binds touch gestures on the deck element and calls back into
             // .NET to page one unit card at a time. Only a deliberate horizontal swipe pages (so taps on the
             // in-card steppers/toggles still work). Idempotent per element; detach() clears the previous binding.

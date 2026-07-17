@@ -4,6 +4,7 @@
 @using Warhammer40k.Core.Play
 @using Warhammer40k.Core.Rosters
 @using Warhammer40k._11.Components
+@using System.Text.Json
 @using System.Text.RegularExpressions
 @implements IAsyncDisposable
 @inject IApiClient Api
@@ -90,8 +91,22 @@ else
 			}
 		</div>
 
-		@* Slim control HUD: CP stepper + turn toggle on one row, the phase row below. *@
+		@* Battle-window HUD: round + next progression, resources/turn, then direct phase correction. *@
 		<div class="hud @(_hudSticky ? "sticky" : null)">
+			<div class="battle-window">
+				<div class="round-step" aria-label="Battle round">
+					<button type="button" @onclick="() => StepRound(-1)" aria-label="Previous battle round">−</button>
+					<span><small>Round</small><strong>@_round</strong></span>
+					<button type="button" @onclick="() => StepRound(1)" aria-label="Next battle round">+</button>
+				</div>
+				<div class="window-title">
+					<strong>@(_turn == BattleTurn.Player ? "Your" : "Opponent's") @BattlePhases.Label(_phase)</strong>
+					<span>@CurrentWindowSummary</span>
+				</div>
+				<button class="next-window" type="button" @onclick="NextBattleWindow" title="Advance to @NextWindowLabel">
+					<span>Next</span><strong>→</strong>
+				</button>
+			</div>
 			<div class="hud-top">
 				<div class="cp" aria-label="Command points">
 					<button class="cp-btn" type="button" @onclick="() => StepCp(-1)" aria-label="Spend command point">−</button>
@@ -109,6 +124,10 @@ else
 						OPP
 					</button>
 				</div>
+				<button type="button" class="first-turn" @onclick="ToggleFirstTurn"
+						title="Set who takes the first turn each battle round">
+					First: @(_firstTurn == BattleTurn.Player ? "YOU" : "OPP")
+				</button>
 			</div>
 
 			<nav class="phases" aria-label="Battle phases">
@@ -120,6 +139,71 @@ else
 				}
 			</nav>
 		</div>
+
+		@{
+			var nowReminders = NowReminders;
+			var nowAbilities = NowAbilities;
+			var nowBuffs = NowBuffs;
+			var nowRules = UsableArmyRules;
+			var nowStrats = AffordableNowStratagems;
+		}
+		<section class="now-ribbon" aria-label="Available now">
+			<div class="now-head">
+				<span class="now-kicker">Now</span>
+				<strong>@NowContextLabel</strong>
+				<span class="now-count">@AvailableNowTotal</span>
+			</div>
+			@if (AvailableNowTotal == 0)
+			{
+				<p class="now-empty">Nothing scheduled for this battle window.</p>
+			}
+			else
+			{
+				<div class="now-actions">
+					@foreach (var reminder in nowReminders)
+					{
+						<button type="button" class="now-action must" @onclick="() => FocusReminder(reminder.Unit)">
+							<span class="na-type">Must resolve</span>
+							<strong>@reminder.Label</strong>
+							<small>@reminder.Unit.Name</small>
+						</button>
+					}
+					@foreach (var action in nowAbilities)
+					{
+						<button type="button" class="now-action ability" @onclick="() => OpenAbilityCard(action.Unit, action.Ability)">
+							<span class="na-type">@(HasEffectKeywords(action.Ability) ? "Effect" : action.Ability.IsEnhancement ? "Enhancement" : "Ability")</span>
+							<strong>@action.Ability.Ability.Name</strong>
+							<small>@action.Unit.Name</small>
+						</button>
+					}
+					@foreach (var action in nowBuffs)
+					{
+						<button type="button" class="now-action ability" @onclick="() => OpenBuffCard(action.Unit, action.Buff)">
+							<span class="na-type">Detachment</span>
+							<strong>@action.Buff.Label</strong>
+							<small>@action.Unit.Name</small>
+						</button>
+					}
+					@foreach (var rule in nowRules)
+					{
+						<button type="button" class="now-action rule" @onclick="() => OpenNowRule(rule)">
+							<span class="na-type">Army rule</span>
+							<strong>@rule.Name</strong>
+							<small>@BattlePhases.Label(_phase) phase</small>
+						</button>
+					}
+					@foreach (var strat in nowStrats)
+					{
+						var cost = EffectiveCost(strat, StratContextUnit);
+						<button type="button" class="now-action stratagem" @onclick="() => OpenNowStratagem(strat)">
+							<span class="na-type">Stratagem · @cost CP</span>
+							<strong>@strat.Name</strong>
+							<small>@StratagemContext(strat)</small>
+						</button>
+					}
+				</div>
+			}
+		</section>
 
 		@{
 			var allStrats = UsableStratagems;
@@ -473,7 +557,13 @@ else
 								@if (ranged.Count > 0)
 								{
 									<div class="weapon-block ranged @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
-										<div class="wb-head"><span class="wb-title">Ranged</span></div>
+										<div class="wb-head">
+											<span class="wb-title">Ranged</span>
+											@if (_phase == BattlePhase.Shooting)
+											{
+												<span class="wb-now">Current phase</span>
+											}
+										</div>
 										<ul class="weapon-list">
 											@foreach (var row in ranged)
 											{
@@ -524,7 +614,13 @@ else
 								@if (melee.Count > 0)
 								{
 									<div class="weapon-block melee @(_phase == BattlePhase.Fight ? "phase-on" : "")">
-										<div class="wb-head"><span class="wb-title">Melee</span></div>
+										<div class="wb-head">
+											<span class="wb-title">Melee</span>
+											@if (_phase == BattlePhase.Fight)
+											{
+												<span class="wb-now">Current phase</span>
+											}
+										</div>
 										<ul class="weapon-list">
 											@foreach (var row in melee)
 											{
@@ -796,6 +892,48 @@ else
 		}
 	</Sheet>
 
+	<Sheet Open="_nowRule is not null" Eyebrow="Army rule" Title="@_nowRule?.Name" OnCloseRequested="CloseNowRule">
+		@if (_nowRule is { } nowRule)
+		{
+			<p class="a-text">@nowRule.Text</p>
+			@if (nowRule.HasExample)
+			{
+				<p class="ar-example"><span class="ar-label">Example</span> @nowRule.Example</p>
+			}
+		}
+	</Sheet>
+
+	<Sheet Open="_nowStratagem is not null" Eyebrow="Stratagem" Title="@_nowStratagem?.Name" OnCloseRequested="CloseNowStratagem">
+		@if (_nowStratagem is { } nowStratagem)
+		{
+			<dl class="s-body now-detail">
+				@if (!string.IsNullOrWhiteSpace(nowStratagem.When))
+				{
+					<dt>When</dt>
+					<dd>@nowStratagem.When</dd>
+				}
+				@if (!string.IsNullOrWhiteSpace(nowStratagem.Target))
+				{
+					<dt>Target</dt>
+					<dd>@nowStratagem.Target</dd>
+				}
+				@if (!string.IsNullOrWhiteSpace(nowStratagem.Effect))
+				{
+					<dt>Effect</dt>
+					<dd>@nowStratagem.Effect</dd>
+				}
+				@if (!string.IsNullOrWhiteSpace(nowStratagem.Restrictions))
+				{
+					<dt>Restrictions</dt>
+					<dd>@nowStratagem.Restrictions</dd>
+				}
+			</dl>
+			<button class="btn primary" type="button" @onclick="UseNowStratagem">
+				Use · @EffectiveCost(nowStratagem, StratContextUnit) CP
+			</button>
+		}
+	</Sheet>
+
 <Sheet Open="_rulesOpen" Eyebrow="Reference" Title="Army &amp; detachment rules" OnCloseRequested="CloseRules">
 	@if (ArmyRules.Count > 0)
 	{
@@ -853,6 +991,8 @@ else
 
 	private BattlePhase _phase = BattlePhase.Command;
 	private BattleTurn _turn = BattleTurn.Player;
+	private BattleTurn _firstTurn = BattleTurn.Player;
+	private int _round = 1;
 	private int _cp;
 	// Victory points: primary + secondary for each side (in-memory trackers).
 	private int _vpYouPrimary;
@@ -884,6 +1024,8 @@ else
 	// The conditional detachment buff whose rule text is shown in a popup (tapped from its toggle chip). Null = closed.
 	private ConditionalUnitBuff? _buffCard;
 	private BattleUnit? _buffCardUnit;
+	private ArmyRule? _nowRule;
+	private StratView? _nowStratagem;
 
 	// Single-cell highlight on a weapon stat ("Rng", "A", "BS"…) so you can mark the exact spot you're on while
 	// resolving an attack. Only the one cell you clicked lights up; click it again to clear.
@@ -922,6 +1064,10 @@ else
 	private Dictionary<string, BattleUnit> _byId = new(StringComparer.Ordinal);
 	private CancellationTokenSource? _saveCts;
 	private bool _orderDirty;
+	private CancellationTokenSource? _battleSaveCts;
+	private DotNetObjectReference<PlaySession>? _sessionSelf;
+	private bool _restorePending;
+	private bool _battleStateReady;
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -934,7 +1080,18 @@ else
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)
+		{
 			await JS.InvokeVoidAsync("tombworld.initScroll");
+			_sessionSelf = DotNetObjectReference.Create(this);
+			await JS.InvokeVoidAsync("tombworld.flushOnHide", _sessionSelf);
+		}
+
+		if (_restorePending)
+		{
+			_restorePending = false;
+			await RestoreBattleStateAsync();
+			StateHasChanged();
+		}
 
 		// Bind the touch-swipe handler once the deck element exists (swipe mode, roster loaded).
 		if (_cardSwipe && _battle is { Units.Count: > 0 } && !_deckBound)
@@ -1083,11 +1240,140 @@ else
 				_order.AddRange(_battle.Units.Select(u => u.Id));
 				RebuildOrdered();
 				ResetTrackers();
+				_restorePending = true;
 			}
 		}
 
 		_loading = false;
 	}
+
+	private async Task RestoreBattleStateAsync()
+	{
+		if (_battle is null)
+			return;
+		try
+		{
+			var json = await JS.InvokeAsync<string?>("tombworld.battleState.get", Id);
+			if (!string.IsNullOrWhiteSpace(json))
+			{
+				var state = JsonSerializer.Deserialize<BattleSessionState>(json);
+				if (state is not null)
+					ApplyBattleState(state);
+			}
+		}
+		catch (Exception ex) when (ex is JsonException or JSException or InvalidOperationException)
+		{
+			// Invalid/stale storage and unavailable browser storage both degrade to the fresh in-memory state.
+		}
+		_battleStateReady = true;
+	}
+
+	private void ApplyBattleState(BattleSessionState state)
+	{
+		if (_battle is null)
+			return;
+		state.Normalize();
+		_round = state.Round;
+		_firstTurn = state.FirstTurn;
+		_turn = state.Turn;
+		_phase = state.Phase;
+		_cp = state.CommandPoints;
+		_vpYouPrimary = state.YourPrimaryVp;
+		_vpYouSecondary = state.YourSecondaryVp;
+		_vpOppPrimary = state.OpponentPrimaryVp;
+		_vpOppSecondary = state.OpponentSecondaryVp;
+		_cardSwipe = state.FocusMode;
+
+		var parts = _battle.Units.SelectMany(u => u.Parts).ToDictionary(p => p.Unit.Id, StringComparer.Ordinal);
+		foreach (var (id, value) in state.PartTracks)
+			if (parts.TryGetValue(id, out var part))
+				_track[id] = Math.Clamp(value, 0, part.TrackMax);
+
+		var weaponKeys = _battle.Units.SelectMany(u => u.Parts)
+			.SelectMany(p => p.Weapons.Where(p.IsPerModelWeapon).Select(w => (Key: WeaponKillKey(p, w), Max: p.ModelsCarrying(w))))
+			.ToDictionary(x => x.Key, x => x.Max, StringComparer.Ordinal);
+		_weaponKills.Clear();
+		foreach (var (key, value) in state.WeaponKills)
+			if (weaponKeys.TryGetValue(key, out var max) && value > 0)
+				_weaponKills[key] = Math.Clamp(value, 0, max);
+
+		var unitPrefixes = _battle.Units.Select(u => u.Id + "|").ToList();
+		_activeEffects.Clear();
+		foreach (var key in state.ActiveEffects)
+			if (unitPrefixes.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal)))
+				_activeEffects.Add(key);
+
+		_shootingChoice.Clear();
+		foreach (var (unitId, choice) in state.ShootingChoices)
+			if (_byId.ContainsKey(unitId) && !string.IsNullOrWhiteSpace(choice))
+				_shootingChoice[unitId] = choice;
+
+		if (state.ActiveUnitId is not null)
+		{
+			var index = _order.IndexOf(state.ActiveUnitId);
+			if (index >= 0)
+				_activeCard = index;
+		}
+		if (_cardSwipe && _ordered.Count > 0)
+			_collapsed.Remove(_ordered[Math.Clamp(_activeCard, 0, _ordered.Count - 1)].Id);
+	}
+
+	private BattleSessionState CaptureBattleState() => new()
+	{
+		Round = _round,
+		FirstTurn = _firstTurn,
+		Turn = _turn,
+		Phase = _phase,
+		CommandPoints = _cp,
+		YourPrimaryVp = _vpYouPrimary,
+		YourSecondaryVp = _vpYouSecondary,
+		OpponentPrimaryVp = _vpOppPrimary,
+		OpponentSecondaryVp = _vpOppSecondary,
+		FocusMode = _cardSwipe,
+		ActiveUnitId = ActiveUnit?.Id,
+		PartTracks = new Dictionary<string, int>(_track, StringComparer.Ordinal),
+		WeaponKills = new Dictionary<string, int>(_weaponKills, StringComparer.Ordinal),
+		ActiveEffects = new HashSet<string>(_activeEffects, StringComparer.Ordinal),
+		ShootingChoices = new Dictionary<string, string>(_shootingChoice, StringComparer.Ordinal),
+	};
+
+	private void ScheduleBattleSave()
+	{
+		if (!_battleStateReady)
+			return;
+		_battleSaveCts?.Cancel();
+		_battleSaveCts?.Dispose();
+		_battleSaveCts = new CancellationTokenSource();
+		_ = SaveBattleStateAsync(_battleSaveCts.Token);
+	}
+
+	private async Task SaveBattleStateAsync(CancellationToken token)
+	{
+		try
+		{
+			await Task.Delay(250, token);
+			await PersistBattleStateAsync();
+		}
+		catch (OperationCanceledException)
+		{
+			// A newer state superseded this snapshot.
+		}
+		catch (Exception ex) when (ex is JSException or InvalidOperationException)
+		{
+			// Browser storage is best-effort; play remains fully functional in memory.
+		}
+	}
+
+	private async Task PersistBattleStateAsync()
+	{
+		if (!_battleStateReady || _battle is null)
+			return;
+		var json = JsonSerializer.Serialize(CaptureBattleState());
+		await JS.InvokeVoidAsync("tombworld.battleState.set", Id, json);
+	}
+
+	[JSInvokable]
+	public Task FlushSave() => PersistBattleStateAsync();
 
 	private void SelectPhase(BattlePhase phase)
 	{
@@ -1095,9 +1381,49 @@ else
 		if (phase != _phase)
 			_shootingChoice.Clear();
 		_phase = phase;
+		ScheduleBattleSave();
 	}
 
-	private void SetTurn(BattleTurn turn) => _turn = turn;
+	private string CurrentWindowSummary => $"{AvailableNowTotal} thing{(AvailableNowTotal == 1 ? "" : "s")} available now";
+
+	private string NextWindowLabel
+	{
+		get
+		{
+			var next = BattleSequence.Next(_round, _turn, _phase, _firstTurn);
+			return $"{(next.Turn == BattleTurn.Player ? "your" : "opponent's")} {BattlePhases.Label(next.Phase)} phase"
+				+ (next.Round != _round ? $" in round {next.Round}" : "");
+		}
+	}
+
+	private void NextBattleWindow()
+	{
+		var next = BattleSequence.Next(_round, _turn, _phase, _firstTurn);
+		if (next.Phase != _phase)
+			_shootingChoice.Clear();
+		_round = next.Round;
+		_turn = next.Turn;
+		_phase = next.Phase;
+		ScheduleBattleSave();
+	}
+
+	private void StepRound(int delta)
+	{
+		_round = Math.Clamp(_round + delta, 1, 99);
+		ScheduleBattleSave();
+	}
+
+	private void ToggleFirstTurn()
+	{
+		_firstTurn = _firstTurn == BattleTurn.Player ? BattleTurn.Opponent : BattleTurn.Player;
+		ScheduleBattleSave();
+	}
+
+	private void SetTurn(BattleTurn turn)
+	{
+		_turn = turn;
+		ScheduleBattleSave();
+	}
 
 	// ---- Army rules (faction-wide, e.g. Reanimation Protocols) — shown on demand via a Sheet ----
 	private IReadOnlyList<ArmyRule> ArmyRules =>
@@ -1110,6 +1436,83 @@ else
 			: ArmyRules
 				.Where(r => _roster.IsScheduledNow(AbilityScheduleKeys.ForArmyRule(r.Name), _phase, _turn))
 				.ToList();
+
+	private sealed record NowReminder(BattleUnit Unit, string Label);
+
+	private BattleUnit? NowUnit => _cardSwipe ? ActiveUnit : null;
+
+	private IReadOnlyList<NowReminder> NowReminders
+	{
+		get
+		{
+			if (!MyCommandPhase || _battle is null)
+				return [];
+			var reminders = new List<NowReminder>();
+			foreach (var unit in _battle.Units.Where(u => !IsDead(u)))
+			{
+				if (NeedsBattleShock(unit))
+					reminders.Add(new NowReminder(unit, "Take Battle-shock test"));
+				if (NeedsReanimation(unit))
+					reminders.Add(new NowReminder(unit, "Resolve Reanimation Protocols"));
+			}
+			return reminders;
+		}
+	}
+
+	private IReadOnlyList<(BattleUnit Unit, BattleAbility Ability)> NowAbilities =>
+		NowUnit is { } unit && !IsDead(unit)
+			? unit.CombinedAbilities
+				.Where(a => IsEffectNow(a) || IsUsableNow(a))
+				.Select(a => (unit, a))
+				.ToList()
+			: [];
+
+	private IReadOnlyList<(BattleUnit Unit, ConditionalUnitBuff Buff)> NowBuffs =>
+		NowUnit is { } unit && !IsDead(unit)
+			? ConditionalBuffsFor(unit).Select(b => (unit, b)).ToList()
+			: [];
+
+	private IReadOnlyList<StratView> AffordableNowStratagems =>
+		UsableStratagems.Where(s => CanAfford(s, StratContextUnit)).ToList();
+
+	private string NowContextLabel => NowUnit is { } unit
+		? $"{unit.Name} · {BattlePhases.Label(_phase)}"
+		: $"Army overview · {BattlePhases.Label(_phase)}";
+
+	private int AvailableNowTotal =>
+		NowReminders.Count + NowAbilities.Count + NowBuffs.Count + UsableArmyRules.Count + AffordableNowStratagems.Count;
+
+	private void FocusReminder(BattleUnit unit)
+	{
+		var index = _order.IndexOf(unit.Id);
+		if (index < 0)
+			return;
+		_cardSwipe = true;
+		_activeCard = index;
+		_collapsed.Remove(unit.Id);
+		_centerActivePill = true;
+		ScheduleBattleSave();
+	}
+
+	private void OpenNowRule(ArmyRule rule) => _nowRule = rule;
+
+	private void CloseNowRule() => _nowRule = null;
+
+	private void OpenNowStratagem(StratView stratagem) => _nowStratagem = stratagem;
+
+	private void CloseNowStratagem() => _nowStratagem = null;
+
+	private string StratagemContext(StratView stratagem) => NowUnit is { } unit
+		? unit.Name
+		: string.IsNullOrWhiteSpace(stratagem.Source) ? "Army" : stratagem.Source;
+
+	private void UseNowStratagem()
+	{
+		if (_nowStratagem is not { } stratagem)
+			return;
+		UseStratagem(stratagem, StratContextUnit);
+		_nowStratagem = null;
+	}
 
 	// Army rules whose text the user expanded (collapsed to the name by default), keyed by rule name.
 	private readonly HashSet<string> _openArmyRules = new(StringComparer.Ordinal);
@@ -1148,12 +1551,18 @@ else
 
 	// Switches off every activated ability/buff (e.g. Relentless Onslaught, Overwhelming Obliteration) so their
 	// weapon-stat changes drop away at end of turn — without touching CP, VP, model counts or the phase/turn.
-	private void ResetAbilities() => _activeEffects.Clear();
+	private void ResetAbilities()
+	{
+		_activeEffects.Clear();
+		ScheduleBattleSave();
+	}
 
-	private void ConfirmReset()
+	private async Task ConfirmReset()
 	{
 		_confirmReset = false;
 		ResetTrackers();
+		_battleStateReady = true;
+		await JS.InvokeVoidAsync("tombworld.battleState.remove", Id);
 	}
 
 	// ---- Command-phase cues (your turn): which units must act this Command phase ----
@@ -1286,7 +1695,11 @@ else
 
 	private void UseStratagem(StratView stratagem, BattleUnit? forUnit) => StepCp(-EffectiveCost(stratagem, forUnit));
 
-	private void StepCp(int delta) => _cp = Math.Max(0, _cp + delta);
+	private void StepCp(int delta)
+	{
+		_cp = Math.Max(0, _cp + delta);
+		ScheduleBattleSave();
+	}
 
 	private async Task ScrollTop() => await JS.InvokeVoidAsync("tombworld.scrollTop");
 
@@ -1302,6 +1715,7 @@ else
 			case 2: _vpYouSecondary = Math.Max(0, _vpYouSecondary + delta); break;
 			case 3: _vpOppSecondary = Math.Max(0, _vpOppSecondary + delta); break;
 		}
+		ScheduleBattleSave();
 	}
 
 	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
@@ -1351,20 +1765,24 @@ else
 			_shootingChoice.Remove(unit.Id);
 		else
 			_shootingChoice[unit.Id] = option;
+		ScheduleBattleSave();
 	}
 
 	private void ResetTrackers()
 	{
+		_round = 1;
 		_cp = 0;
 		_vpYouPrimary = _vpYouSecondary = _vpOppPrimary = _vpOppSecondary = 0;
 		_phase = BattlePhase.Command;
 		_turn = BattleTurn.Player;
+		_firstTurn = BattleTurn.Player;
 		_track.Clear();
 		_weaponKills.Clear();
 		_collapsed.Clear();
 		_openAbilities.Clear();
 		_openStrats.Clear();
 		_shootingChoice.Clear();
+		_activeEffects.Clear();
 		_selectedMember.Clear();
 		_selectedCell = null;
 		if (_battle is null)
@@ -1405,6 +1823,7 @@ else
 			return;
 		}
 		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+		ScheduleBattleSave();
 	}
 
 	private static string WeaponKillKey(BattlePart part, WeaponProfile weapon) => part.Unit.Id + "|" + weapon.Name;
@@ -1433,6 +1852,7 @@ else
 		else
 			_weaponKills[key] = newKills;
 		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+		ScheduleBattleSave();
 	}
 
 	// The per-model weapons eligible for a casualty (delta -1: those with a live model) or a restore (delta +1:
@@ -1638,6 +2058,7 @@ else
 			_activeEffects.Add(EffectKey(unit, ability));
 		else
 			_activeEffects.Remove(EffectKey(unit, ability));
+		ScheduleBattleSave();
 	}
 
 	// The bracketed keywords from active conditional effects that apply to THIS weapon. An ability that names a
@@ -1707,6 +2128,7 @@ else
 			_activeEffects.Add(BuffKey(unit, buff));
 		else
 			_activeEffects.Remove(BuffKey(unit, buff));
+		ScheduleBattleSave();
 	}
 
 	private static string BuffModifierLabel(ConditionalUnitBuff buff) =>
@@ -1789,6 +2211,7 @@ else
 		// Each card is shown expanded in the deck, so make sure the active unit isn't collapsed.
 		if (_activeCard < _ordered.Count)
 			_collapsed.Remove(_ordered[_activeCard].Id);
+		ScheduleBattleSave();
 		return true;
 	}
 
@@ -1866,6 +2289,17 @@ else
 
 	public async ValueTask DisposeAsync()
 	{
+		_battleSaveCts?.Cancel();
+		_battleSaveCts?.Dispose();
+		try
+		{
+			await PersistBattleStateAsync();
+			await JS.InvokeVoidAsync("tombworld.cancelFlushOnHide");
+		}
+		catch (Exception ex) when (ex is JSDisconnectedException or InvalidOperationException)
+		{
+			// Browser already detached; the last completed debounce remains persisted.
+		}
 		if (_deckBound || _reorderBound)
 		{
 			try
@@ -1897,6 +2331,7 @@ else
 				// Best-effort persistence on teardown.
 			}
 		}
+		_sessionSelf?.Dispose();
 		_deckSelf?.Dispose();
 	}
 

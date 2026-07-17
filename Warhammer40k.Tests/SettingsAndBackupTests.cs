@@ -31,14 +31,14 @@ public class SettingsAndBackupTests
     }
 
     [Fact]
-    public void SettingsEntity_defaults_play_layout_to_floating_scroll()
+    public void SettingsEntity_defaults_play_layout_to_floating_focus()
     {
         Assert.False(UserSettings.Default.PlayHudSticky);
-        Assert.False(UserSettings.Default.PlayCardSwipe);
+        Assert.True(UserSettings.Default.PlayCardSwipe);
 
         var back = SettingsEntity.From("u", UserSettings.Default).ToSettings();
         Assert.False(back.PlayHudSticky);
-        Assert.False(back.PlayCardSwipe);
+        Assert.True(back.PlayCardSwipe);
     }
 
     [Fact]

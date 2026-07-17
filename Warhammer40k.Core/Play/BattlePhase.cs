@@ -49,4 +49,14 @@ public static class BattlePhases
         BattlePhase.Fight => "FGT",
         _ => "ALL",
     };
+
+    /// <summary>Returns the next phase, or <see cref="BattlePhase.Command"/> after Fight.</summary>
+    public static BattlePhase Next(BattlePhase phase) => phase switch
+    {
+        BattlePhase.Command => BattlePhase.Movement,
+        BattlePhase.Movement => BattlePhase.Shooting,
+        BattlePhase.Shooting => BattlePhase.Charge,
+        BattlePhase.Charge => BattlePhase.Fight,
+        _ => BattlePhase.Command,
+    };
 }
