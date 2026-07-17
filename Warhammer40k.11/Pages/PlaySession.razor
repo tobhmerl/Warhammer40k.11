@@ -205,96 +205,6 @@ else
 			}
 		</section>
 
-		@{
-			var allStrats = UsableStratagems;
-			// Only show stratagems you can pay for right now (hidden, not greyed). "My Will Be Done" reduces the
-			// effective cost by 1 for the bearer's own unit, so it can reveal an otherwise-unaffordable stratagem.
-			var stratUnit = StratContextUnit;
-			var strats = allStrats.Where(s => CanAfford(s, stratUnit)).ToList();
-		}
-		<section class="strats" aria-label="Stratagems usable now">
-			<button type="button" class="strats-head" @onclick="ToggleStrats" aria-expanded="@_stratsOpen">
-				<span class="chev" aria-hidden="true">@(_stratsOpen ? "▾" : "▸")</span>
-				<span class="strats-title">Stratagems</span>
-				<span class="strats-sub">@BattlePhases.Label(_phase) · @(_turn == BattleTurn.Player ? "your turn" : "opponent's turn")</span>
-				<span class="strats-count">@strats.Count</span>
-			</button>
-			@if (_stratsOpen)
-			{
-			@if (strats.Count == 0)
-			{
-				@if (allStrats.Count > 0)
-				{
-					<p class="strats-empty">Not enough CP — @allStrats.Count stratagem@(allStrats.Count == 1 ? "" : "s") hidden for this phase and turn.</p>
-				}
-				else
-				{
-					<p class="strats-empty">No stratagems for this phase and turn.</p>
-				}
-			}
-			else
-			{
-				<ul class="strat-list">
-					@foreach (var s in strats)
-					{
-						var open = IsStratOpen(s);
-						var cost = EffectiveCost(s, stratUnit);
-						<li class="strat" @key="(s.Source + s.Id)">
-							<div class="s-head">
-								<button type="button" class="s-name-btn" @onclick="() => ToggleStrat(s)" aria-expanded="@open" title="Show stratagem details">
-									<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
-									<span class="s-name">@s.Name</span>
-								</button>
-								@if (cost < s.Cost)
-								{
-									<span class="s-cp discounted" title="My Will Be Done: @s.Cost CP − 1"><s class="s-cp-was">@s.Cost</s> @cost CP</span>
-								}
-								else
-								{
-									<span class="s-cp">@s.Cost CP</span>
-								}
-								<button class="btn small s-use" type="button"
-										@onclick="() => UseStratagem(s, stratUnit)"
-										title="@($"Spend {cost} CP")">
-									Use
-								</button>
-							</div>
-							@if (open)
-							{
-								@if (!string.IsNullOrWhiteSpace(s.Flavour))
-								{
-									<p class="s-flavour">@s.Flavour</p>
-								}
-								<dl class="s-body">
-									@if (!string.IsNullOrWhiteSpace(s.When))
-									{
-										<dt>When</dt>
-										<dd>@s.When</dd>
-									}
-									@if (!string.IsNullOrWhiteSpace(s.Target))
-									{
-										<dt>Target</dt>
-										<dd>@s.Target</dd>
-									}
-									@if (!string.IsNullOrWhiteSpace(s.Effect))
-									{
-										<dt>Effect</dt>
-										<dd>@s.Effect</dd>
-									}
-									@if (!string.IsNullOrWhiteSpace(s.Restrictions))
-									{
-										<dt>Restrictions</dt>
-										<dd>@s.Restrictions</dd>
-									}
-								</dl>
-							}
-						</li>
-					}
-				</ul>
-			}
-			}
-		</section>
-
 		@{ var usableRules = UsableArmyRules; }
 		@if (usableRules.Count > 0)
 		{
@@ -335,14 +245,11 @@ else
 					var collapsed = IsCollapsed(unit);
 					var reanimate = MyCommandPhase && NeedsReanimation(unit);
 					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
-					var effectNow = unit.CombinedAbilities.Where(IsEffectNow).ToList(); var effectAlways = unit.CombinedAbilities.Where(IsEffectAlways).ToList();
+					var effectAlways = unit.CombinedAbilities.Where(IsEffectAlways).ToList();
 					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
 					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
-					var usableAbilities = unit.CombinedAbilities.Where(IsUsableNow).ToList();
 					var coreAbilities = unit.CoreAbilities;
-					var conditionalBuffs = ConditionalBuffsFor(unit).ToList();
 					var warlordShown = unit.IsWarlord;
-					var hasNowLine = !dead && (conditionalBuffs.Count > 0 || effectNow.Count > 0 || usableAbilities.Count > 0);
 					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0 || effectAlways.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
@@ -388,44 +295,7 @@ else
 													<span class="chip warlord">Warlord</span>
 												}
 											</span>
-											@* Line 2 — everything available this phase/turn, highlighted together ("-" placeholder when none) *@
-											<span class="chip-line">
-												@if (hasNowLine)
-												{
-													@foreach (var buff in conditionalBuffs)
-													{
-														<span class="chip effect now @(IsBuffActive(unit, buff) ? "on" : "")" role="button" tabindex="0"
-															  title="@($"{buff.Label} — tap; switch on to apply {BuffModifierLabel(buff)} ({buff.Effect})")"
-															  @onclick="() => OpenBuffCard(unit, buff)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnBuffChipKey(e, unit, buff)" @onkeydown:stopPropagation="true">
-															@buff.Label
-														</span>
-													}
-													@foreach (var a in effectNow)
-													{
-														<span class="chip effect now @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
-														</span>
-													}
-													@foreach (var a in usableAbilities)
-													{
-														<span class="chip ability now" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — usable now; tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
-														</span>
-													}
-												}
-												else
-												{
-													<span class="chip ph" aria-hidden="true">— available now</span>
-												}
-											</span>
-											@* Line 3 — all other always-available abilities and keywords ("-" placeholder when none) *@
+										@* Line 2 — always-available abilities and keywords; current-window actions live only in the Now ribbon. *@
 											<span class="chip-line">
 												@if (hasAbilityLine)
 												{
@@ -999,10 +869,6 @@ else
 	private int _vpYouSecondary;
 	private int _vpOppPrimary;
 	private int _vpOppSecondary;
-	// Whether the Stratagems panel is expanded (collapsible like the unit cards).
-	private bool _stratsOpen = false;
-	// Stratagems whose details the user expanded (collapsed to just the name by default), keyed by source + id.
-	private readonly HashSet<string> _openStrats = new(StringComparer.Ordinal);
 	// Per-part current tracked value (models for multi-model units, wounds for single multi-wound models),
 	// keyed by roster-unit id (in-memory, like the round/CP trackers).
 	private readonly Dictionary<string, int> _track = new(StringComparer.Ordinal);
@@ -1718,18 +1584,6 @@ else
 		ScheduleBattleSave();
 	}
 
-	private void ToggleStrats() => _stratsOpen = !_stratsOpen;
-
-	// Each stratagem shows only its name until clicked; the details (flavour/when/target/effect) open on demand.
-	private bool IsStratOpen(StratView stratagem) => _openStrats.Contains(stratagem.Source + "\u0001" + stratagem.Id);
-
-	private void ToggleStrat(StratView stratagem)
-	{
-		var key = stratagem.Source + "\u0001" + stratagem.Id;
-		if (!_openStrats.Remove(key))
-			_openStrats.Add(key);
-	}
-
 	// ---- Weapon stat selection (mark the exact cell you're on while resolving an attack) ----
 	private bool IsCellSelected(object weapon, string stat) =>
 		_selectedCell is { } c && ReferenceEquals(c.Weapon, weapon) && string.Equals(c.Stat, stat, StringComparison.Ordinal);
@@ -1780,7 +1634,6 @@ else
 		_weaponKills.Clear();
 		_collapsed.Clear();
 		_openAbilities.Clear();
-		_openStrats.Clear();
 		_shootingChoice.Clear();
 		_activeEffects.Clear();
 		_selectedMember.Clear();
