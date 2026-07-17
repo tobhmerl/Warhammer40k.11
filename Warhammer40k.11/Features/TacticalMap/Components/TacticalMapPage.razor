@@ -80,10 +80,13 @@
 				<span class="lg opponent">Opponent</span>
 			</span>
 			<button class="btn small ghost" type="button" @onclick="AddOpponentMarker">+ Opponent marker</button>
+			<button class="btn small ghost @(_measureMode ? "on" : "")" type="button" @onclick="ToggleMeasure" title="Measure distances in inches">@(_measureMode ? "Measuring…" : "Measure")</button>
 			<button class="btn small primary" type="button" disabled="@_busy" @onclick="SavePlanAsync">@(_busy ? "Saving…" : "Save")</button>
 		</div>
 
-		<TacticalBoard Map="_map" Tokens="_plan.Tokens" OnChanged="SavePlanAsync" />
+		<TacticalBoard Map="_map" Tokens="_plan.Tokens" MeasureMode="_measureMode" OnChanged="SavePlanAsync" />
+
+		<p class="tmap-hint">Drag models to plan your setup. Coherency is enforced — a move that would break a unit's coherency (within 2″, or two models for units of 7+) snaps back. Use <strong>Measure</strong> to check ranges.</p>
 
 		@if (_error is not null)
 		{
@@ -104,6 +107,9 @@
 	private TacticalPlan? _plan;
 	private MapDefinition _map = TacticalMaps.Resolve(TacticalMaps.DefaultMapId);
 	private string _newRosterId = "";
+	private bool _measureMode;
+
+	private void ToggleMeasure() => _measureMode = !_measureMode;
 
 	protected override async Task OnInitializedAsync()
 	{

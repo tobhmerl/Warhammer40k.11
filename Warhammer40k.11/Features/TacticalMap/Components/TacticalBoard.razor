@@ -4,21 +4,36 @@
    draggable token per model. Positions are inches, so the board scales to any width while staying accurate.
    Part of the removable Tactical Map feature — see ../DELETE.md. *@
 
-<div class="board" @ref="_boardRef">
+<div class="board @(MeasureMode ? "measuring" : "")" @ref="_boardRef">
 	<img class="board-bg" src="@Map.BackgroundUrl" alt="@Map.Name" draggable="false" />
 	<svg class="board-svg" viewBox="@ViewBox" preserveAspectRatio="none"
-		 @onpointermove="OnPointerMove" @onpointerup="OnPointerUp" @onpointerleave="OnPointerUp">
+		 @onpointerdown="OnSurfacePointerDown" @onpointermove="OnPointerMove" @onpointerup="OnPointerUp" @onpointerleave="OnPointerUp">
 		@foreach (var token in Tokens)
 		{
 			var r = RadiusInches(token);
-			<g class="tok @(token.Side == MapSide.Player ? "player" : "opponent") @(_draggingId == token.Id ? "drag" : "")"
+			var broken = _broken.Contains(token.Id);
+			<g class="tok @(token.Side == MapSide.Player ? "player" : "opponent") @(_draggingId == token.Id ? "drag" : "") @(broken ? "broken" : "")"
 			   transform="@Translate(token)"
-			   @onpointerdown="e => OnPointerDown(e, token)" @onpointerdown:stopPropagation="true">
-				<circle class="tok-base" r="@Inv(r)" />
+			   @onpointerdown="e => OnTokenPointerDown(e, token)" @onpointerdown:stopPropagation="true">
+				@if (broken)
+				{
+					<circle class="tok-warn" r="@Fmt(r + 0.35)" />
+				}
+				<circle class="tok-base" r="@Fmt(r)" />
 				<title>@token.Label</title>
 			</g>
 		}
+		@if (_measureFrom is { } a && _measureTo is { } b)
+		{
+			<line class="ruler" x1="@Fmt(a.X)" y1="@Fmt(a.Y)" x2="@Fmt(b.X)" y2="@Fmt(b.Y)" />
+			<circle class="ruler-end" cx="@Fmt(a.X)" cy="@Fmt(a.Y)" r="0.5" />
+			<circle class="ruler-end" cx="@Fmt(b.X)" cy="@Fmt(b.Y)" r="0.5" />
+		}
 	</svg>
+	@if (_measureFrom is { } ma && _measureTo is { } mb)
+	{
+		<span class="ruler-label" style="@RulerLabelStyle(ma, mb)">@MeasureLabel</span>
+	}
 </div>
 
 @code {
@@ -28,55 +43,144 @@
 	/// <summary>The tokens currently on the board (mutated in place as they are dragged).</summary>
 	[Parameter, EditorRequired] public List<MapToken> Tokens { get; set; } = [];
 
-	/// <summary>Raised after a token finishes moving, so the page can persist the plan.</summary>
+	/// <summary>Raised after a token move is accepted, so the page can persist the plan.</summary>
 	[Parameter] public EventCallback OnChanged { get; set; }
+
+	/// <summary>When true, dragging draws a measuring ruler instead of moving tokens.</summary>
+	[Parameter] public bool MeasureMode { get; set; }
 
 	private ElementReference _boardRef;
 	private string? _draggingId;
+	private double _dragStartX, _dragStartY;
+	private HashSet<string> _broken = [];
+
+	private (double X, double Y)? _measureFrom;
+	private (double X, double Y)? _measureTo;
+	private bool _measuring;
 
 	private string ViewBox => $"0 0 {Fmt(Map.WidthInches)} {Fmt(Map.HeightInches)}";
 
-	// A model's on-board radius in inches, from its base diameter (mm → inches).
-	private static double RadiusInches(MapToken token) => token.BaseMm / 25.4 / 2.0;
+	private static double RadiusInches(MapToken token) => Coherency.RadiusInches(token);
 
-	private static string Translate(MapToken token) =>
-		$"translate({Fmt(token.XInches)} {Fmt(token.YInches)})";
+	private static string Translate(MapToken token) => $"translate({Fmt(token.XInches)} {Fmt(token.YInches)})";
 
-	private void OnPointerDown(PointerEventArgs e, MapToken token) => _draggingId = token.Id;
+	private string MeasureLabel
+	{
+		get
+		{
+			if (_measureFrom is not { } a || _measureTo is not { } b)
+				return "";
+			var dx = a.X - b.X;
+			var dy = a.Y - b.Y;
+			var inches = Math.Sqrt(dx * dx + dy * dy);
+			return $"{inches.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}\u2033";
+		}
+	}
+
+	protected override void OnParametersSet() => _broken = Coherency.BrokenTokenIds(Tokens);
+
+	// ---- Token drag (movement mode) ----
+	private void OnTokenPointerDown(PointerEventArgs e, MapToken token)
+	{
+		if (MeasureMode)
+			return;
+		_draggingId = token.Id;
+		_dragStartX = token.XInches;
+		_dragStartY = token.YInches;
+	}
 
 	private async Task OnPointerMove(PointerEventArgs e)
 	{
+		if (MeasureMode)
+		{
+			if (_measuring)
+			{
+				_measureTo = await ToBoardInches(e);
+				StateHasChanged();
+			}
+			return;
+		}
+
 		if (_draggingId is null)
 			return;
 		var token = Tokens.FirstOrDefault(t => t.Id == _draggingId);
 		if (token is null)
 			return;
 
-		var rect = await JS.InvokeAsync<BoardRect>("tombworld.rect", _boardRef);
-		if (rect.Width <= 0 || rect.Height <= 0)
-			return;
-
-		// Map the pointer's viewport position to board inches, clamped to the play area.
-		var x = (e.ClientX - rect.Left) / rect.Width * Map.WidthInches;
-		var y = (e.ClientY - rect.Top) / rect.Height * Map.HeightInches;
+		var p = await ToBoardInches(e);
 		var r = RadiusInches(token);
-		token.XInches = Math.Clamp(x, r, Map.WidthInches - r);
-		token.YInches = Math.Clamp(y, r, Map.HeightInches - r);
+		token.XInches = Math.Clamp(p.X, r, Map.WidthInches - r);
+		token.YInches = Math.Clamp(p.Y, r, Map.HeightInches - r);
 		StateHasChanged();
 	}
 
 	private async Task OnPointerUp(PointerEventArgs e)
 	{
+		if (MeasureMode)
+		{
+			_measuring = false;
+			return;
+		}
+
 		if (_draggingId is null)
 			return;
+		var token = Tokens.FirstOrDefault(t => t.Id == _draggingId);
 		_draggingId = null;
+		if (token is null)
+			return;
+
+		// Hard block: if the drag ended this model out of coherency with its unit, revert the move.
+		var others = Tokens
+			.Where(t => !ReferenceEquals(t, token) && !string.IsNullOrEmpty(token.RosterUnitId)
+						&& string.Equals(t.RosterUnitId, token.RosterUnitId, StringComparison.Ordinal))
+			.ToList();
+		if (others.Count > 0 && !Coherency.IsInCoherency(token, others))
+		{
+			token.XInches = _dragStartX;
+			token.YInches = _dragStartY;
+			_broken = Coherency.BrokenTokenIds(Tokens);
+			StateHasChanged();
+			return; // nothing persisted — the move was blocked
+		}
+
+		_broken = Coherency.BrokenTokenIds(Tokens);
 		if (OnChanged.HasDelegate)
 			await OnChanged.InvokeAsync();
 	}
 
-	// Invariant-culture number formatting for SVG attributes (never a comma decimal separator).
+	// ---- Measure mode ----
+	private async Task OnSurfacePointerDown(PointerEventArgs e)
+	{
+		if (!MeasureMode)
+			return;
+		var p = await ToBoardInches(e);
+		_measureFrom = p;
+		_measureTo = p;
+		_measuring = true;
+		StateHasChanged();
+	}
+
+	private async Task<(double X, double Y)> ToBoardInches(PointerEventArgs e)
+	{
+		var rect = await JS.InvokeAsync<BoardRect>("tombworld.rect", _boardRef);
+		if (rect.Width <= 0 || rect.Height <= 0)
+			return (0, 0);
+		var x = (e.ClientX - rect.Left) / rect.Width * Map.WidthInches;
+		var y = (e.ClientY - rect.Top) / rect.Height * Map.HeightInches;
+		return (x, y);
+	}
+
 	private static string Fmt(double value) => value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
-	private static string Inv(double value) => Fmt(value);
+
+	// Positions the HTML measurement label at the ruler's midpoint, in percent of the board size.
+	private string RulerLabelStyle((double X, double Y) a, (double X, double Y) b)
+	{
+		var left = (a.X + b.X) / 2 / Map.WidthInches * 100;
+		var top = (a.Y + b.Y) / 2 / Map.HeightInches * 100;
+		var l = left.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+		var t = top.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+		return $"left:{l}%;top:{t}%;";
+	}
 
 	private readonly record struct BoardRect(double Left, double Top, double Width, double Height);
 }

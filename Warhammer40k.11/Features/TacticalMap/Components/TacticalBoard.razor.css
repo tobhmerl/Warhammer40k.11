@@ -56,3 +56,49 @@
     fill-opacity: 1;
     stroke-width: 0.4;
 }
+
+/* Coherency warning: a pulsing amber ring around models that are out of coherency. */
+.tok-warn {
+    fill: none;
+    stroke: #f5b301;
+    stroke-width: 0.3;
+    opacity: 0.9;
+    animation: coh-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes coh-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.95; }
+}
+
+.board.measuring {
+    cursor: crosshair;
+}
+
+.board.measuring .tok {
+    cursor: crosshair;
+}
+
+/* Measuring ruler overlay. */
+.ruler {
+    stroke: #eaf7f0;
+    stroke-width: 0.22;
+    stroke-dasharray: 0.8 0.5;
+}
+
+.ruler-end {
+    fill: #eaf7f0;
+}
+
+.ruler-label {
+    position: absolute;
+    transform: translate(-50%, -140%);
+    padding: .05rem .3rem;
+    border-radius: 4px;
+    background: #05100b;
+    color: #eaf7f0;
+    font-size: .72rem;
+    font-weight: 700;
+    pointer-events: none;
+    white-space: nowrap;
+}

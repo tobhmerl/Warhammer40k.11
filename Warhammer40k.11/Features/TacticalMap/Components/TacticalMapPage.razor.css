@@ -166,3 +166,16 @@
     opacity: .5;
     cursor: default;
 }
+
+.btn.small.on {
+    background: var(--accent, #2bd47a);
+    color: #06110b;
+    border-color: transparent;
+    font-weight: 600;
+}
+
+.tmap-hint {
+    margin: 0;
+    font-size: .8rem;
+    color: var(--muted, #9fb3aa);
+}
