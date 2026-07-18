@@ -9,12 +9,49 @@
     @if (!_immersive)
     {
         <nav class="appbar" aria-label="Primary">
-            <NavLink class="navlink" href="catalogue">Catalogue</NavLink>
-            <NavLink class="navlink" href="rosters">Rosters</NavLink>
-            <NavLink class="navlink" href="play">Play</NavLink>
-            <NavLink class="navlink" href="combat-sim">Combat Sim</NavLink>
-            <NavLink class="navlink" href="tactical-map">Tactical Map</NavLink>
-            <NavLink class="navlink" href="settings">Settings</NavLink>
+            <NavLink class="navlink" href="catalogue" title="Catalogue" aria-label="Catalogue">
+                <svg class="navicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z" />
+                    <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5A1.5 1.5 0 0 0 20 18.5z" />
+                </svg>
+            </NavLink>
+            <NavLink class="navlink" href="rosters" title="Rosters" aria-label="Rosters">
+                <svg class="navicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M9 6h11" />
+                    <path d="M9 12h11" />
+                    <path d="M9 18h11" />
+                    <circle cx="4.5" cy="6" r="1.1" />
+                    <circle cx="4.5" cy="12" r="1.1" />
+                    <circle cx="4.5" cy="18" r="1.1" />
+                </svg>
+            </NavLink>
+            <NavLink class="navlink" href="play" title="Play" aria-label="Play">
+                <svg class="navicon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true" focusable="false">
+                    <path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5z" />
+                </svg>
+            </NavLink>
+            <NavLink class="navlink" href="combat-sim" title="Combat Sim" aria-label="Combat Sim">
+                <svg class="navicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M14.5 14.5 20 20l-1.5 1.5-5.5-5.5" />
+                    <path d="M6 3l9 9" />
+                    <path d="M4 3h3l11 11v3h-3L4 6z" />
+                    <path d="M9.5 14.5 4 20l1.5 1.5 5.5-5.5" />
+                    <path d="M18 3l-9 9" />
+                </svg>
+            </NavLink>
+            <NavLink class="navlink" href="tactical-map" title="Tactical Map" aria-label="Tactical Map">
+                <svg class="navicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5z" />
+                    <path d="M9 4v13.5" />
+                    <path d="M15 6.5V20" />
+                </svg>
+            </NavLink>
+            <NavLink class="navlink" href="settings" title="Settings" aria-label="Settings">
+                <svg class="navicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </NavLink>
         </nav>
     }
 

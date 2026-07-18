@@ -174,6 +174,12 @@
     transition: color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
+.appbar ::deep a.navlink .navicon {
+    width: 1.55rem;
+    height: 1.55rem;
+    display: block;
+}
+
 .appbar ::deep a.navlink:hover {
     color: var(--accent-strong);
     background: var(--accent-soft);
