@@ -1471,8 +1471,10 @@ else
 			.FirstOrDefault(e => e is not null)?.Name ?? unit.AssignedEnhancementId;
 	}
 
-	// Overview weapon summary: one line per distinct weapon on the unit's datasheet, name only
-	// (ranged also shows its range, e.g. Gauss Flayer 24"). Ranged listed first, then melee.
+	// Overview weapon summary: one line per distinct EQUIPPED weapon on the unit, name only
+	// (ranged also shows its range, e.g. Gauss Flayer 24"). Equipped = the unit's default weapons
+	// plus the wargear options the player actually selected; unselected alternatives are hidden.
+	// Ranged listed first, then melee.
 	private readonly record struct WeaponLine(bool Melee, string Text);
 
 	private IEnumerable<WeaponLine> UnitWeaponLines(RosterUnit unit)
@@ -1480,8 +1482,31 @@ else
 		if (SheetFor(unit) is not { } sheet)
 			yield break;
 
+		// Weapon names offered as a wargear choice, and the subset the player selected.
+		var optionWeapons = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var selectedWeapons = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+		foreach (var group in sheet.WargearGroups)
+		{
+			var selection = unit.Wargear.FirstOrDefault(s => string.Equals(s.GroupId, group.Id, StringComparison.OrdinalIgnoreCase));
+			foreach (var option in group.Options)
+			{
+				if (MatchWeapon(sheet, option.Name) is not { } matched)
+					continue;
+				optionWeapons.Add(matched.Name);
+				var chosen = selection is not null
+					&& (selection.OptionIds.Any(id => string.Equals(id, option.Id, StringComparison.OrdinalIgnoreCase))
+						|| selection.Counts.Any(c => c.Models > 0 && string.Equals(c.OptionId, option.Id, StringComparison.OrdinalIgnoreCase)));
+				if (chosen)
+					selectedWeapons.Add(matched.Name);
+			}
+		}
+
+		// Equipped = explicitly selected option weapons, plus default weapons that aren't a choice at all.
+		bool Equipped(WeaponProfile w) => selectedWeapons.Contains(w.Name) || !optionWeapons.Contains(w.Name);
+
 		foreach (var text in sheet.Weapons
-			.Where(w => !string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase))
+			.Where(w => !string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase) && Equipped(w))
 			.Select(w => string.IsNullOrWhiteSpace(w.Range) ? w.Name : $"{w.Name} {w.Range}")
 			.Distinct(StringComparer.OrdinalIgnoreCase))
 		{
@@ -1489,13 +1514,20 @@ else
 		}
 
 		foreach (var name in sheet.Weapons
-			.Where(w => string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase))
+			.Where(w => string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase) && Equipped(w))
 			.Select(w => w.Name)
 			.Distinct(StringComparer.OrdinalIgnoreCase))
 		{
 			yield return new WeaponLine(true, name);
 		}
 	}
+
+	// Maps a wargear option name to the datasheet weapon it grants (same fuzzy match as the wargear chips).
+	private static WeaponProfile? MatchWeapon(Datasheet sheet, string optionName) =>
+		sheet.Weapons.FirstOrDefault(w =>
+			string.Equals(w.Name, optionName, StringComparison.OrdinalIgnoreCase)
+			|| optionName.Contains(w.Name, StringComparison.OrdinalIgnoreCase)
+			|| w.Name.Contains(optionName, StringComparison.OrdinalIgnoreCase));
 
 	// A wargear chip for the unit card: the chosen option's name plus a compact weapon summary when the option
 	// maps to a weapon (range/attacks for ranged, S/AP/D so the loadout choice reads at a glance). Icon marks
@@ -1524,10 +1556,7 @@ else
 
 	private static WargearChip BuildWargearChip(Datasheet sheet, string optionName)
 	{
-		var weapon = sheet.Weapons.FirstOrDefault(w =>
-			string.Equals(w.Name, optionName, StringComparison.OrdinalIgnoreCase)
-			|| optionName.Contains(w.Name, StringComparison.OrdinalIgnoreCase)
-			|| w.Name.Contains(optionName, StringComparison.OrdinalIgnoreCase));
+		var weapon = MatchWeapon(sheet, optionName);
 
 		if (weapon is null)
 			return new WargearChip("◆", optionName, "", optionName);
