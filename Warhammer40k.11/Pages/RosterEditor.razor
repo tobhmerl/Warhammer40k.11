@@ -1430,33 +1430,14 @@ else
 					{
 						<span class="chip binding">@binding +@entry.Unit.BindingSurcharge</span>
 					}
-					@foreach (var wargear in WargearChips(entry.Unit))
+					@foreach (var wl in UnitWeaponLines(entry.Unit))
 					{
-						<span class="chip wargear" title="@wargear.Title" @key="wargear.Name">
-							<span class="wg-icon" aria-hidden="true">@wargear.Icon</span>
-							<span class="wg-name">@wargear.Name</span>
-							@if (!string.IsNullOrEmpty(wargear.Detail))
-							{
-								<span class="wg-detail">@wargear.Detail</span>
-							}
+						<span class="chip weapon @(wl.Melee ? "melee" : "ranged")" @key="wl.Text">
+							<span class="wg-icon" aria-hidden="true">@(wl.Melee ? "\u2694" : "\u25CE")</span>
+							<span class="wg-name">@wl.Text</span>
 						</span>
 					}
 				</span>
-				@{
-					var weaponLines = UnitWeaponLines(entry.Unit).ToList();
-				}
-				@if (weaponLines.Count > 0)
-				{
-					<span class="u-weapons">
-						@foreach (var wl in weaponLines)
-						{
-							<span class="uw-line" @key="wl.Text">
-								<span class="uw-icon" aria-hidden="true">@(wl.Melee ? "\u2694" : "\u25CE")</span>
-								<span class="uw-name">@wl.Text</span>
-							</span>
-						}
-					</span>
-				}
 			</span>
 			<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
 		</button>
@@ -1522,55 +1503,12 @@ else
 		}
 	}
 
-	// Maps a wargear option name to the datasheet weapon it grants (same fuzzy match as the wargear chips).
+	// Maps a wargear option name to the datasheet weapon it grants (fuzzy match on name).
 	private static WeaponProfile? MatchWeapon(Datasheet sheet, string optionName) =>
 		sheet.Weapons.FirstOrDefault(w =>
 			string.Equals(w.Name, optionName, StringComparison.OrdinalIgnoreCase)
 			|| optionName.Contains(w.Name, StringComparison.OrdinalIgnoreCase)
 			|| w.Name.Contains(optionName, StringComparison.OrdinalIgnoreCase));
-
-	// A wargear chip for the unit card: the chosen option's name plus a compact weapon summary when the option
-	// maps to a weapon (range/attacks for ranged, S/AP/D so the loadout choice reads at a glance). Icon marks
-	// ranged (◎) vs melee (⚔) vs non-weapon wargear (◆).
-	private readonly record struct WargearChip(string Icon, string Name, string Detail, string Title);
-
-	private IEnumerable<WargearChip> WargearChips(RosterUnit unit)
-	{
-		if (unit.Wargear.Count == 0 || SheetFor(unit) is not { } sheet)
-			yield break;
-
-		foreach (var selection in unit.Wargear)
-		{
-			var group = sheet.WargearGroups.FirstOrDefault(g => string.Equals(g.Id, selection.GroupId, StringComparison.OrdinalIgnoreCase));
-			if (group is null)
-				continue;
-			foreach (var optionId in selection.OptionIds)
-			{
-				var option = group.Options.FirstOrDefault(o => string.Equals(o.Id, optionId, StringComparison.OrdinalIgnoreCase));
-				if (option is null || string.IsNullOrWhiteSpace(option.Name))
-					continue;
-				yield return BuildWargearChip(sheet, option.Name);
-			}
-		}
-	}
-
-	private static WargearChip BuildWargearChip(Datasheet sheet, string optionName)
-	{
-		var weapon = MatchWeapon(sheet, optionName);
-
-		if (weapon is null)
-			return new WargearChip("◆", optionName, "", optionName);
-
-		var melee = string.Equals(weapon.Type, "Melee", StringComparison.OrdinalIgnoreCase);
-		// Ranged: lead with range + attacks; melee: lead with attacks. Both show S / AP / D.
-		var lead = melee
-			? $"A{weapon.Attacks}"
-			: $"{weapon.Range} · A{weapon.Attacks}";
-		var detail = $"{lead} · S{weapon.Strength} AP{weapon.ArmourPenetration} D{weapon.Damage}";
-		var title = $"{optionName} — {(melee ? "Melee" : "Ranged")}: {detail}"
-			+ (weapon.Keywords.Count > 0 ? " [" + string.Join(", ", weapon.Keywords) + "]" : "");
-		return new WargearChip(melee ? "⚔" : "◎", optionName, detail, title);
-	}
 
 	private IEnumerable<(string Id, string Name)> LeaderTargets(RosterUnit leader)
 	{
