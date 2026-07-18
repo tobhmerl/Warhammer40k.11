@@ -45,6 +45,12 @@ public sealed class MapToken
 
     /// <summary>Vertical position on the board, in inches from the top edge.</summary>
     public double YInches { get; set; }
+
+    /// <summary>The model's Move characteristic in inches, when known (drives the move/charge range rings).</summary>
+    public double? MoveInches { get; set; }
+
+    /// <summary>The model's longest ranged-weapon range in inches, when known (drives the gun range ring).</summary>
+    public double? WeaponRangeInches { get; set; }
 }
 
 /// <summary>

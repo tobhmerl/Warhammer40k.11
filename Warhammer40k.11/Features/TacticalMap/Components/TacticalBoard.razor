@@ -2,17 +2,39 @@
 
 @* The battlefield: the map image as a background with an SVG overlay (viewBox in board inches) of one
    draggable token per model. Positions are inches, so the board scales to any width while staying accurate.
+   Dragging a model moves its whole unit as a rigid formation by default (Shift or the page's mode toggle
+   switches to single-model moves); clicking a model selects its unit for rotation and range rings.
    Part of the removable Tactical Map feature — see ../DELETE.md. *@
 
 <div class="board @(MeasureMode ? "measuring" : "")" @ref="_boardRef">
 	<img class="board-bg" src="@Map.BackgroundUrl" alt="@Map.Name" draggable="false" />
 	<svg class="board-svg" viewBox="@ViewBox" preserveAspectRatio="none"
 		 @onpointerdown="OnSurfacePointerDown" @onpointermove="OnPointerMove" @onpointerup="OnPointerUp" @onpointerleave="OnPointerUp">
+		@if (!MeasureMode && SelectedTokens() is { Count: > 0 } ringTokens)
+		{
+			@foreach (var t in ringTokens)
+			{
+				var baseR = RadiusInches(t);
+				@if (ShowWeaponRange && t.WeaponRangeInches is { } gun)
+				{
+					<circle class="ring weapon" cx="@Fmt(t.XInches)" cy="@Fmt(t.YInches)" r="@Fmt(baseR + gun)" />
+				}
+				@if (ShowChargeRange && t.MoveInches is { } cm)
+				{
+					<circle class="ring charge" cx="@Fmt(t.XInches)" cy="@Fmt(t.YInches)" r="@Fmt(baseR + cm + TacticalStats.ChargeInches)" />
+				}
+				@if (ShowMoveRange && t.MoveInches is { } m)
+				{
+					<circle class="ring move" cx="@Fmt(t.XInches)" cy="@Fmt(t.YInches)" r="@Fmt(baseR + m)" />
+				}
+			}
+		}
 		@foreach (var token in Tokens)
 		{
 			var r = RadiusInches(token);
 			var broken = _broken.Contains(token.Id);
-			<g class="tok @(token.Side == MapSide.Player ? "player" : "opponent") @(_draggingId == token.Id ? "drag" : "") @(broken ? "broken" : "")"
+			var selected = _selectedUnitId is not null && string.Equals(token.RosterUnitId, _selectedUnitId, StringComparison.Ordinal);
+			<g class="tok @(token.Side == MapSide.Player ? "player" : "opponent") @(_drag?.Members.Any(m => ReferenceEquals(m.Token, token)) == true ? "drag" : "") @(broken ? "broken" : "") @(selected ? "selected" : "")"
 			   transform="@Translate(token)"
 			   @onpointerdown="e => OnTokenPointerDown(e, token)" @onpointerdown:stopPropagation="true">
 				@if (broken)
@@ -21,6 +43,18 @@
 				}
 				<circle class="tok-base" r="@Fmt(r)" fill="@TokenStyle.Color(token.Side, token.ColorIndex)" />
 				<title>@token.Label</title>
+			</g>
+		}
+		@if (!MeasureMode && SelectedTokens() is { Count: > 1 } selTokens)
+		{
+			var (cx, cy) = Formation.Centroid(selTokens);
+			var selR = SelectionRadius(selTokens, cx, cy);
+			<circle class="sel-ring" cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(selR)" />
+			<g class="rot-handle" transform="@($"translate({Fmt(cx)} {Fmt(cy - selR - 1.1)})")"
+			   @onpointerdown="OnRotateHandleDown" @onpointerdown:stopPropagation="true">
+				<line class="rot-stem" x1="0" y1="1.1" x2="0" y2="0" />
+				<circle class="rot-grip" r="0.85" />
+				<text class="rot-icon" y="0.32">&#x21bb;</text>
 			</g>
 		}
 		@if (_measureFrom is { } a && _measureTo is { } b)
@@ -56,14 +90,43 @@
 	/// <summary>When true, dragging draws a measuring ruler instead of moving tokens.</summary>
 	[Parameter] public bool MeasureMode { get; set; }
 
+	/// <summary>When true (default), dragging a model moves its whole unit; Shift inverts per drag.</summary>
+	[Parameter] public bool UnitDrag { get; set; } = true;
+
+	/// <summary>Draw the selected unit's Move range ring.</summary>
+	[Parameter] public bool ShowMoveRange { get; set; }
+
+	/// <summary>Draw the selected unit's charge-threat ring (Move + a maximum 2D6 charge).</summary>
+	[Parameter] public bool ShowChargeRange { get; set; }
+
+	/// <summary>Draw the selected unit's longest gun-range ring.</summary>
+	[Parameter] public bool ShowWeaponRange { get; set; }
+
+	// An in-progress drag: the unit's (or single model's) start placements plus the pointer geometry.
+	// The board rect is captured once at drag start so pointer moves need no JS interop.
+	private sealed class DragState
+	{
+		public required List<Formation.Placement> Members { get; init; }
+		public MapToken? Pressed { get; init; }
+		public BoardRect Rect { get; init; }
+		public double StartPointerX { get; init; }
+		public double StartPointerY { get; init; }
+		public bool Rotating { get; init; }
+		public double OriginX { get; init; }
+		public double OriginY { get; init; }
+		public double StartAngle { get; init; }
+		public bool Moved { get; set; }
+	}
+
 	private ElementReference _boardRef;
-	private string? _draggingId;
-	private double _dragStartX, _dragStartY;
+	private DragState? _drag;
+	private string? _selectedUnitId;
 	private HashSet<string> _broken = [];
 
 	private (double X, double Y)? _measureFrom;
 	private (double X, double Y)? _measureTo;
 	private bool _measuring;
+	private BoardRect _measureRect;
 
 	private string ViewBox => $"0 0 {Fmt(Map.WidthInches)} {Fmt(Map.HeightInches)}";
 
@@ -80,45 +143,113 @@
 			var dx = a.X - b.X;
 			var dy = a.Y - b.Y;
 			var inches = Math.Sqrt(dx * dx + dy * dy);
-			return $"{inches.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}\u2033";
+			return $"{inches.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}″";
 		}
 	}
 
-	protected override void OnParametersSet() => _broken = Coherency.BrokenTokenIds(Tokens);
+	protected override void OnParametersSet()
+	{
+		_broken = Coherency.BrokenTokenIds(Tokens);
+		if (_selectedUnitId is not null && !Tokens.Any(t => string.Equals(t.RosterUnitId, _selectedUnitId, StringComparison.Ordinal)))
+			_selectedUnitId = null;
+	}
+
+	private List<MapToken> SelectedTokens() =>
+		_selectedUnitId is null
+			? []
+			: Tokens.Where(t => string.Equals(t.RosterUnitId, _selectedUnitId, StringComparison.Ordinal)).ToList();
+
+	// Radius of the dashed selection circle: just outside the unit's outermost base.
+	private static double SelectionRadius(IReadOnlyList<MapToken> tokens, double cx, double cy)
+	{
+		double max = 0;
+		foreach (var t in tokens)
+		{
+			var dx = t.XInches - cx;
+			var dy = t.YInches - cy;
+			max = Math.Max(max, Math.Sqrt(dx * dx + dy * dy) + RadiusInches(t));
+		}
+		return max + 0.6;
+	}
 
 	// ---- Token drag (movement mode) ----
-	private void OnTokenPointerDown(PointerEventArgs e, MapToken token)
+	private async Task OnTokenPointerDown(PointerEventArgs e, MapToken token)
 	{
 		if (MeasureMode)
 			return;
-		_draggingId = token.Id;
-		_dragStartX = token.XInches;
-		_dragStartY = token.YInches;
+		var rect = await BoardRectAsync();
+		if (rect.Width <= 0 || rect.Height <= 0)
+			return;
+		var p = ToBoardInches(e, rect);
+
+		// Shift inverts the page's drag mode for this one drag (unit <-> single model).
+		var unitDrag = UnitDrag ^ e.ShiftKey;
+		var members = unitDrag && !string.IsNullOrEmpty(token.RosterUnitId)
+			? Tokens.Where(t => string.Equals(t.RosterUnitId, token.RosterUnitId, StringComparison.Ordinal)).ToList()
+			: [token];
+
+		_drag = new DragState
+		{
+			Members = members.Select(t => new Formation.Placement(t, t.XInches, t.YInches)).ToList(),
+			Pressed = token,
+			Rect = rect,
+			StartPointerX = p.X,
+			StartPointerY = p.Y,
+		};
 	}
 
-	private async Task OnPointerMove(PointerEventArgs e)
+	// Grabbing the rotate handle starts a rotation of the selected unit around its centroid.
+	private async Task OnRotateHandleDown(PointerEventArgs e)
+	{
+		if (MeasureMode)
+			return;
+		var selected = SelectedTokens();
+		if (selected.Count < 2)
+			return;
+		var rect = await BoardRectAsync();
+		if (rect.Width <= 0 || rect.Height <= 0)
+			return;
+		var p = ToBoardInches(e, rect);
+		var (ox, oy) = Formation.Centroid(selected);
+		_drag = new DragState
+		{
+			Members = selected.Select(t => new Formation.Placement(t, t.XInches, t.YInches)).ToList(),
+			Rect = rect,
+			Rotating = true,
+			OriginX = ox,
+			OriginY = oy,
+			StartAngle = Math.Atan2(p.Y - oy, p.X - ox),
+		};
+	}
+
+	private void OnPointerMove(PointerEventArgs e)
 	{
 		if (MeasureMode)
 		{
 			if (_measuring)
-			{
-				_measureTo = await ToBoardInches(e);
-				StateHasChanged();
-			}
+				_measureTo = ToBoardInches(e, _measureRect);
 			return;
 		}
 
-		if (_draggingId is null)
+		if (_drag is null)
 			return;
-		var token = Tokens.FirstOrDefault(t => t.Id == _draggingId);
-		if (token is null)
-			return;
-
-		var p = await ToBoardInches(e);
-		var r = RadiusInches(token);
-		token.XInches = Math.Clamp(p.X, r, Map.WidthInches - r);
-		token.YInches = Math.Clamp(p.Y, r, Map.HeightInches - r);
-		StateHasChanged();
+		var p = ToBoardInches(e, _drag.Rect);
+		if (_drag.Rotating)
+		{
+			var angle = Math.Atan2(p.Y - _drag.OriginY, p.X - _drag.OriginX) - _drag.StartAngle;
+			Formation.Rotate(_drag.Members, _drag.OriginX, _drag.OriginY, angle, Map);
+			_drag.Moved = true;
+		}
+		else
+		{
+			var dx = p.X - _drag.StartPointerX;
+			var dy = p.Y - _drag.StartPointerY;
+			Formation.Translate(_drag.Members, dx, dy, Map);
+			// Finger/mouse jitter below ~0.2″ still counts as a click (selection) rather than a move.
+			if (Math.Abs(dx) + Math.Abs(dy) > 0.2)
+				_drag.Moved = true;
+		}
+		_broken = Coherency.BrokenTokenIds(Tokens);
 	}
 
 	private async Task OnPointerUp(PointerEventArgs e)
@@ -129,47 +260,53 @@
 			return;
 		}
 
-		if (_draggingId is null)
+		if (_drag is null)
 			return;
-		var token = Tokens.FirstOrDefault(t => t.Id == _draggingId);
-		_draggingId = null;
-		if (token is null)
-			return;
+		var drag = _drag;
+		_drag = null;
 
-		// Hard block: if the drag ended this model out of coherency with its unit, revert the move.
-		var others = Tokens
-			.Where(t => !ReferenceEquals(t, token) && !string.IsNullOrEmpty(token.RosterUnitId)
-						&& string.Equals(t.RosterUnitId, token.RosterUnitId, StringComparison.Ordinal))
-			.ToList();
-		if (others.Count > 0 && !Coherency.IsInCoherency(token, others))
+		// A press without movement is a click: undo any sub-threshold jitter and toggle selection of the
+		// pressed model's unit.
+		if (!drag.Moved)
 		{
-			token.XInches = _dragStartX;
-			token.YInches = _dragStartY;
+			foreach (var (token, sx, sy) in drag.Members)
+			{
+				token.XInches = sx;
+				token.YInches = sy;
+			}
 			_broken = Coherency.BrokenTokenIds(Tokens);
-			StateHasChanged();
-			return; // nothing persisted — the move was blocked
+			if (drag.Pressed is { } pressed && !string.IsNullOrEmpty(pressed.RosterUnitId))
+				_selectedUnitId = string.Equals(_selectedUnitId, pressed.RosterUnitId, StringComparison.Ordinal) ? null : pressed.RosterUnitId;
+			return;
 		}
 
+		// Coherency is advisory: out-of-coherency models keep their amber warning ring but the move stands.
 		_broken = Coherency.BrokenTokenIds(Tokens);
 		if (OnChanged.HasDelegate)
 			await OnChanged.InvokeAsync();
 	}
 
-	// ---- Measure mode ----
+	// ---- Measure mode / empty-board clicks ----
 	private async Task OnSurfacePointerDown(PointerEventArgs e)
 	{
 		if (!MeasureMode)
+		{
+			_selectedUnitId = null;
 			return;
-		var p = await ToBoardInches(e);
+		}
+		_measureRect = await BoardRectAsync();
+		if (_measureRect.Width <= 0 || _measureRect.Height <= 0)
+			return;
+		var p = ToBoardInches(e, _measureRect);
 		_measureFrom = p;
 		_measureTo = p;
 		_measuring = true;
-		StateHasChanged();
 	}
 
-	private async Task<(double X, double Y)> ToBoardInches(PointerEventArgs e)
+	private async Task<BoardRect> BoardRectAsync() => await JS.InvokeAsync<BoardRect>("tombworld.rect", _boardRef);
+
+	private (double X, double Y) ToBoardInches(PointerEventArgs e, BoardRect rect)
 	{
-		var rect = await JS.InvokeAsync<BoardRect>("tombworld.rect", _boardRef);
 		if (rect.Width <= 0 || rect.Height <= 0)
 			return (0, 0);
 		var x = (e.ClientX - rect.Left) / rect.Width * Map.WidthInches;

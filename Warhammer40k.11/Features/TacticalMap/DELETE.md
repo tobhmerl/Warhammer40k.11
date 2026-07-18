@@ -11,6 +11,8 @@ The interactive board lives entirely here; server persistence reuses the shared 
 ## Shared (Core/Api) support this feature relies on
 - `Warhammer40k.Core/Tactical/TacticalPlan.cs` — plan/token/map models + base-size defaults
 - `Warhammer40k.Core/Tactical/Coherency.cs` — unit-coherency math
+- `Warhammer40k.Core/Tactical/Formation.cs` — rigid unit translate/rotate with board clamping
+- `Warhammer40k.Core/Tactical/TacticalStats.cs` — Move/gun-range parsing for the range rings
 - `Warhammer40k.Core/Tactical/TokenStyle.cs` — abbreviations + color palettes
 - `Warhammer40k.Api/TacticalPlanRepository.cs` + `TacticalPlanFunctions.cs` — `/api/tactical-plans` CRUD
 - `IApiClient` / `ApiClient` — `Get/Save/Delete TacticalPlan(s)Async`

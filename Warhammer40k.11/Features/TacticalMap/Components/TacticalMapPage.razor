@@ -101,9 +101,23 @@
 			<button class="btn small primary" type="button" disabled="@_busy" @onclick="SavePlanAsync">@(_busy ? "Saving…" : "Save")</button>
 		</div>
 
-		<TacticalBoard Map="_map" Tokens="_plan.Tokens" MeasureMode="_measureMode" OnChanged="SavePlanAsync" />
+		<div class="tmap-tools">
+			<span class="tool-group" role="group" aria-label="Drag mode">
+				<button class="btn small ghost @(_unitDrag ? "on" : "")" type="button" @onclick="() => _unitDrag = true" title="Dragging any model moves its whole unit together (hold Shift for a single model)">Move unit</button>
+				<button class="btn small ghost @(!_unitDrag ? "on" : "")" type="button" @onclick="() => _unitDrag = false" title="Drag single models to fine-tune a formation (hold Shift to move the whole unit)">Move model</button>
+			</span>
+			<span class="tool-label">Rings for selected unit:</span>
+			<span class="tool-group" role="group" aria-label="Range rings">
+				<button class="btn small ghost @(_showMove ? "on" : "")" type="button" @onclick="() => _showMove = !_showMove" title="Move range (M)">Move</button>
+				<button class="btn small ghost @(_showCharge ? "on" : "")" type="button" @onclick="() => _showCharge = !_showCharge" title="Charge threat (M + 12″)">Charge</button>
+				<button class="btn small ghost @(_showGuns ? "on" : "")" type="button" @onclick="() => _showGuns = !_showGuns" title="Longest gun range">Guns</button>
+			</span>
+		</div>
 
-		<p class="tmap-hint">Drag models to plan your setup. Coherency is enforced — a move that would break a unit's coherency (within 2″, or two models for units of 7+) snaps back. Use <strong>Measure</strong> to check ranges.</p>
+		<TacticalBoard Map="_map" Tokens="_plan.Tokens" MeasureMode="_measureMode" OnChanged="SavePlanAsync"
+					   UnitDrag="_unitDrag" ShowMoveRange="_showMove" ShowChargeRange="_showCharge" ShowWeaponRange="_showGuns" />
+
+		<p class="tmap-hint">Drag any model to move its whole unit together (<strong>Move model</strong> or holding <kbd>Shift</kbd> moves single models). Click a model to select its unit: drag the <strong>⟳ handle</strong> to rotate the formation, and toggle the ring buttons to see its move, charge-threat and gun ranges. Models out of coherency (within 2″ of a unit-mate, two mates for units of 7+) pulse amber. Use <strong>Measure</strong> to check any distance.</p>
 
 		@if (UnitGroups() is { Count: > 0 } groups)
 		{
@@ -116,6 +130,10 @@
 							   value="@g.Abbrev" maxlength="3"
 							   @onchange="e => RenameUnitAsync(g.Key, (string?)e.Value)" aria-label="@($"Abbreviation for {g.Name}")" />
 						<span class="legend-name">@g.Name</span>
+						@if (g.MoveInches is not null || g.WeaponRangeInches is not null)
+						{
+							<span class="legend-stats">@LegendStats(g)</span>
+						}
 						<span class="legend-count">@g.Count @(g.Count == 1 ? "model" : "models")</span>
 					</div>
 				}
@@ -142,6 +160,11 @@
 	private MapDefinition _map = TacticalMaps.Resolve(TacticalMaps.DefaultMapId);
 	private string _newRosterId = "";
 	private bool _measureMode;
+	private bool _unitDrag = true;
+	private bool _showMove;
+	private bool _showCharge;
+	private bool _showGuns;
+	private bool _saveQueued;
 
 	private void ToggleMeasure() => _measureMode = !_measureMode;
 
@@ -201,6 +224,8 @@
 			var name = sheet?.Name ?? "Unit";
 			var abbrev = TokenStyle.Abbreviate(name);
 			var baseMm = sheet is null ? BaseSizeDefaults.Default : BaseSizeDefaults.ForDatasheet(sheet);
+			var move = TacticalStats.MoveInchesFor(sheet);
+			var gunRange = TacticalStats.MaxRangedInchesFor(sheet);
 			var diameter = baseMm / 25.4;
 			var count = Math.Max(1, unit.ModelCount);
 			for (var i = 0; i < count; i++)
@@ -221,6 +246,8 @@
 					BaseMm = baseMm,
 					XInches = cursorX + diameter / 2,
 					YInches = cursorY,
+					MoveInches = move,
+					WeaponRangeInches = gunRange,
 				});
 				cursorX += diameter + 0.3;
 				rowMaxY = Math.Max(rowMaxY, cursorY);
@@ -250,7 +277,7 @@
 	}
 
 	// A distinct unit on the board (its models share a RosterUnitId), for the legend.
-	private sealed record UnitGroupView(string Key, string Name, string Abbrev, MapSide Side, int ColorIndex, int Count);
+	private sealed record UnitGroupView(string Key, string Name, string Abbrev, MapSide Side, int ColorIndex, int Count, double? MoveInches, double? WeaponRangeInches);
 
 	private List<UnitGroupView> UnitGroups()
 	{
@@ -262,11 +289,23 @@
 			.Select(grp =>
 			{
 				var first = grp.First();
-				return new UnitGroupView(grp.Key, first.Label, first.Abbrev, first.Side, first.ColorIndex, grp.Count());
+				return new UnitGroupView(grp.Key, first.Label, first.Abbrev, first.Side, first.ColorIndex, grp.Count(),
+					grp.Max(t => t.MoveInches), grp.Max(t => t.WeaponRangeInches));
 			})
 			.OrderBy(g => g.Side)
 			.ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
 			.ToList();
+	}
+
+	// e.g. "M 10″ · Guns 24″" — only the parts the unit actually has.
+	private static string LegendStats(UnitGroupView g)
+	{
+		var parts = new List<string>(2);
+		if (g.MoveInches is { } m)
+			parts.Add($"M {m.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}″");
+		if (g.WeaponRangeInches is { } r)
+			parts.Add($"Guns {r.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}″");
+		return string.Join(" · ", parts);
 	}
 
 	// Renames a whole unit's abbreviation (applies to every model of that unit), then persists.
@@ -360,6 +399,14 @@
 			var diameter = baseMm / 25.4;
 			var abbrev = TokenStyle.Abbreviate(unit.Name);
 			var unitId = Guid.NewGuid().ToString("n");
+			var move = unit.ModelGroups
+				.Select(g => TacticalStats.ParseInches(g.Profile.Movement))
+				.Max();
+			var gunRange = unit.AllWeapons
+				.SelectMany(w => w.HasFiringModes ? w.FiringModes : [w])
+				.Where(w => !w.IsMelee)
+				.Select(w => TacticalStats.ParseInches(w.Range))
+				.Max();
 
 			for (var i = 0; i < models; i++)
 			{
@@ -379,6 +426,8 @@
 					BaseMm = baseMm,
 					XInches = cursorX + diameter / 2,
 					YInches = cursorY,
+					MoveInches = move,
+					WeaponRangeInches = gunRange,
 				});
 				cursorX += diameter + 0.3;
 			}
@@ -392,28 +441,63 @@
 		var plan = await Api.GetTacticalPlanAsync(id);
 		if (plan is not null)
 		{
+			BackfillStats(plan);
 			_plan = plan;
 			_map = TacticalMaps.Resolve(plan.MapId);
 		}
 		_busy = false;
 	}
 
+	// The roster build is the source of truth: refresh roster-backed tokens' Move/gun-range stats from the
+	// catalogue on open, so plans saved before stats existed (or after a catalogue update) get range rings.
+	private void BackfillStats(TacticalPlan plan)
+	{
+		var roster = _rosters.FirstOrDefault(r => r.Id == plan.RosterId);
+		if (roster is null)
+			return;
+		foreach (var unit in roster.Units)
+		{
+			var sheet = _catalogue.Datasheets.FirstOrDefault(d => d.Id == unit.DatasheetId);
+			if (sheet is null)
+				continue;
+			var move = TacticalStats.MoveInchesFor(sheet);
+			var gunRange = TacticalStats.MaxRangedInchesFor(sheet);
+			foreach (var token in plan.Tokens.Where(t => string.Equals(t.RosterUnitId, unit.Id, StringComparison.Ordinal)))
+			{
+				token.MoveInches = move;
+				token.WeaponRangeInches = gunRange;
+			}
+		}
+	}
+
 	private void ClosePlan() => _plan = null;
 
 	private async Task SavePlanAsync()
 	{
-		if (_plan is null || _busy)
+		if (_plan is null)
 			return;
+		// A save requested while one is in flight is queued and runs right after, so a quick second drag
+		// is never silently dropped.
+		if (_busy)
+		{
+			_saveQueued = true;
+			return;
+		}
 		_busy = true;
 		_error = null;
 		try
 		{
-			var saved = await Api.SaveTacticalPlanAsync(_plan);
-			_plan.Id = saved.Id;
-			_plan.ModifiedUtc = saved.ModifiedUtc;
-			var idx = _plans.FindIndex(p => p.Id == saved.Id);
-			if (idx >= 0)
-				_plans[idx] = saved;
+			do
+			{
+				_saveQueued = false;
+				var saved = await Api.SaveTacticalPlanAsync(_plan);
+				_plan.Id = saved.Id;
+				_plan.ModifiedUtc = saved.ModifiedUtc;
+				var idx = _plans.FindIndex(p => p.Id == saved.Id);
+				if (idx >= 0)
+					_plans[idx] = saved;
+			}
+			while (_saveQueued && _plan is not null);
 		}
 		catch (Exception)
 		{
@@ -422,6 +506,7 @@
 		finally
 		{
 			_busy = false;
+			_saveQueued = false;
 		}
 	}
 

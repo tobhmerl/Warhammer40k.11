@@ -132,6 +132,23 @@
     border-color: #7a2a1c;
 }
 
+.tmap-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.tool-group {
+    display: inline-flex;
+    gap: .25rem;
+}
+
+.tool-label {
+    font-size: .78rem;
+    color: var(--muted, #9fb3aa);
+}
+
 .tmap-error {
     color: #e0563b;
     margin: 0;
@@ -255,6 +272,12 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.legend-stats {
+    font-size: .78rem;
+    color: var(--muted, #9fb3aa);
     white-space: nowrap;
 }
 
