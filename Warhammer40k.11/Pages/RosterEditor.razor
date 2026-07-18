@@ -1442,6 +1442,21 @@ else
 						</span>
 					}
 				</span>
+				@{
+					var weaponLines = UnitWeaponLines(entry.Unit).ToList();
+				}
+				@if (weaponLines.Count > 0)
+				{
+					<span class="u-weapons">
+						@foreach (var wl in weaponLines)
+						{
+							<span class="uw-line" @key="wl.Text">
+								<span class="uw-icon" aria-hidden="true">@(wl.Melee ? "\u2694" : "\u25CE")</span>
+								<span class="uw-name">@wl.Text</span>
+							</span>
+						}
+					</span>
+				}
 			</span>
 			<span class="u-pts">@UnitPoints(entry.Unit) pts</span>
 		</button>
@@ -1454,6 +1469,32 @@ else
 		return _detachments
 			.Select(d => d.FindEnhancement(unit.AssignedEnhancementId))
 			.FirstOrDefault(e => e is not null)?.Name ?? unit.AssignedEnhancementId;
+	}
+
+	// Overview weapon summary: one line per distinct weapon on the unit's datasheet, name only
+	// (ranged also shows its range, e.g. Gauss Flayer 24"). Ranged listed first, then melee.
+	private readonly record struct WeaponLine(bool Melee, string Text);
+
+	private IEnumerable<WeaponLine> UnitWeaponLines(RosterUnit unit)
+	{
+		if (SheetFor(unit) is not { } sheet)
+			yield break;
+
+		foreach (var text in sheet.Weapons
+			.Where(w => !string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase))
+			.Select(w => string.IsNullOrWhiteSpace(w.Range) ? w.Name : $"{w.Name} {w.Range}")
+			.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			yield return new WeaponLine(false, text);
+		}
+
+		foreach (var name in sheet.Weapons
+			.Where(w => string.Equals(w.Type, "Melee", StringComparison.OrdinalIgnoreCase))
+			.Select(w => w.Name)
+			.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			yield return new WeaponLine(true, name);
+		}
 	}
 
 	// A wargear chip for the unit card: the chosen option's name plus a compact weapon summary when the option

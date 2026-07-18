@@ -702,6 +702,31 @@
     gap: 0.35rem;
 }
 
+/* ---- Weapon summary (overview): melee + ranged names, ranged with range ---- */
+.u-weapons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.uw-line {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.uw-icon {
+    color: var(--accent);
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.uw-name {
+    font-weight: 500;
+}
+
 .u-pts {
     flex: none;
     color: var(--accent-strong);
