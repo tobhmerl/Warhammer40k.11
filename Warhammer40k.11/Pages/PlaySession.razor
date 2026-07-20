@@ -1520,11 +1520,12 @@ else
 	}
 
 	// "My Will Be Done" (Overlord / Overlord with Translocation Shroud) reduces a Stratagem's cost by 1 CP, but
-	// ONLY when that Stratagem is used to target the bearer's own unit. So the discount is scoped to a specific
-	// target unit: a unit gets it when it (or a Leader attached to it — i.e. any live part of the group) has the
-	// ability. Other units pay the normal cost even while an Overlord leads a different unit.
+	// ONLY when that Stratagem is used to target the bearer's own unit, and ONLY when the player ticked
+	// "Apply to unit" for it in setup. So the discount is scoped to that specific target unit; other units pay
+	// the normal cost even while an Overlord leads a different unit.
 	private bool UnitHasCpDiscount(BattleUnit unit) =>
-		unit.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost);
+		unit.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost
+			&& unit.IsAbilityAppliedToUnit(p, BattlePart.MyWillBeDoneAbility));
 
 	// The unit the Stratagem panel is currently scoped to: in swipe mode the active card (the target), otherwise
 	// none — list mode isn't unit-targeted, so a row is discounted only when some eligible bearer unit exists.

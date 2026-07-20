@@ -675,6 +675,11 @@ public sealed class BattleUnit
     /// </summary>
     private static string? ConferredSummaryFor(BattlePart part, string abilityName, Ability ability)
     {
+        // "My Will Be Done" doesn't confer a save; ticking "Apply to unit" enables the Stratagem CP discount
+        // for this unit, surfaced only in Play Mode via the reduced Stratagem cost.
+        if (string.Equals(abilityName, BattlePart.MyWillBeDoneAbility, StringComparison.OrdinalIgnoreCase))
+            return "−1 CP to Stratagems targeting this unit";
+
         if (part.IsLeader)
             foreach (var conferral in part.Datasheet.LeaderConferrals)
                 if (!conferral.IsEmpty
@@ -739,6 +744,13 @@ public sealed class BattleUnit
                     return conferral.Summary;
         return null;
     }
+
+    /// <summary>
+    /// True when the player ticked "Apply to unit" in setup for <paramref name="abilityName"/> on
+    /// <paramref name="part"/> (e.g. "My Will Be Done" → the unit's Stratagems cost 1 CP less).
+    /// </summary>
+    public bool IsAbilityAppliedToUnit(BattlePart part, string abilityName) =>
+        _roster.IsApplied(AbilityScheduleKeys.ForUnitAbility(part.Datasheet.Id, abilityName));
 }
 
 /// <summary>An ability shown on a battle card, tagged with the member datasheet it belongs to.</summary>
@@ -855,7 +867,10 @@ public sealed class BattlePart
     /// Mode shows the reduced cost and only hides a Stratagem when even the reduced cost is unaffordable.
     /// </summary>
     public bool ReducesStratagemCpCost =>
-        Datasheet.Abilities.Any(a => string.Equals(a.Name, "My Will Be Done", StringComparison.OrdinalIgnoreCase));
+        Datasheet.Abilities.Any(a => string.Equals(a.Name, MyWillBeDoneAbility, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The "My Will Be Done" ability name (grants the Stratagem CP discount when applied to its unit).</summary>
+    public const string MyWillBeDoneAbility = "My Will Be Done";
 
     /// <summary>Models in this part.</summary>
     public int ModelCount => Unit.ModelCount;

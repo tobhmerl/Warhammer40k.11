@@ -1197,6 +1197,11 @@ else
 	// the engine: a leader conferral, or a save granted by a conditional (non-own-rule) ability.
 	private static string? ApplySummary(Datasheet sheet, Ability ability)
 	{
+		// "My Will Be Done" offers an "Apply to unit" toggle (like Inv/FNP): when ticked, Play Mode reduces the
+		// unit's Stratagem cost by 1 CP. It confers no save, so it is special-cased here.
+		if (string.Equals(ability.Name, BattlePart.MyWillBeDoneAbility, StringComparison.OrdinalIgnoreCase))
+			return "−1 CP to Stratagems targeting this unit";
+
 		var conferral = sheet.LeaderConferrals.FirstOrDefault(c =>
 			!c.IsEmpty && string.Equals(c.SourceAbility, ability.Name, StringComparison.OrdinalIgnoreCase));
 		if (conferral is { IsEmpty: false } && !string.IsNullOrWhiteSpace(conferral.Summary))
