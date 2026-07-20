@@ -355,9 +355,27 @@ public sealed class BattleRoster
     {
         if (buff.RequiresAttachedLeader && !unit.Parts.Any(p => p.IsLeader))
             return false;
+        if (buff.Keywords.Count == 0)
+            return true;
         return buff.Scope == GrantScope.Unit
-            ? unit.Parts.Any(p => MatchesAny(p, buff.Keywords))
-            : MatchesAny(part, buff.Keywords);
+            ? unit.Parts.Any(p => buff.Keywords.Any(k => PartHasKeyword(unit, p, k)))
+            : buff.Keywords.Any(k => PartHasKeyword(unit, part, k));
+    }
+
+    // True when the part has the keyword on its datasheet, is granted it by its own setup-assigned Enhancement,
+    // or is granted it unit-wide by another member's Enhancement (e.g. Destroyer Ankh confers DESTROYER CULT to
+    // the whole unit once the bearer is attached). Enhancement keyword grants are treated as always-on.
+    private static bool PartHasKeyword(BattleUnit unit, BattlePart part, string keyword)
+    {
+        if (part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase))
+            return true;
+        if (part.Enhancement is { } own && own.KeywordGrants.Contains(keyword, StringComparer.OrdinalIgnoreCase))
+            return true;
+        foreach (var member in unit.Parts)
+            if (member.Enhancement is { KeywordGrantAffectsWholeUnit: true } enh
+                && enh.KeywordGrants.Contains(keyword, StringComparer.OrdinalIgnoreCase))
+                return true;
+        return false;
     }
 
     /// <summary>The selectable weapon-ability choices a unit qualifies for (e.g. it contains a CRYPTEK model).</summary>

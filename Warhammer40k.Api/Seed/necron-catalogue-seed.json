@@ -1712,24 +1712,7 @@
           "points": 90
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "1439-16ea-58ca-27e9::ec5c-d69f-ec0f-3e72",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "overlords-blade",
-              "name": "Overlord's blade"
-            },
-            {
-              "id": "resurrection-orb",
-              "name": "Resurrection orb"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Plasmancer",

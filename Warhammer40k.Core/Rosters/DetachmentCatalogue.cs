@@ -359,6 +359,11 @@ public static class DetachmentCatalogue
             "attached to a DESTROYER CULT unit (excluding CHARACTER units). If you do, the bearer's unit cannot " +
             "contain any models without the DESTROYER CULT keyword. Add 3\" to the Move characteristic of the bearer.");
 
+        // Both confer the DESTROYER CULT keyword. Cold Fervour's +2 Strength is keyword-driven, so the bearer
+        // (and, once attached, the whole unit) benefits — see BattleRoster keyword matching.
+        GrantKeyword(d, "destroyer-ankh", wholeUnit: true, "Destroyer Cult");
+        GrantKeyword(d, "murdermind", wholeUnit: true, "Destroyer Cult");
+
         d.Stratagems =
         [
             new Stratagem
@@ -1058,6 +1063,17 @@ public static class DetachmentCatalogue
         enhancement.Text = text;
         if (requiredKeywords.Length > 0)
             enhancement.Eligibility.RequiredKeywords = [.. requiredKeywords];
+    }
+
+    // Grants keyword(s) to an enhancement's bearer (and, when wholeUnit, every model in the unit it is attached
+    // to) so keyword-triggered detachment buffs (e.g. Cursed Legion's +2 Strength) apply.
+    private static void GrantKeyword(Detachment d, string enhancementId, bool wholeUnit, params string[] keywords)
+    {
+        var enhancement = d.FindEnhancement(enhancementId);
+        if (enhancement is null || keywords.Length == 0)
+            return;
+        enhancement.KeywordGrants = [.. keywords];
+        enhancement.KeywordGrantAffectsWholeUnit = wholeUnit;
     }
 
     private static Detachment MakePantheon(string name)

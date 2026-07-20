@@ -107,6 +107,20 @@ public sealed class Enhancement
     public bool AffectsWholeUnit { get; set; }
 
     /// <summary>
+    /// Keywords this Enhancement confers on its bearer (e.g. Destroyer Ankh grants <c>DESTROYER CULT</c>).
+    /// Play Mode treats these as always-on keywords on the bearer, so keyword-triggered detachment buffs
+    /// (e.g. Cursed Legion's +2 Strength to DESTROYER CULT models) apply to it.
+    /// </summary>
+    public List<string> KeywordGrants { get; set; } = [];
+
+    /// <summary>
+    /// When true, <see cref="KeywordGrants"/> apply to <b>every model in the bearer's unit</b> once the
+    /// bearer is attached (e.g. the unit "cannot contain any models without the DESTROYER CULT keyword"),
+    /// so keyword-triggered buffs benefit the whole unit. When false, only the bearer gains the keyword.
+    /// </summary>
+    public bool KeywordGrantAffectsWholeUnit { get; set; }
+
+    /// <summary>
     /// Extra selectable shooting abilities this Enhancement adds to its bearer's unit on top of the
     /// detachment's own weapon-ability choice — e.g. Atomic Disintegrators adds [ANTI-MONSTER 5+] /
     /// [ANTI-VEHICLE 5+] to the Technosorcerous Augmentations pick. Surfaced by Play Mode's shooting menu.
