@@ -359,9 +359,10 @@ public static class DetachmentCatalogue
             "attached to a DESTROYER CULT unit (excluding CHARACTER units). If you do, the bearer's unit cannot " +
             "contain any models without the DESTROYER CULT keyword. Add 3\" to the Move characteristic of the bearer.");
 
-        // Both confer the DESTROYER CULT keyword. Cold Fervour's +2 Strength is keyword-driven, so the bearer
-        // (and, once attached, the whole unit) benefits — see BattleRoster keyword matching.
-        GrantKeyword(d, "destroyer-ankh", wholeUnit: true, "Destroyer Cult");
+        // Both confer the DESTROYER CULT keyword. Cold Fervour's +2 Strength is keyword-driven, so it applies
+        // to whichever models actually gain the keyword. Destroyer Ankh grants it to the bearer only (RAW);
+        // Murdermind forces the whole attached unit to be DESTROYER CULT, so it is unit-wide.
+        GrantKeyword(d, "destroyer-ankh", wholeUnit: false, "Destroyer Cult");
         GrantKeyword(d, "murdermind", wholeUnit: true, "Destroyer Cult");
 
         d.Stratagems =
