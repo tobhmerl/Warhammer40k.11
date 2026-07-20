@@ -2038,28 +2038,7 @@
           "points": 90
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "6733-60f-2fbe-e3bd::30e1-73f0-aec6-7673",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "enmitic-annihilator",
-              "name": "Enmitic annihilator"
-            },
-            {
-              "id": "flensing-claw",
-              "name": "Flensing claw"
-            },
-            {
-              "id": "hyperphase-harvester",
-              "name": "Hyperphase harvester"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Technomancer",
