@@ -125,20 +125,25 @@ html[data-scroll="up"] .hud.sticky {
 
 .now-kicker,
 .na-type {
-    font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
 
 .now-kicker {
+    font-size: 0.6rem;
     color: var(--accent-strong);
+}
+
+/* Category label on a chip (ABILITY / EFFECT / STRATAGEM …) — kept compact so it doesn't crowd the chip. */
+.na-type {
+    font-size: 0.48rem;
 }
 
 .now-head strong {
     overflow: hidden;
     color: var(--text);
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -217,6 +222,11 @@ html[data-scroll="up"] .hud.sticky {
 .now-action small,
 .na-type {
     color: var(--text-faint);
+}
+
+/* The optional model/member name shown on a chip scoped to a specific member — kept small and quiet. */
+.now-action small {
+    font-size: 0.62rem;
 }
 
 .now-detail {

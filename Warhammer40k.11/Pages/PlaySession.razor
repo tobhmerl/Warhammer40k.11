@@ -1263,16 +1263,13 @@ else
 	{
 		get
 		{
-			if (!MyCommandPhase || _battle is null)
+			if (!MyCommandPhase || _battle is null || NowUnit is not { } unit || IsDead(unit))
 				return [];
 			var reminders = new List<NowReminder>();
-			foreach (var unit in _battle.Units.Where(u => !IsDead(u)))
-			{
-				if (NeedsBattleShock(unit))
-					reminders.Add(new NowReminder(unit, "Take Battle-shock test"));
-				if (NeedsReanimation(unit))
-					reminders.Add(new NowReminder(unit, "Resolve Reanimation Protocols"));
-			}
+			if (NeedsBattleShock(unit))
+				reminders.Add(new NowReminder(unit, "Take Battle-shock test"));
+			if (NeedsReanimation(unit))
+				reminders.Add(new NowReminder(unit, "Resolve Reanimation Protocols"));
 			return reminders;
 		}
 	}
