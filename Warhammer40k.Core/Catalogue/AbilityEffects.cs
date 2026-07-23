@@ -63,6 +63,13 @@ public sealed class StatModifier
     /// <summary>For weapon-characteristic targets, which weapons are affected. Ignored for unit-statline targets.</summary>
     [JsonPropertyName("weaponClass")] public WeaponClass WeaponClass { get; set; } = WeaponClass.Any;
 
+    /// <summary>
+    /// When set on an Enhancement's modifier, this single buff applies to <b>every model in the bearer's
+    /// unit</b> even if the enhancement is otherwise bearer-only. Lets one enhancement mix scopes — e.g.
+    /// Destroyer Ankh's <c>+2"</c> Move is unit-wide while its <c>+2</c> Attacks stays on the bearer.
+    /// </summary>
+    [JsonPropertyName("affectsWholeUnit")] public bool AffectsWholeUnit { get; set; }
+
     /// <summary>Optional override for the short display label; <see cref="Describe"/> computes a default when empty.</summary>
     [JsonPropertyName("label")] public string Label { get; set; } = "";
 

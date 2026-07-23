@@ -365,6 +365,14 @@ public static class DetachmentCatalogue
         GrantKeyword(d, "destroyer-ankh", wholeUnit: false, "Destroyer Cult");
         GrantKeyword(d, "murdermind", wholeUnit: true, "Destroyer Cult");
 
+        // Destroyer Ankh's own characteristic buffs (separate from Cold Fervour's keyword-driven +2 Strength):
+        // +2" Move for every model in the bearer's unit, and +2 Attacks on the bearer's melee weapons only.
+        d.FindEnhancement("destroyer-ankh")!.StatModifiers =
+        [
+            new StatModifier { Target = StatTarget.Move, Delta = 2, AffectsWholeUnit = true, Label = "+2\" M" },
+            new StatModifier { Target = StatTarget.Attacks, Delta = 2, WeaponClass = WeaponClass.Melee, Label = "+2 A" },
+        ];
+
         d.Stratagems =
         [
             new Stratagem

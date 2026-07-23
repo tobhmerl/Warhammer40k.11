@@ -309,8 +309,9 @@ public sealed class BattleRoster
 
     /// <summary>
     /// The stat modifiers from setup-assigned Enhancements that apply to <paramref name="part"/>: the part's
-    /// own enhancement, plus any unit-wide (<see cref="Enhancement.AffectsWholeUnit"/>) enhancement carried by
-    /// another model in the same combat group. Only enhancements the player ticked "Apply to unit" for count.
+    /// own enhancement, plus any unit-wide (<see cref="Enhancement.AffectsWholeUnit"/>, or a single
+    /// <see cref="StatModifier.AffectsWholeUnit"/> modifier) enhancement carried by another model in the same
+    /// combat group. Only enhancements the player ticked "Apply to unit" for count.
     /// </summary>
     private IEnumerable<StatModifier> EnhancementStatModifiers(BattleUnit unit, BattlePart part)
     {
@@ -320,10 +321,10 @@ public sealed class BattleRoster
                 continue;
             if (!Source.IsApplied(AbilityScheduleKeys.ForEnhancement(enh.Id)))
                 continue;
-            if (!enh.AffectsWholeUnit && !ReferenceEquals(member, part))
-                continue;
+            var isBearer = ReferenceEquals(member, part);
             foreach (var mod in enh.StatModifiers)
-                yield return mod;
+                if (isBearer || enh.AffectsWholeUnit || mod.AffectsWholeUnit)
+                    yield return mod;
         }
     }
 
