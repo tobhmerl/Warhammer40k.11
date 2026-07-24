@@ -916,16 +916,32 @@ public sealed class BattlePart
     public int? MaxWounds => WoundsPerModel is { } w ? w * Math.Max(1, ModelCount) : null;
 
     /// <summary>
-    /// True when this part is a single multi-wound model (e.g. a Character): in Play Mode its <b>wounds</b>
-    /// are tracked rather than a 1/1 model count — even when it is attached as a Leader.
+    /// True when this part's <b>wounds</b> are tracked in Play Mode (rather than a raw model count): whenever
+    /// the datasheet has a fixed Wounds characteristic. The counter then shows the part's total wound pool
+    /// (wounds-per-model × models), so a single lost wound is visible and triggers Reanimation, while a model
+    /// only drops out once a full model's worth of wounds is gone. Variable wounds (e.g. "D6") fall back to
+    /// model tracking.
     /// </summary>
-    public bool TracksWounds => ModelCount == 1 && WoundsPerModel is > 1;
+    public bool TracksWounds => WoundsPerModel is > 0;
 
     /// <summary>
-    /// The trackable maximum for the Play-Mode counter: this part's wounds when it is a single multi-wound
-    /// model, otherwise its model count.
+    /// The trackable maximum for the Play-Mode counter: this part's total wound pool when its wounds are a
+    /// fixed number, otherwise its model count.
     /// </summary>
-    public int TrackMax => TracksWounds ? MaxWounds!.Value : Math.Max(1, ModelCount);
+    public int TrackMax => MaxWounds ?? Math.Max(1, ModelCount);
+
+    /// <summary>
+    /// The number of models still alive for a given number of <paramref name="woundsRemaining"/>: a model with
+    /// even a single wound left still fights, so this is <c>ceil(woundsRemaining / wounds-per-model)</c>,
+    /// clamped to the model count. Falls back to the value itself when wounds are variable (model tracking).
+    /// </summary>
+    public int ModelsAliveAt(int woundsRemaining)
+    {
+        if (WoundsPerModel is not { } w || w <= 0)
+            return Math.Clamp(woundsRemaining, 0, Math.Max(1, ModelCount));
+        var models = (woundsRemaining + w - 1) / w; // ceil
+        return Math.Clamp(models, 0, ModelCount);
+    }
 
     /// <summary>The weapons actually in play for this part (always-on + wargear selected in setup), datasheet order.</summary>
     public IReadOnlyList<WeaponProfile> Weapons { get; }

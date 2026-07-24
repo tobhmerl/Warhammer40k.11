@@ -332,10 +332,10 @@ else
 										</span>
 								</span>
 							</button>
-							@if (unit.Parts.Count == 1 && unit.Primary.TracksWounds)
+							@if (UnitTracksWounds(unit))
 							{
-								<span class="u-models" title="Wounds remaining">
-									<span class="um-value @(dead ? "gone" : "")">@PartCurrent(unit.Primary)<span class="um-max">/@unit.Primary.TrackMax</span></span>
+								<span class="u-models" title="@($"Wounds remaining — {GroupModels(unit)} {(GroupModels(unit) == 1 ? "model" : "models")} alive")">
+									<span class="um-value @(dead ? "gone" : "")">@GroupWounds(unit)<span class="um-max">/@GroupWoundsMax(unit)</span></span>
 									<span class="um-label">wounds</span>
 								</span>
 							}
@@ -682,13 +682,13 @@ else
 	</Sheet>
 
 	<Sheet Open="@(_loadoutPart is not null)"
-		   Eyebrow="@(_loadoutDelta < 0 ? "Casualty" : "Reinforce")"
-		   Title="@(_loadoutDelta < 0 ? "Remove which model?" : "Return which model?")"
+		   Eyebrow="@(_loadoutModelDelta < 0 ? "Casualty" : "Reinforce")"
+		   Title="@(_loadoutModelDelta < 0 ? "Remove which model?" : "Return which model?")"
 		   OnCloseRequested="CancelLoadoutChoice">
 		@if (_loadoutPart is { } lp)
 		{
 			<div class="loadout-pick">
-				@foreach (var opt in LoadoutOptions(lp, _loadoutDelta))
+				@foreach (var opt in LoadoutOptions(lp, _loadoutModelDelta))
 				{
 					<button class="btn loadout-opt" type="button" @onclick="() => ApplyLoadoutChoice(opt.Weapon)">
 						<span class="lo-name">@opt.Weapon.Name</span>
@@ -1141,6 +1141,9 @@ else
 	{
 		if (_battle is null)
 			return;
+		// A pre-v2 save tracked MODELS, not wounds — its part tracks/weapon-kills are incompatible with the new
+		// wound pool, so they are dropped (units start at full wounds) while the rest of the state is kept.
+		var legacyTracks = state.Version < BattleSessionState.CurrentVersion;
 		state.Normalize();
 		_round = state.Round;
 		_firstTurn = state.FirstTurn;
@@ -1155,7 +1158,7 @@ else
 
 		var parts = _battle.Units.SelectMany(u => u.Parts).ToDictionary(p => p.Unit.Id, StringComparer.Ordinal);
 		foreach (var (id, value) in state.PartTracks)
-			if (parts.TryGetValue(id, out var part))
+			if (!legacyTracks && parts.TryGetValue(id, out var part))
 				_track[id] = Math.Clamp(value, 0, part.TrackMax);
 
 		var weaponKeys = _battle.Units.SelectMany(u => u.Parts)
@@ -1163,7 +1166,7 @@ else
 			.ToDictionary(x => x.Key, x => x.Max, StringComparer.Ordinal);
 		_weaponKills.Clear();
 		foreach (var (key, value) in state.WeaponKills)
-			if (weaponKeys.TryGetValue(key, out var max) && value > 0)
+			if (!legacyTracks && weaponKeys.TryGetValue(key, out var max) && value > 0)
 				_weaponKills[key] = Math.Clamp(value, 0, max);
 
 		var unitPrefixes = _battle.Units.Select(u => u.Id + "|").ToList();
@@ -1668,22 +1671,37 @@ else
 
 	private void StepPart(BattlePart part, int delta)
 	{
-		// A per-model loadout part (each model carries Gauss or Enmitic) needs to know WHICH model leaves, so that
-		// weapon's attacks reduce correctly. When there's a genuine choice we ask; otherwise apply it directly.
-		if (delta != 0 && part.IsPerModel)
-		{
-			var options = LoadoutOptions(part, delta);
-			if (options.Count >= 2)
-			{
-				_loadoutPart = part;
-				_loadoutDelta = delta;
-				return;
-			}
-			if (options.Count == 1)
-				AdjustWeapon(part, options[0].Weapon, delta);
+		if (delta == 0)
 			return;
+		var current = PartCurrent(part);
+		var target = Math.Clamp(current + delta, 0, part.TrackMax);
+		if (target == current)
+			return;
+
+		// A per-model loadout part (each model carries Gauss or Enmitic) needs to know WHICH model leaves so that
+		// weapon's attacks reduce correctly — but only when a whole model actually dies/returns (a wound step
+		// that doesn't cross a model boundary just adjusts the pool).
+		if (part.IsPerModel)
+		{
+			var modelDelta = part.ModelsAliveAt(target) - part.ModelsAliveAt(current);
+			if (modelDelta != 0)
+			{
+				var options = LoadoutOptions(part, modelDelta);
+				if (options.Count >= 2)
+				{
+					_loadoutPart = part;
+					_loadoutModelDelta = modelDelta;
+					_loadoutWoundTarget = target;
+					return;
+				}
+				if (options.Count == 1)
+				{
+					AdjustWeapon(part, options[0].Weapon, modelDelta, target);
+					return;
+				}
+			}
 		}
-		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+		_track[part.Unit.Id] = target;
 		ScheduleBattleSave();
 	}
 
@@ -1698,21 +1716,19 @@ else
 		return part.ModelsCarrying(weapon, PartModelsAlive(part));
 	}
 
-	// Apply one casualty (delta -1) or restoration (delta +1) to a specific per-model weapon, keeping the part's
-	// total model count (_track) in step with the per-weapon kill tally.
-	private void AdjustWeapon(BattlePart part, WeaponProfile weapon, int delta)
+	// Apply one model casualty (modelDelta -1) or restoration (modelDelta +1) to a specific per-model weapon,
+	// then set the part's wound pool to woundTarget, keeping the per-weapon kill tally in step with the wounds.
+	private void AdjustWeapon(BattlePart part, WeaponProfile weapon, int modelDelta, int woundTarget)
 	{
 		var key = WeaponKillKey(part, weapon);
 		var setup = part.ModelsCarrying(weapon);
 		var kills = _weaponKills.GetValueOrDefault(key);
-		var newKills = Math.Clamp(kills - delta, 0, setup); // delta -1 → +1 kill; delta +1 → -1 kill
-		if (newKills == kills)
-			return;
+		var newKills = Math.Clamp(kills - modelDelta, 0, setup); // modelDelta -1 → +1 kill; +1 → -1 kill
 		if (newKills <= 0)
 			_weaponKills.Remove(key);
 		else
 			_weaponKills[key] = newKills;
-		_track[part.Unit.Id] = Math.Clamp(PartCurrent(part) + delta, 0, part.TrackMax);
+		_track[part.Unit.Id] = Math.Clamp(woundTarget, 0, part.TrackMax);
 		ScheduleBattleSave();
 	}
 
@@ -1735,12 +1751,13 @@ else
 
 	// ---- Per-model loadout casualty chooser (which weapon's model leaves / returns) ----
 	private BattlePart? _loadoutPart;
-	private int _loadoutDelta;
+	private int _loadoutModelDelta;
+	private int _loadoutWoundTarget;
 
 	private void ApplyLoadoutChoice(WeaponProfile weapon)
 	{
 		if (_loadoutPart is { } part)
-			AdjustWeapon(part, weapon, _loadoutDelta);
+			AdjustWeapon(part, weapon, _loadoutModelDelta, _loadoutWoundTarget);
 		_loadoutPart = null;
 	}
 
@@ -1748,14 +1765,22 @@ else
 
 	private bool PartDown(BattlePart part) => PartCurrent(part) == 0;
 
-	// Live models this part still contributes (a wounded-but-alive single model is still 1 model).
-	private int PartModelsAlive(BattlePart part) =>
-		part.TracksWounds ? (PartCurrent(part) > 0 ? 1 : 0) : PartCurrent(part);
+	// Live models this part still contributes: a wounded-but-alive model counts fully (ceil of remaining
+	// wounds ÷ wounds-per-model), so weapon Attacks only drop once a whole model's wounds are gone.
+	private int PartModelsAlive(BattlePart part) => part.ModelsAliveAt(PartCurrent(part));
 
 	// True when this part has lost wounds/models but is not destroyed (drives the Reanimation cue).
 	private bool PartHasLosses(BattlePart part) => PartCurrent(part) < part.TrackMax;
 
 	private int GroupModels(BattleUnit unit) => unit.Parts.Sum(PartModelsAlive);
+
+	// True when every part of the unit tracks wounds (fixed Wounds), so the header can show a wound pool.
+	private bool UnitTracksWounds(BattleUnit unit) => unit.Parts.All(p => p.TracksWounds);
+
+	// The unit's current / maximum total wound pool, summed across the bodyguard and any attached Leaders.
+	private int GroupWounds(BattleUnit unit) => unit.Parts.Sum(PartCurrent);
+
+	private int GroupWoundsMax(BattleUnit unit) => unit.Parts.Sum(p => p.TrackMax);
 
 	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
 

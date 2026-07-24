@@ -263,18 +263,18 @@ public class BattleRosterTests
         var warriors = group.Primary;
         var imotekh = group.Parts.Single(p => p.Datasheet.Id == "imotekh");
 
-        // The lone Character tracks wounds (6); the multi-model bodyguard tracks models (10).
+        // Both track wounds now: the lone Character its 6 wounds, the 10-model bodyguard its 10-wound pool.
         Assert.True(imotekh.TracksWounds);
         Assert.Equal(6, imotekh.TrackMax);
-        Assert.False(warriors.TracksWounds);
+        Assert.True(warriors.TracksWounds);
         Assert.Equal(10, warriors.TrackMax);
     }
 
     [Theory]
-    [InlineData(1, "1", false, 1)]   // lone single-wound model → still a model count
+    [InlineData(1, "1", true, 1)]    // lone single-wound model → 1 wound
     [InlineData(1, "6", true, 6)]    // lone multi-wound model → tracks 6 wounds
-    [InlineData(5, "2", false, 5)]   // multi-model unit → tracks 5 models
-    [InlineData(1, "D6", false, 1)]  // variable wounds can't be tracked numerically
+    [InlineData(5, "2", true, 10)]   // multi-model unit → tracks the 10-wound pool (5 × 2)
+    [InlineData(1, "D6", false, 1)]  // variable wounds can't be tracked numerically → model count
     public void TracksWounds_and_TrackMax_follow_models_and_wounds(int models, string wounds, bool tracksWounds, int trackMax)
     {
         var catalogue = Catalogue(Sheet("u", "Unit", wounds: wounds));
@@ -284,6 +284,24 @@ public class BattleRosterTests
 
         Assert.Equal(tracksWounds, part.TracksWounds);
         Assert.Equal(trackMax, part.TrackMax);
+    }
+
+    [Theory]
+    [InlineData(5, "2", 10, 5)]  // full pool → all 5 models
+    [InlineData(5, "2", 9, 5)]   // one wound lost → a wounded model still fights (ceil)
+    [InlineData(5, "2", 8, 4)]   // a full model's worth gone → 4 models
+    [InlineData(5, "2", 1, 1)]   // a single wound left → 1 model alive
+    [InlineData(5, "2", 0, 0)]   // wiped out → 0 models
+    [InlineData(3, "3", 7, 3)]   // 3×3 Lokhust: 7 wounds → still 3 models (one on 1 wound)
+    [InlineData(3, "3", 6, 2)]   // 6 wounds → 2 full models
+    public void ModelsAliveAt_uses_ceil_of_remaining_wounds(int models, string wounds, int remaining, int expected)
+    {
+        var catalogue = Catalogue(Sheet("u", "Unit", wounds: wounds));
+        var roster = new Roster { Units = [Unit("r", "u", models: models)] };
+
+        var part = Assert.Single(BattleRoster.Build(roster, catalogue).Units).Primary;
+
+        Assert.Equal(expected, part.ModelsAliveAt(remaining));
     }
 
     // ---------- Cryptek Conclave detachment: smart weapon effects ----------
