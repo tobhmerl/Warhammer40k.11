@@ -729,6 +729,14 @@ else
 					<span>Active now — apply @EffectLabel(ac) to this unit's weapons</span>
 				</label>
 			}
+			@if (IsOncePerBattleAbility(ac) && _abilityCardUnit is { } opbu)
+			{
+				<label class="ac-toggle">
+					<input type="checkbox" checked="@IsOncePerBattleUsed(OncePerBattleAbilityKey(opbu, ac))"
+						   @onchange="e => SetOncePerBattleUsed(OncePerBattleAbilityKey(opbu, ac), (bool)e.Value!)" />
+					<span>Used this battle — hide from currently-usable actions (once per battle)</span>
+				</label>
+			}
 			<p class="a-text">@Clean(ac.Ability.Text)</p>
 		}
 	</Sheet>
@@ -780,6 +788,14 @@ else
 					<dd>@nowStratagem.Restrictions</dd>
 				}
 			</dl>
+			@if (IsOncePerBattleStrat(nowStratagem))
+			{
+				<label class="ac-toggle">
+					<input type="checkbox" checked="@IsOncePerBattleUsed(OncePerBattleStratKey(nowStratagem))"
+						   @onchange="e => SetOncePerBattleUsed(OncePerBattleStratKey(nowStratagem), (bool)e.Value!)" />
+					<span>Used this battle — hide from currently-usable actions (once per battle)</span>
+				</label>
+			}
 			<button class="btn primary" type="button" @onclick="UseNowStratagem">
 				Use · @EffectiveCost(nowStratagem, StratContextUnit) CP
 			</button>
@@ -1161,6 +1177,10 @@ else
 			if (_byId.ContainsKey(unitId) && !string.IsNullOrWhiteSpace(choice))
 				_shootingChoice[unitId] = choice;
 
+		_usedOncePerBattle.Clear();
+		foreach (var key in state.UsedOncePerBattle)
+			if (!string.IsNullOrWhiteSpace(key))
+				_usedOncePerBattle.Add(key);
 		if (state.ActiveUnitId is not null)
 		{
 			var index = _order.IndexOf(state.ActiveUnitId);
@@ -1188,6 +1208,7 @@ else
 		WeaponKills = new Dictionary<string, int>(_weaponKills, StringComparer.Ordinal),
 		ActiveEffects = new HashSet<string>(_activeEffects, StringComparer.Ordinal),
 		ShootingChoices = new Dictionary<string, string>(_shootingChoice, StringComparer.Ordinal),
+		UsedOncePerBattle = new HashSet<string>(_usedOncePerBattle, StringComparer.Ordinal),
 	};
 
 	private void ScheduleBattleSave()
@@ -1278,6 +1299,7 @@ else
 		NowUnit is { } unit && !IsDead(unit)
 			? unit.CombinedAbilities
 				.Where(a => IsEffectNow(a) || IsUsableNow(a))
+				.Where(a => !IsOncePerBattleUsedAbility(unit, a))
 				.Select(a => (unit, a))
 				.ToList()
 			: [];
@@ -1288,7 +1310,10 @@ else
 			: [];
 
 	private IReadOnlyList<StratView> AffordableNowStratagems =>
-		UsableStratagems.Where(s => CanAfford(s, StratContextUnit)).ToList();
+		UsableStratagems
+			.Where(s => CanAfford(s, StratContextUnit))
+			.Where(s => !(IsOncePerBattleStrat(s) && IsOncePerBattleUsed(OncePerBattleStratKey(s))))
+			.ToList();
 
 	private string NowContextLabel => NowUnit is { } unit
 		? $"{unit.Name} · {BattlePhases.Label(_phase)}"
@@ -1355,6 +1380,9 @@ else
 		if (_nowStratagem is not { } stratagem)
 			return;
 		UseStratagem(stratagem, StratContextUnit);
+		// A once-per-battle stratagem is consumed when used, so mark it used automatically.
+		if (IsOncePerBattleStrat(stratagem))
+			SetOncePerBattleUsed(OncePerBattleStratKey(stratagem), true);
 		_nowStratagem = null;
 	}
 
@@ -1617,6 +1645,7 @@ else
 		_activeEffects.Clear();
 		_selectedMember.Clear();
 		_selectedCell = null;
+		_usedOncePerBattle.Clear();
 		if (_battle is null)
 			return;
 		foreach (var unit in _battle.Units)
@@ -1843,6 +1872,38 @@ else
 	private static readonly Regex EffectKeywordRx = new(@"\[([^\]]+)\]", RegexOptions.Compiled);
 	private readonly HashSet<string> _activeEffects = new(StringComparer.Ordinal);
 
+	// Keys of "once per battle" abilities/enhancements/stratagems the player has ticked as used this game.
+	private readonly HashSet<string> _usedOncePerBattle = new(StringComparer.Ordinal);
+
+	// An item is "once per battle" when its rules text says so — abilities/enhancements by their text, a
+	// stratagem across any of its clauses. Such items can be ticked "used" and then drop out of the Now ribbon.
+	private static bool IsOncePerBattleText(string? text) =>
+		!string.IsNullOrEmpty(text) && text.Contains("once per battle", StringComparison.OrdinalIgnoreCase);
+
+	private static bool IsOncePerBattleAbility(BattleAbility ability) =>
+		IsOncePerBattleText(ability.Ability.Text);
+
+	private bool IsOncePerBattleStrat(StratView strat) =>
+		IsOncePerBattleText(strat.Effect) || IsOncePerBattleText(strat.When)
+		|| IsOncePerBattleText(strat.Restrictions) || IsOncePerBattleText(strat.Target);
+
+	// Stable keys: an ability/enhancement is once-per-battle per bearing unit; a stratagem is army-wide.
+	private static string OncePerBattleAbilityKey(BattleUnit unit, BattleAbility ability) =>
+		"A|" + unit.Id + "|" + ability.Ability.Name;
+
+	private static string OncePerBattleStratKey(StratView strat) => "S|" + strat.Id;
+
+	private bool IsOncePerBattleUsed(string key) => _usedOncePerBattle.Contains(key);
+
+	private void SetOncePerBattleUsed(string key, bool used)
+	{
+		if (used)
+			_usedOncePerBattle.Add(key);
+		else
+			_usedOncePerBattle.Remove(key);
+		ScheduleBattleSave();
+	}
+
 	private static List<string> EffectKeywords(BattleAbility ability)
 	{
 		var list = new List<string>();
@@ -1874,8 +1935,12 @@ else
 	// equals the number of highlighted chips on the card, whatever the ability's origin.
 	private int AvailableNowCount(BattleUnit unit) =>
 		ConditionalBuffsFor(unit).Count()
-		+ unit.CombinedAbilities.Count(IsEffectNow)
-		+ unit.CombinedAbilities.Count(IsUsableNow);
+		+ unit.CombinedAbilities.Count(a => IsEffectNow(a) && !IsOncePerBattleUsedAbility(unit, a))
+		+ unit.CombinedAbilities.Count(a => IsUsableNow(a) && !IsOncePerBattleUsedAbility(unit, a));
+
+	// True when this ability is a once-per-battle item the player has already ticked "used" for this unit.
+	private bool IsOncePerBattleUsedAbility(BattleUnit unit, BattleAbility ability) =>
+		IsOncePerBattleAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability));
 
 	private static string EffectLabel(BattleAbility ability) =>
 		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));

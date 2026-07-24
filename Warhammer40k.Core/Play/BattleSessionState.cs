@@ -70,6 +70,12 @@ public sealed class BattleSessionState
 
     public Dictionary<string, string> ShootingChoices { get; set; } = [];
 
+    /// <summary>
+    /// Keys of "once per battle" abilities/enhancements/stratagems the player has marked as used this game.
+    /// Such items drop out of the currently-usable actions until the game is reset.
+    /// </summary>
+    public HashSet<string> UsedOncePerBattle { get; set; } = [];
+
     /// <summary>Clamps untrusted or stale browser values to safe play-mode ranges.</summary>
     public void Normalize()
     {
@@ -87,5 +93,6 @@ public sealed class BattleSessionState
         WeaponKills ??= [];
         ActiveEffects ??= [];
         ShootingChoices ??= [];
+        UsedOncePerBattle ??= [];
     }
 }
