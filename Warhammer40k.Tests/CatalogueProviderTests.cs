@@ -56,7 +56,7 @@ public class CatalogueProviderTests
     [InlineData("lokhust-destroyers", 3, 1, 50)]   // your 3rd+ unit: 40 -> 50
     [InlineData("monolith", 2, 1, 440)]            // your 2nd+ unit: 420 -> 440
     [InlineData("canoptek-wraiths", 2, 3, 115)]    // your 2nd+ unit: 95 -> 115
-    [InlineData("doomsday-ark", 3, 1, 220)]        // your 3rd+ unit: 200 -> 220
+    [InlineData("doomsday-ark", 3, 1, 230)]        // your 3rd+ unit: 210 -> 230
     public void Real_seed_carries_per_copy_escalation(string id, int rank, int models, int escalated)
     {
         var sheet = Get(id);
