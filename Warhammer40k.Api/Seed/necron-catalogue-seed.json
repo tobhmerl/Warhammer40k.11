@@ -617,32 +617,6 @@
           "models": 1,
           "points": 175
         }
-      ],
-      "wargearGroups": [
-        {
-          "id": "d8b6-17d1-7472-3a70::b3f7-2c0a-1af8-4ad4",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "blade-tail-and-whip-coils",
-              "name": "Blade tail and whip coils"
-            },
-            {
-              "id": "enmitic-disintegrators",
-              "name": "Enmitic disintegrators"
-            },
-            {
-              "id": "nullstone-field-generator",
-              "name": "Nullstone field generator"
-            },
-            {
-              "id": "unmaker-gauntlet",
-              "name": "Unmaker gauntlet"
-            }
-          ]
-        }
       ]
     },
     {
