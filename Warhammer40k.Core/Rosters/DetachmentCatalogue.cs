@@ -52,6 +52,7 @@ public static class DetachmentCatalogue
     {
         var d = Make("Hand of the Dynasty");
         d.Enabled = true;
+        d.Disposition = "Take and Hold";
         d.DetachmentPoints = 1;
         d.Tags = ["Dynasty"];
 
@@ -139,6 +140,7 @@ public static class DetachmentCatalogue
             ("Phasal Subjugator", 35),
             ("Veil of Darkness", 20));
         d.Enabled = true;
+        d.Disposition = "Take and Hold";
         d.Tags = ["Dynasty"];
 
         d.Rules =
@@ -257,6 +259,7 @@ public static class DetachmentCatalogue
             ("Ingrained Superiority", 5),
             ("Soulless Reaper", 15));
         d.Enabled = true;
+        d.Disposition = "Purge the Foe";
         d.Rules =
         [
             new DetachmentRule
@@ -282,6 +285,7 @@ public static class DetachmentCatalogue
             ("Hyperphasic Fulcrum", 15),
             ("Metalodermal Tesla Weave", 10));
         d.Enabled = true;
+        d.Disposition = "Take and Hold";
         d.Rules =
         [
             new DetachmentRule
@@ -311,6 +315,7 @@ public static class DetachmentCatalogue
             ("Mark of the Nekrosor", 20),
             ("Murdermind", 15));
         d.Enabled = true;
+        d.Disposition = "Purge the Foe";
         d.Rules =
         [
             new DetachmentRule
@@ -441,6 +446,7 @@ public static class DetachmentCatalogue
             ("Hyperspatial Transfer Node", 15),
             ("Osteoclave Fulcrum", 20));
         d.Enabled = true;
+        d.Disposition = "Reconnaissance";
         d.Tags = ["Hypercrypt"];
         d.Rules =
         [
@@ -536,6 +542,7 @@ public static class DetachmentCatalogue
             ("Unflinching Will", 20),
             ("Warrior Noble", 15));
         d.Enabled = true;
+        d.Disposition = "Disruption";
         d.Rules =
         [
             new DetachmentRule
@@ -630,6 +637,7 @@ public static class DetachmentCatalogue
         var d = Make("Pantheon of Woe");
         d.DetachmentPoints = 2;
         d.Enabled = true;
+        d.Disposition = "Disruption";
         d.AppliesPantheonBindings = true;
         d.Rules =
         [
@@ -714,6 +722,7 @@ public static class DetachmentCatalogue
             ("Deepening Madness", 20),
             ("Recursive Reanimation", 5));
         d.Enabled = true;
+        d.Disposition = "Reconnaissance";
         d.Rules =
         [
             new DetachmentRule
@@ -736,6 +745,7 @@ public static class DetachmentCatalogue
             ("Mortality Shroud", 10),
             ("Prelocational Optimiser", 25));
         d.Enabled = true;
+        d.Disposition = "Priority Assets";
         d.Tags = ["Hypercrypt"];
         d.Rules =
         [
@@ -776,6 +786,7 @@ public static class DetachmentCatalogue
             ("Dread Majesty", 30),
             ("Miniaturised Nebuloscope", 15));
         d.Enabled = true;
+        d.Disposition = "Priority Assets";
 
         d.Rules =
         [
@@ -911,6 +922,7 @@ public static class DetachmentCatalogue
             ("Gravitic Bolas", 15),
             ("Quantum Abacus", 15));
         d.Enabled = true;
+        d.Disposition = "Priority Assets";
         d.DetachmentPoints = 2;
 
         // Enhancement display text (shown on the bearer's card in Play Mode) + per-enhancement eligibility (R6).

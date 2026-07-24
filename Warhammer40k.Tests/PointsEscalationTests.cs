@@ -125,4 +125,25 @@ public class PointsEscalationTests
 
         Assert.Equal(420 + 280 + 440 + 310, RosterCalculator.TotalPoints(roster, cat, (Detachment?)null));
     }
+
+    [Fact]
+    public void Real_seed_three_Doomsday_Arks_cost_650_per_MFM_2026()
+    {
+        var cat = Warhammer40k.Api.CatalogueProvider.LoadEmbedded();
+        var sheet = cat.Datasheets.Single(d => d.Name == "Doomsday Ark");
+
+        // MFM 2026: 1st & 2nd Doomsday Ark are 210 each, the 3rd (and beyond) escalate to 230.
+        Assert.Equal(3, sheet.EscalationRank);
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit(sheet.Id, 1),
+                Unit(sheet.Id, 1),
+                Unit(sheet.Id, 1),
+            ],
+        };
+
+        Assert.Equal(650, RosterCalculator.TotalPoints(roster, cat, (Detachment?)null));
+    }
 }

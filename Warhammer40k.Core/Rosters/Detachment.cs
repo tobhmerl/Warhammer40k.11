@@ -23,6 +23,12 @@ public sealed class Detachment
     /// <summary>Detachment Points spent to field this detachment (11th edition). 0 until costed.</summary>
     public int DetachmentPoints { get; set; }
 
+    /// <summary>
+    /// The detachment's Force Disposition (Munitorum Field Manual), e.g. "Take and Hold", "Purge the Foe",
+    /// "Priority Assets", "Reconnaissance", "Disruption". Empty until set. Reference/display only.
+    /// </summary>
+    public string Disposition { get; set; } = string.Empty;
+
     /// <summary>Whether this detachment is selectable in setup. Only detachments with authored rules are enabled.</summary>
     public bool Enabled { get; set; }
 

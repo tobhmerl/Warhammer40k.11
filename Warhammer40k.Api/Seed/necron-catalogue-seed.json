@@ -514,7 +514,7 @@
     },
     {
       "name": "Nekrosor Ammentar",
-      "points": 175,
+      "points": 185,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -615,7 +615,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 175
+          "points": 185
         }
       ]
     },
@@ -695,7 +695,7 @@
     },
     {
       "name": "The Silent King",
-      "points": 400,
+      "points": 420,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -834,7 +834,7 @@
       "pointsOptions": [
         {
           "models": 3,
-          "points": 400
+          "points": 420
         }
       ],
       "wargearGroups": []
@@ -1069,7 +1069,7 @@
     },
     {
       "name": "Chronomancer",
-      "points": 80,
+      "points": 70,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -1146,8 +1146,8 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 80,
-          "escalatedPoints": 90
+          "points": 70,
+          "escalatedPoints": 80
         }
       ],
       "wargearGroups": []
@@ -2006,10 +2006,12 @@
           "keywords": []
         }
       ],
+      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 90
+          "points": 90,
+          "escalatedPoints": 100
         }
       ],
       "wargearGroups": []
@@ -3121,8 +3123,8 @@
         },
         {
           "models": 6,
-          "points": 160,
-          "escalatedPoints": 170
+          "points": 170,
+          "escalatedPoints": 180
         }
       ],
       "wargearGroups": []
@@ -3222,8 +3224,8 @@
         },
         {
           "models": 3,
-          "points": 150,
-          "escalatedPoints": 160
+          "points": 160,
+          "escalatedPoints": 170
         }
       ],
       "wargearGroups": [
@@ -4001,7 +4003,7 @@
     },
     {
       "name": "Canoptek Reanimator",
-      "points": 70,
+      "points": 75,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4062,7 +4064,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 70
+          "points": 75
         }
       ],
       "wargearGroups": []
@@ -4286,7 +4288,7 @@
     },
     {
       "name": "Doomsday Ark",
-      "points": 200,
+      "points": 210,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4376,8 +4378,8 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 200,
-          "escalatedPoints": 220
+          "points": 210,
+          "escalatedPoints": 230
         }
       ],
       "wargearGroups": []
@@ -4816,7 +4818,7 @@
     },
     {
       "name": "Tesseract Vault",
-      "points": 445,
+      "points": 465,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4942,8 +4944,8 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 445,
-          "escalatedPoints": 465
+          "points": 465,
+          "escalatedPoints": 485
         }
       ],
       "wargearGroups": []

@@ -495,7 +495,7 @@ else
 			<div class="dp-item @(selected ? "on" : "") @(disabled ? "disabled" : "")">
 				<button type="button" class="dp-toggle" @onclick="() => ToggleDetachment(d)" disabled="@disabled" aria-pressed="@selected">
 					<span class="dp-check" aria-hidden="true">@(selected ? "✓" : "")</span>
-					<span class="dp-name">@d.Name</span>
+					<span class="dp-name">@d.Name@(string.IsNullOrEmpty(d.Disposition) ? "" : $" · {d.Disposition}")</span>
 					<span class="dp-cost">@d.DetachmentPoints DP</span>
 				</button>
 				@if (d.Rules.Count > 0)
