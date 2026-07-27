@@ -405,7 +405,7 @@ else
 										.Distinct(StringComparer.OrdinalIgnoreCase)
 										.ToList();
 								}
-								@if (_phase == BattlePhase.Shooting && shootOptions.Count > 0)
+								@if (MyShootingPhase && shootOptions.Count > 0)
 								{
 									<div class="shoot-choice">
 										<span class="sc-label">@(shootChoices.Count > 0 ? shootChoices[0].Name : "Shooting ability")</span>
@@ -419,10 +419,10 @@ else
 								}
 								@if (ranged.Count > 0)
 								{
-									<div class="weapon-block ranged @(_phase == BattlePhase.Shooting ? "phase-on" : "")">
+									<div class="weapon-block ranged @(MyShootingPhase ? "phase-on" : "")">
 										<div class="wb-head">
 											<span class="wb-title">Ranged</span>
-											@if (_phase == BattlePhase.Shooting)
+											@if (MyShootingPhase)
 											{
 												<span class="wb-now">Current phase</span>
 											}
@@ -434,7 +434,7 @@ else
 													@{
 														var rwMods = _battle.WeaponStatModifiers(unit, row.Part, ranged: true).Concat(ActiveBuffModifiers(unit, ranged: true)).ToList();
 														var rGrants = _battle.GrantedWeaponAbilities(unit, row.Part, ranged: true).Concat(ActiveWeaponEffects(unit, row.Weapon)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-														var rChosen = _phase == BattlePhase.Shooting ? SelectedChoice(unit) : null; var rCarry = WeaponModelsAlive(row.Part, row.Weapon);
+														var rChosen = MyShootingPhase ? SelectedChoice(unit) : null; var rCarry = WeaponModelsAlive(row.Part, row.Weapon);
 													}
 													<div class="w-top">
 														<span class="wname">@(row.Weapon.Count > 1 ? $"{row.Weapon.Count}× " : "")@row.Weapon.Name</span>
@@ -1498,6 +1498,11 @@ else
 
 	// ---- Command-phase cues (your turn): which units must act this Command phase ----
 	private bool MyCommandPhase => _phase == BattlePhase.Command && _turn == BattleTurn.Player;
+
+	// Only the active player shoots, so "your Shooting phase" abilities (e.g. Technosorcerous Augmentations)
+	// and the ranged "current phase" emphasis follow the turn as well as the phase. The Fight phase is shared —
+	// both armies fight in it — so melee is deliberately not gated this way.
+	private bool MyShootingPhase => _phase == BattlePhase.Shooting && _turn == BattleTurn.Player;
 
 	// A unit that has lost wounds or models (but isn't destroyed) should run Reanimation Protocols.
 	private bool NeedsReanimation(BattleUnit unit) => !IsDead(unit) && unit.Parts.Any(PartHasLosses);
