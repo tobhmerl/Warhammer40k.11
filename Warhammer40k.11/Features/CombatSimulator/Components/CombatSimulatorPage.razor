@@ -55,6 +55,22 @@
 			<UnitPicker Units="AttackerPool" Selected="_attacker" SelectedChanged="OnAttackerChanged" />
 			@if (_attacker is not null)
 			{
+				@* Everything already resolved from the roster — leader conferrals, detachment buffs and
+				   enhancements — is baked into the profiles above, so it must not be entered again below. *@
+				@if (_attacker.InheritedEffects.Count > 0)
+				{
+					<div class="csim-inherited" title="Applied automatically from your roster — do not add these again in the modifiers">
+						<span class="csim-inherited-head">Applied from roster</span>
+						@foreach (var effect in _attacker.InheritedEffects)
+						{
+							<span class="csim-inherited-chip">@effect</span>
+						}
+					</div>
+				}
+				else
+				{
+					<p class="csim-note">No roster modifiers apply — the printed profiles are used as-is.</p>
+				}
 				<WeaponSelector Unit="_attacker" Selection="_weaponSelection" />
 			}
 			else if (AttackerPool.Count == 0)

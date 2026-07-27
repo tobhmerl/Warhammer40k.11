@@ -58,6 +58,13 @@ public sealed record CombatUnit
 
     public List<CombatModelGroup> ModelGroups { get; init; } = [];
     public List<UnitAbility> UnitAbilities { get; init; } = [];
+
+    /// <summary>
+    /// Short labels for the modifiers automatically inherited from the roster (leader conferrals, detachment
+    /// buffs, enhancements), e.g. "+2 Strength (melee)" or "Critical hit 5+". Shown in the simulator so it is
+    /// obvious what is already baked in and does not need entering by hand. Empty when nothing applies.
+    /// </summary>
+    public List<string> InheritedEffects { get; init; } = [];
     public CombatSource Source { get; init; } = CombatSource.Native;
     public bool IsAttachedUnit { get; init; }
 

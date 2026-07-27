@@ -137,9 +137,12 @@ public sealed class AttackResolver
         if (atk.OathOfMoment && rerollHits == RerollPolicy.None)
             rerollHits = RerollPolicy.Failures;
 
-        var natural = RollWithReroll(rerollHits, n => IsHit(n, clampedHitMod, effectiveTarget, atk.CritHitThreshold));
+        // The weapon may already carry a lowered critical-hit threshold inherited from the roster; the manual
+        // modifier can only improve on it, never undo it.
+        var critHitOn = CriticalHitThreshold(weapon);
+        var natural = RollWithReroll(rerollHits, n => IsHit(n, clampedHitMod, effectiveTarget, critHitOn));
 
-        var crit = natural >= atk.CritHitThreshold;
+        var crit = natural >= critHitOn;
         var hit = natural != 1 && (crit || natural + clampedHitMod >= effectiveTarget);
         if (!hit)
             return;
@@ -230,6 +233,18 @@ public sealed class AttackResolver
         if (strength == toughness) return 4;
         if (toughness >= 2 * strength) return 6;
         return 5; // T > S but < 2S
+    }
+
+    /// <summary>
+    /// The hit roll that counts as a critical hit: the better (lower) of the weapon's inherited threshold and
+    /// the manual attacker modifier, never worse than the unmodified 6+.
+    /// </summary>
+    private int CriticalHitThreshold(CombatWeapon weapon)
+    {
+        var threshold = _config.Attacker.CritHitThreshold;
+        if (weapon.CriticalHitOn is { } inherited)
+            threshold = Math.Min(threshold, inherited);
+        return threshold;
     }
 
     private int CriticalWoundThreshold(CombatWeapon weapon)

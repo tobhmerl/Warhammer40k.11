@@ -30,6 +30,13 @@ public sealed record CombatWeapon
 
     public List<WeaponAbility> Abilities { get; init; } = [];
 
+    /// <summary>
+    /// The hit roll at which this weapon scores a critical hit when an ability lowers it (e.g. a leader's
+    /// "critical hit on 5+"), or <c>null</c> for the unmodified 6+. Inherited from the roster; the manual
+    /// attacker modifier can still improve on it.
+    /// </summary>
+    public int? CriticalHitOn { get; init; }
+
     /// <summary>Alternative firing modes (multi-profile weapons). Empty for a single-profile weapon.</summary>
     public List<CombatWeapon> FiringModes { get; init; } = [];
 
