@@ -70,11 +70,39 @@ public static class NativeNecronSource
         {
             Name = unit.Name,
             Faction = "Necrons",
+            Keywords = KeywordsOf(unit),
             ModelGroups = groups,
             UnitAbilities = abilities,
             Source = CombatSource.Native,
             IsAttachedUnit = unit.Parts.Count > 1,
         };
+    }
+
+    /// <summary>
+    /// Every datasheet keyword across the unit's parts, de-duplicated. A qualified keyword
+    /// ("Faction: Necrons") also contributes its bare value ("Necrons"), so Anti-[keyword] matching works
+    /// either way. These drive Anti-X when this unit is the target.
+    /// </summary>
+    private static List<string> KeywordsOf(BattleUnit unit)
+    {
+        var result = new List<string>();
+
+        void Add(string keyword)
+        {
+            var value = keyword.Trim();
+            if (value.Length > 0 && !result.Contains(value, StringComparer.OrdinalIgnoreCase))
+                result.Add(value);
+        }
+
+        foreach (var keyword in unit.Parts.SelectMany(p => p.Datasheet.Keywords))
+        {
+            Add(keyword);
+            var colon = keyword.IndexOf(':');
+            if (colon >= 0)
+                Add(keyword[(colon + 1)..]);
+        }
+
+        return result;
     }
 
     private static CombatWeapon MapWeapon(WeaponProfile w, int carriedByModels)

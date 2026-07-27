@@ -49,6 +49,13 @@ public sealed record CombatUnit
 {
     public string Name { get; init; } = "";
     public string Faction { get; init; } = "";
+
+    /// <summary>
+    /// The unit's datasheet keywords (INFANTRY, MOUNTED, VEHICLE, CHARACTER, …). Drives Anti-[keyword]
+    /// matching when this unit is the target, so a weapon's Anti-INFANTRY 3+ only applies to INFANTRY.
+    /// </summary>
+    public List<string> Keywords { get; init; } = [];
+
     public List<CombatModelGroup> ModelGroups { get; init; } = [];
     public List<UnitAbility> UnitAbilities { get; init; } = [];
     public CombatSource Source { get; init; } = CombatSource.Native;

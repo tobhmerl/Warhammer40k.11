@@ -236,8 +236,13 @@ public sealed class AttackResolver
     {
         var atk = _config.Attacker;
         var threshold = atk.CritWoundThreshold;
-        if (atk.AntiOverrideThreshold is { } o)
-            threshold = Math.Min(threshold, o);
+        // Anti granted outside the weapon profile (detachment ability, Stratagem) still only bites a target
+        // that actually has the keyword, exactly like a printed Anti-X.
+        if (atk.AntiThreshold is { } manual && atk.AntiKeyword is { Length: > 0 } manualKeyword
+            && TargetHasKeyword(manualKeyword))
+        {
+            threshold = Math.Min(threshold, manual);
+        }
         foreach (var anti in weapon.Abilities.OfType<Anti>())
             if (TargetHasKeyword(anti.Keyword))
                 threshold = Math.Min(threshold, anti.CritThreshold);

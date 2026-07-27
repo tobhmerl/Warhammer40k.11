@@ -75,6 +75,12 @@
 			@if (_target is not null)
 			{
 				<p class="csim-meta">@_target.TotalModels model(s) · T@(TargetToughness) · Sv @(TargetSave)+@(TargetInvulnText)</p>
+				@if (_target.Keywords.Count > 0)
+				{
+					<p class="csim-keywords" title="Datasheet keywords — Anti-X only applies when the target carries the keyword">
+						@string.Join(" · ", _target.Keywords)
+					</p>
+				}
 			}
 			else if (TargetPool.Count == 0)
 			{
@@ -464,10 +470,18 @@
 
 	private static List<string> TargetKeywordsFor(CombatUnit unit)
 	{
-		// Use the model-group names + faction as keyword hints for Anti-X matching.
-		var keywords = new List<string> { unit.Faction };
+		// The datasheet keywords (INFANTRY, MOUNTED, …) drive Anti-X; faction and model-group names are kept as
+		// extra hints so an Anti-<unit name> or Anti-<faction> still matches.
+		var keywords = new List<string>(unit.Keywords);
+		void Add(string value)
+		{
+			if (!string.IsNullOrWhiteSpace(value) && !keywords.Contains(value, StringComparer.OrdinalIgnoreCase))
+				keywords.Add(value);
+		}
+
+		Add(unit.Faction);
 		foreach (var group in unit.ModelGroups)
-			keywords.Add(group.Profile.Name);
+			Add(group.Profile.Name);
 		return keywords;
 	}
 

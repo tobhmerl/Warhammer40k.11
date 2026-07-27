@@ -47,8 +47,14 @@ public sealed record AttackerModifiers
     /// <summary>Drives Rapid Fire and Melta.</summary>
     public bool TargetWithinHalfRange { get; init; }
 
-    /// <summary>Anti override: when set, treat the weapon as Anti-(any) at this threshold.</summary>
-    public int? AntiOverrideThreshold { get; init; }
+    /// <summary>
+    /// Manual Anti-[keyword] N+ (e.g. granted by a detachment ability or Stratagem rather than printed on the
+    /// weapon). Both must be set, and it only applies when the target carries <see cref="AntiKeyword"/>.
+    /// </summary>
+    public string? AntiKeyword { get; init; }
+
+    /// <summary>The wound roll at which the manual <see cref="AntiKeyword"/> counts as a critical wound.</summary>
+    public int? AntiThreshold { get; init; }
 
     public bool IgnoresCover { get; init; }
 }

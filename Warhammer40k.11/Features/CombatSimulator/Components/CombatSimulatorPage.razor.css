@@ -226,6 +226,15 @@
     margin: 0.5rem 0 0;
 }
 
+/* The target's datasheet keywords — shown so it's obvious why an Anti-X does or doesn't apply. */
+.csim-keywords {
+    color: var(--text-faint, #6f8278);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0.25rem 0 0;
+}
+
 .csim-note {
     color: var(--text-dim, #9fb4a8);
     font-size: 0.85rem;

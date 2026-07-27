@@ -52,6 +52,25 @@
 			</select>
 		</li>
 		<li class="csim-mline check"><label><input type="checkbox" checked="@a.DevastatingWounds" @onchange="e => Emit(a with { DevastatingWounds = Bool(e.Value) })" /> <span class="csim-mlabel">Devastating Wounds</span></label></li>
+		@* Anti granted off the weapon profile (detachment ability, Stratagem). It only bites a target that
+		   actually carries the keyword, so a wrong pick simply has no effect. *@
+		<li class="csim-mline"><span class="csim-mlabel">Anti-</span>
+			<select @onchange="e => Emit(a with { AntiKeyword = Text(e.Value) })" title="Only applies when the target has this keyword">
+				<option value="" selected="@(string.IsNullOrEmpty(a.AntiKeyword))">—</option>
+				@foreach (var kw in AntiKeywords)
+				{
+					<option value="@kw" selected="@(string.Equals(a.AntiKeyword, kw, StringComparison.OrdinalIgnoreCase))">@kw</option>
+				}
+			</select>
+			<select @onchange="e => Emit(a with { AntiThreshold = IntOrNull(e.Value) })" title="Wound roll that counts as a critical wound">
+				<option value="" selected="@(a.AntiThreshold is null)">—</option>
+				<option value="2" selected="@(a.AntiThreshold == 2)">2+</option>
+				<option value="3" selected="@(a.AntiThreshold == 3)">3+</option>
+				<option value="4" selected="@(a.AntiThreshold == 4)">4+</option>
+				<option value="5" selected="@(a.AntiThreshold == 5)">5+</option>
+				<option value="6" selected="@(a.AntiThreshold == 6)">6+</option>
+			</select>
+		</li>
 		<li class="csim-mline check"><label><input type="checkbox" checked="@a.OathOfMoment" @onchange="e => Emit(a with { OathOfMoment = Bool(e.Value) })" /> <span class="csim-mlabel">Oath of Moment</span></label></li>
 		<li class="csim-mline check"><label><input type="checkbox" checked="@a.TargetWithinHalfRange" @onchange="e => Emit(a with { TargetWithinHalfRange = Bool(e.Value) })" /> <span class="csim-mlabel">Target within ½ range</span></label></li>
 		<li class="csim-mline check"><label><input type="checkbox" checked="@a.IgnoresCover" @onchange="e => Emit(a with { IgnoresCover = Bool(e.Value) })" /> <span class="csim-mlabel">Ignores Cover</span></label></li>
@@ -107,4 +126,11 @@ else if (Defender is not null)
 	private static int? IntOrNull(object? v) => int.TryParse(v?.ToString(), out var n) ? n : null;
 	private static bool Bool(object? v) => v is bool b && b;
 	private static RerollPolicy Policy(object? v) => int.TryParse(v?.ToString(), out var n) ? (RerollPolicy)n : RerollPolicy.None;
+	private static string? Text(object? v) => v?.ToString() is { Length: > 0 } s ? s : null;
+
+	// The keywords Anti-X is written against in 11th edition; the target must carry one for it to apply.
+	private static readonly string[] AntiKeywords =
+	[
+		"Infantry", "Mounted", "Vehicle", "Monster", "Character", "Fly", "Psyker", "Swarm", "Titanic", "Walker",
+	];
 }

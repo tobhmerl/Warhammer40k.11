@@ -148,6 +148,40 @@ public class AttackResolverTests
     }
 
     [Fact]
+    public void Weapon_anti_does_nothing_when_the_target_lacks_the_keyword()
+    {
+        // Same Anti-Infantry 4+ weapon, but a VEHICLE target: the crit-wound threshold stays at 6+, so
+        // Devastating Wounds fires far less often than against Infantry.
+        var weapon = Weapon(a: "1", skill: 2, s: "4", ap: 0, d: "1", models: 20,
+            abilities: new[] { new Anti("Infantry", 4), (WeaponAbility)new DevastatingWounds() });
+
+        var vsInfantry = Run(weapon, Target(toughness: 4, save: 2, models: 20), targetKeywords: new[] { "Infantry" });
+        var vsVehicle = Run(weapon, Target(toughness: 4, save: 2, models: 20), targetKeywords: new[] { "Vehicle" });
+
+        Assert.True(vsInfantry.Funnel.DevastatingMortalWounds > vsVehicle.Funnel.DevastatingMortalWounds,
+            $"infantry={vsInfantry.Funnel.DevastatingMortalWounds}, vehicle={vsVehicle.Funnel.DevastatingMortalWounds}");
+    }
+
+    [Fact]
+    public void Manual_anti_lowers_the_crit_wound_threshold_only_for_a_matching_target()
+    {
+        // Anti granted by a detachment ability (no Anti on the weapon profile): Anti-Infantry 3+ plus
+        // Devastating Wounds. It must bite an INFANTRY target and do nothing to a VEHICLE.
+        var weapon = Weapon(a: "1", skill: 2, s: "4", ap: 0, d: "1", models: 20,
+            abilities: new[] { (WeaponAbility)new DevastatingWounds() });
+        var anti = new AttackerModifiers { AntiKeyword = "Infantry", AntiThreshold = 3 };
+
+        var vsInfantry = Run(weapon, Target(toughness: 4, save: 2, models: 20), atk: anti, targetKeywords: new[] { "Infantry" });
+        var vsVehicle = Run(weapon, Target(toughness: 4, save: 2, models: 20), atk: anti, targetKeywords: new[] { "Vehicle" });
+        var plain = Run(weapon, Target(toughness: 4, save: 2, models: 20), targetKeywords: new[] { "Infantry" });
+
+        Assert.True(vsInfantry.Funnel.DevastatingMortalWounds > plain.Funnel.DevastatingMortalWounds,
+            "manual Anti should raise devastating mortals against a matching target");
+        Assert.True(vsVehicle.Funnel.DevastatingMortalWounds < vsInfantry.Funnel.DevastatingMortalWounds,
+            "manual Anti must not apply to a target without the keyword");
+    }
+
+    [Fact]
     public void Invuln_is_used_against_high_ap_and_ignores_ap()
     {
         // Sv3+ / 4++ vs AP-3 → armour becomes 6+, invuln 4+ is better → effective 4+. Compare to no-invuln (6+).

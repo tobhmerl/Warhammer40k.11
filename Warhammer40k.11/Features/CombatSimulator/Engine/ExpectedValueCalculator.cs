@@ -94,8 +94,12 @@ public static class ExpectedValueCalculator
             var required = AttackResolver.WoundTarget(Math.Max(1, strength), toughness);
             var woundMod = Math.Clamp(atk.WoundRollModifier + (atk.OathOfMoment ? 1 : 0) - (def.MinusOneToBeWounded ? 1 : 0), -1, 1);
             var critWoundThreshold = atk.CritWoundThreshold;
-            if (atk.AntiOverrideThreshold is { } o)
-                critWoundThreshold = Math.Min(critWoundThreshold, o);
+            // Anti granted off the weapon profile still only bites a target that carries the keyword.
+            if (atk.AntiThreshold is { } manual && atk.AntiKeyword is { Length: > 0 } manualKeyword
+                && config.TargetKeywords.Any(k => string.Equals(k, manualKeyword, StringComparison.OrdinalIgnoreCase)))
+            {
+                critWoundThreshold = Math.Min(critWoundThreshold, manual);
+            }
             foreach (var anti in weapon.Abilities.OfType<Anti>())
                 if (config.TargetKeywords.Any(k => string.Equals(k, anti.Keyword, StringComparison.OrdinalIgnoreCase)))
                     critWoundThreshold = Math.Min(critWoundThreshold, anti.CritThreshold);
