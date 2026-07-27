@@ -39,6 +39,41 @@
     margin-left: auto;
 }
 
+/* Each action carries an icon plus its label. */
+.topbar-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-ic {
+    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+/* On a phone the labels would wrap this row onto several lines, so below this width the buttons collapse to
+   their icons. The text stays in the DOM for screen readers (each button also carries a title). */
+@media (max-width: 620px) {
+    .topbar-actions .btn-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .topbar-actions .btn {
+        gap: 0;
+        padding-left: 0.55rem;
+        padding-right: 0.55rem;
+    }
+}
+
 /* ---- Floating control HUD: fixed to the bottom, auto-hides while scrolling up ---- */
 .hud {
     position: fixed;
