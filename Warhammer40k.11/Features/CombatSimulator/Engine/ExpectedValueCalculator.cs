@@ -79,9 +79,14 @@ public static class ExpectedValueCalculator
                     target = weapon.Skill;
                     hitRoll = 0;
                 }
-                var pHit = SuccessProbability(target, hitRoll, atk.CritHitThreshold);
+                // The weapon may carry a lowered critical-hit threshold inherited from the roster; the manual
+                // modifier can only improve on it.
+                var critHitOn = weapon.CriticalHitOn is { } inherited
+                    ? Math.Min(atk.CritHitThreshold, inherited)
+                    : atk.CritHitThreshold;
+                var pHit = SuccessProbability(target, hitRoll, critHitOn);
                 hits = attacks * pHit;
-                critHits = attacks * CritProbability(atk.CritHitThreshold);
+                critHits = attacks * CritProbability(critHitOn);
 
                 // Sustained Hits add extra hits per crit.
                 var sustained = atk.SustainedHits + (weapon.Get<SustainedHits>()?.X ?? 0);

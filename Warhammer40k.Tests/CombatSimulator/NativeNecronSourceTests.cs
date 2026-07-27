@@ -19,8 +19,8 @@ public class NativeNecronSourceTests
         {
             Units = [new RosterUnit { Id = "r1", DatasheetId = datasheetId, ModelCount = models }],
         };
-        var unit = BattleRoster.Build(roster, catalogue).Units.Single();
-        return NativeNecronSource.FromBattleUnit(unit);
+        var battle = BattleRoster.Build(roster, catalogue);
+        return NativeNecronSource.FromBattleUnit(battle, battle.Units.Single());
     }
 
     [Fact]
@@ -47,5 +47,56 @@ public class NativeNecronSourceTests
         var combat = Map("necron-warriors", 10);
 
         Assert.Equal(combat.Keywords.Distinct(StringComparer.OrdinalIgnoreCase).Count(), combat.Keywords.Count);
+    }
+
+    // ---- Automatic inheritance of the modifiers Play Mode already resolves ----
+
+    private static CombatUnit MapWithDetachment(string datasheetId, int models, string detachmentId)
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var roster = new Roster
+        {
+            DetachmentIds = [detachmentId],
+            Units = [new RosterUnit { Id = "r1", DatasheetId = datasheetId, ModelCount = models }],
+        };
+        var detachments = roster.DetachmentIds
+            .Select(DetachmentCatalogue.FindById)
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList();
+        var battle = BattleRoster.Build(roster, catalogue, detachments);
+        return NativeNecronSource.FromBattleUnit(battle, battle.Units.Single());
+    }
+
+    [Fact]
+    public void Detachment_stat_buff_is_baked_into_the_weapon_profile()
+    {
+        // Cursed Legion's Cold Fervour: +2 Strength on DESTROYER CULT models' weapons. Skorpekh Destroyers
+        // carry that keyword, so the simulator must see the buffed Strength without the user typing it.
+        var plain = Map("skorpekh-destroyers", 3);
+        var buffed = MapWithDetachment("skorpekh-destroyers", 3, "cursed-legion");
+
+        var plainStrength = plain.AllWeapons.First().Strength.ExpectedValue();
+        var buffedStrength = buffed.AllWeapons.First().Strength.ExpectedValue();
+
+        Assert.Equal(plainStrength + 2, buffedStrength);
+    }
+
+    [Fact]
+    public void Inherited_effects_are_reported_for_display()
+    {
+        var buffed = MapWithDetachment("skorpekh-destroyers", 3, "cursed-legion");
+
+        // The user must be able to see what was applied, otherwise they cannot tell it apart from "nothing".
+        Assert.NotEmpty(buffed.InheritedEffects);
+        Assert.Contains(buffed.InheritedEffects, e => e.Contains("Str", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void A_unit_without_roster_modifiers_reports_none()
+    {
+        var plain = Map("necron-warriors", 10);
+
+        Assert.Empty(plain.InheritedEffects);
     }
 }
