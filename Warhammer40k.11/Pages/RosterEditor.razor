@@ -102,6 +102,7 @@ else
 			<div class="editor-actions">
 				<button class="btn primary add-unit" type="button" @onclick="OpenPicker">+ Add unit</button>
 				<button class="btn ghost" type="button" @onclick="OpenTiming">Stratagems</button>
+				<button class="btn ghost" type="button" @onclick="ExportJsonAsync" title="Download the whole army as JSON — units, attached leaders, abilities, saves, enhancements and stratagems">Export JSON</button>
 			</div>
 
 			@foreach (var group in UnitGroups())
@@ -800,6 +801,25 @@ else
 			return;
 		_roster.Name = e.Value?.ToString() ?? "";
 		_dirty = true;
+	}
+
+	// Downloads the army as a self-describing JSON document for use outside the app (e.g. pasted into a chat
+	// assistant). Everything is pre-resolved, so the file stands on its own without the catalogue.
+	private async Task ExportJsonAsync()
+	{
+		if (_roster is null || _catalogue is null)
+			return;
+
+		try
+		{
+			var json = RosterExporter.ToJson(_roster, _catalogue);
+			var safeName = string.Concat((_roster.Name ?? "roster").Split(Path.GetInvalidFileNameChars()));
+			await JS.InvokeVoidAsync("tombworld.download", $"{safeName}-export.json", json);
+		}
+		catch (Exception ex)
+		{
+			_error = $"Export failed: {ex.Message}";
+		}
 	}
 
 	private async Task SaveAsync()
