@@ -1023,7 +1023,7 @@ html[data-scroll="up"] .hud.sticky {
     border-color: var(--border-strong);
 }
 
-/* Inv / FNP are reference stats: kept neutral (value in the normal ink) so the chip row stays calm. The
+/* INV / FNP are reference stats: kept neutral (value in the normal ink) so the chip row stays calm. The
    "unit"/model scope suffix and the solid-vs-dashed edge already distinguish them — no colour needed. */
 .chip.inv,
 .chip.fnp {

@@ -154,13 +154,13 @@ else
 						@foreach (var inv in u.InvulnerableSaves)
 						{
 							<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
-								@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
+								INV @inv.Value<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
 							</span>
 						}
 					}
 					else
 					{
-						<span class="chip ph" aria-hidden="true">— inv</span>
+						<span class="chip ph" aria-hidden="true">— INV</span>
 					}
 					@if (u.FeelNoPains.Count > 0)
 					{
