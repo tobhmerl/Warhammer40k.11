@@ -903,6 +903,17 @@ html[data-scroll="up"] .hud.sticky {
     border-bottom: 1px solid var(--border);
 }
 
+/* Focus mode: the chips live in the Now ribbon, so this header is only the collapse toggle — keep it to a
+   slim strip instead of a full-height row. */
+.deck .u-head {
+    align-items: center;
+    padding: 0.2rem 0.9rem;
+}
+
+.deck .u-head .chev {
+    margin-top: 0;
+}
+
 /* ---- Collapsible header ---- */
 .u-toggle {
     flex: 1;
