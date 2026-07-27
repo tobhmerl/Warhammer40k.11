@@ -85,6 +85,18 @@
 				@if (TargetIsOpponent)
 				{
 					<button type="button" class="csim-btn tiny" @onclick="OpenImport">Import opponent ↑</button>
+					@if (Opponent.Count > 0)
+					{
+						@if (_confirmClearOpponent)
+						{
+							<button type="button" class="csim-btn tiny danger" @onclick="ClearOpponent" title="Discard the imported opponent army">Clear — sure?</button>
+							<button type="button" class="csim-btn tiny" @onclick="() => _confirmClearOpponent = false">Keep</button>
+						}
+						else
+						{
+							<button type="button" class="csim-btn tiny" @onclick="() => _confirmClearOpponent = true" title="Discard the imported opponent army and start over">Clear opponent</button>
+						}
+					}
 				}
 			</div>
 			<UnitPicker Units="TargetPool" Selected="_target" SelectedChanged="OnTargetChanged" />
@@ -179,6 +191,9 @@
 	// My army = native Necrons; Opponent = imported. The direction toggle swaps which is attacker/target.
 	private bool _myArmyAttacks = true;
 	private bool _importOpen;
+
+	// Clearing the opponent throws away an import, so it is confirmed rather than fired on a stray tap.
+	private bool _confirmClearOpponent;
 
 	private readonly List<CombatUnit> _native = [];
 	private CombatUnit? _attacker;
@@ -469,6 +484,31 @@
 	}
 
 	private void CloseImport() => _importOpen = false;
+
+	/// <summary>
+	/// Drops the imported opponent army entirely. Imports accumulate, so this is also the way to start over
+	/// after importing the wrong list. Any attacker/target picked from the opponent pool is cleared with it,
+	/// otherwise the page would keep pointing at a unit that no longer exists.
+	/// </summary>
+	private void ClearOpponent()
+	{
+		Imported.Clear();
+		_importedCount = 0;
+		_importWarnings.Clear();
+		_importText = "";
+
+		if (_attacker is not null && !MyArmy.Contains(_attacker))
+		{
+			_attacker = null;
+			_weaponSelection.Reset(null);
+		}
+		if (_target is not null && !MyArmy.Contains(_target))
+			_target = null;
+
+		_result = null;
+		_confirmClearOpponent = false;
+		_ = SaveAsync();
+	}
 
 	private async Task OnFileSelected(InputFileChangeEventArgs e)
 	{

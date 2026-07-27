@@ -363,6 +363,12 @@
     font-size: 0.75rem;
 }
 
+/* Destructive confirmation (discarding the imported opponent army). */
+.csim-btn.danger {
+    border-color: var(--danger, #ff5f56);
+    color: var(--danger, #ff5f56);
+}
+
 .csim-btn.primary {
     background: linear-gradient(180deg, var(--accent-strong, #7fe3b0), var(--accent-deep, #2f6b4d));
     color: #04130d;
