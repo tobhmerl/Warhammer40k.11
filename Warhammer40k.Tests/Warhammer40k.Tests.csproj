@@ -21,6 +21,7 @@
   <ItemGroup>
     <!-- CombatSimulator feature (removable): importer fixture copied next to the test assembly. -->
     <Content Include="CombatSimulator\Fixtures\dark-angels-sample.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="CombatSimulator\Fixtures\roster-export-sample.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

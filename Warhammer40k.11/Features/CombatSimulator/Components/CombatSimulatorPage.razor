@@ -166,7 +166,7 @@
 					<h2 class="csim-h2">Import opponent army</h2>
 					<button type="button" class="csim-modal-x" @onclick="CloseImport" aria-label="Close">×</button>
 				</div>
-				<p class="csim-note">New Recruit / BattleScribe 11th-edition JSON. Upload a file or paste the export.</p>
+				<p class="csim-note">Upload a file or paste the export. Both formats are recognised automatically: this app's own roster export (Export JSON in the roster editor) and New Recruit / BattleScribe 11th-edition JSON.</p>
 
 				<label class="csim-file">
 					<InputFile OnChange="OnFileSelected" accept=".json,application/json" />
@@ -497,7 +497,7 @@
 	{
 		_importWarnings.Clear();
 		var json = _importText;
-		var result = NewRecruitImporter.Import(json);
+		var result = ArmyImporter.Import(json);
 		Imported.Add(json, result.Units);
 		_importedCount = result.Units.Count;
 		_importWarnings.AddRange(result.Warnings);

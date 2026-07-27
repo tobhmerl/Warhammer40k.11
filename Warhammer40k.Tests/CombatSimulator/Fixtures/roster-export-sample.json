@@ -1,0 +1,370 @@
+{
+  "schema": "tombworld.roster-export/1",
+  "note": "All conferrals from attached Leaders are shown as active. Azrael is attached to the Hellblaster Squad; the Librarian is attached to the Inner Circle Companions.",
+  "roster": {
+    "name": "Dark Angels 1485",
+    "faction": "Dark Angels",
+    "pointsLimit": 2000,
+    "totalPoints": 1485,
+    "detachmentPointsSpent": 3,
+    "detachmentPointsBudget": 3
+  },
+  "detachments": [
+    {
+      "name": "Inner Circle Task Force",
+      "detachmentPoints": 2,
+      "disposition": "Priority Assets",
+      "rules": [
+        {
+          "name": "Vowed Target",
+          "text": "Each time a Deathwing Infantry unit from your army makes an attack that targets a unit within range of one or more of your Vowed objective markers, add 1 to the Wound roll."
+        }
+      ],
+      "enhancements": [],
+      "stratagems": []
+    }
+  ],
+  "armyRules": [
+    {
+      "name": "Oath of Moment",
+      "text": "At the start of your Command phase, select one unit from your opponent's army."
+    }
+  ],
+  "coreStratagems": [],
+  "units": [
+    {
+      "name": "Hellblaster Squad + Azrael",
+      "points": 360,
+      "isWarlord": true,
+      "isAttachedUnit": true,
+      "totalModels": 10,
+      "keywords": [
+        "Infantry",
+        "Imperium",
+        "Faction: Adeptus Astartes",
+        "Hellblaster Squad",
+        "Character",
+        "Epic Hero",
+        "Azrael",
+        "Faction: Dark Angels",
+        "Deathwing"
+      ],
+      "invulnerableSaves": [
+        {
+          "value": "4+",
+          "appliesTo": "unit"
+        }
+      ],
+      "feelNoPains": [],
+      "conferredUnitAbilities": [
+        "Invulnerable Save 4+",
+        "Sustained Hits 1"
+      ],
+      "abilities": [
+        {
+          "name": "Supreme Grand Master",
+          "text": "While this model is leading a unit, weapons equipped by models in that unit have the [SUSTAINED HITS 1] ability.",
+          "from": "Azrael",
+          "applies": "Sustained Hits 1 for weapons equipped by models in this unit"
+        },
+        {
+          "name": "The Lion Helm",
+          "text": "Models in the bearer's unit have a 4+ invulnerable save.",
+          "from": "Azrael",
+          "applies": "Invulnerable Save 4+ for the unit"
+        }
+      ],
+      "models": [
+        {
+          "name": "Hellblaster",
+          "models": 9,
+          "woundsPerModel": 2,
+          "statline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "3+",
+            "w": "2",
+            "ld": "6+",
+            "oc": "1"
+          },
+          "baseStatline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "3+",
+            "w": "2",
+            "ld": "6+",
+            "oc": "1"
+          },
+          "weapons": [
+            {
+              "name": "Close combat weapon",
+              "type": "Melee",
+              "range": "Melee",
+              "attacks": "3",
+              "skill": "3+",
+              "strength": "4",
+              "ap": "0",
+              "damage": "1",
+              "modelsCarrying": 9,
+              "abilities": [
+                "Sustained Hits 1"
+              ]
+            },
+            {
+              "name": "Plasma Incinerator - Supercharge",
+              "type": "Ranged",
+              "range": "24\"",
+              "attacks": "2",
+              "skill": "3+",
+              "strength": "8",
+              "ap": "-3",
+              "damage": "2",
+              "abilities": [
+                "Assault",
+                "Heavy",
+                "Hazardous",
+                "Sustained Hits 1"
+              ],
+              "modelsCarrying": 9
+            }
+          ]
+        },
+        {
+          "name": "Azrael",
+          "models": 1,
+          "woundsPerModel": 6,
+          "statline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "2+",
+            "w": "6",
+            "ld": "6+",
+            "oc": "1"
+          },
+          "baseStatline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "2+",
+            "w": "6",
+            "ld": "6+",
+            "oc": "1"
+          },
+          "weapons": [
+            {
+              "name": "Lion's Wrath",
+              "type": "Ranged",
+              "range": "24\"",
+              "attacks": "2",
+              "skill": "2+",
+              "strength": "8",
+              "ap": "-3",
+              "damage": "2",
+              "abilities": [
+                "Anti-Infantry 4+",
+                "Devastating Wounds",
+                "Rapid Fire 1",
+                "Sustained Hits 1"
+              ],
+              "modelsCarrying": 1
+            },
+            {
+              "name": "The Sword of Secrets",
+              "type": "Melee",
+              "range": "Melee",
+              "attacks": "6",
+              "skill": "2+",
+              "strength": "6",
+              "ap": "-4",
+              "damage": "2",
+              "abilities": [
+                "Devastating Wounds",
+                "Sustained Hits 1"
+              ],
+              "modelsCarrying": 1
+            }
+          ],
+          "isLeader": true
+        }
+      ],
+      "appliedModifiers": [
+        "Invulnerable Save 4+",
+        "[SUSTAINED HITS 1] (all weapons)"
+      ]
+    },
+    {
+      "name": "Inner Circle Companions + Librarian",
+      "points": 230,
+      "isAttachedUnit": true,
+      "totalModels": 7,
+      "keywords": [
+        "Infantry",
+        "Faction: Dark Angels",
+        "Inner Circle Companions",
+        "Psyker",
+        "Librarian"
+      ],
+      "invulnerableSaves": [
+        {
+          "value": "4+",
+          "appliesTo": "unit"
+        }
+      ],
+      "feelNoPains": [
+        {
+          "value": "4+ vs Psychic Attacks",
+          "appliesTo": "unit"
+        }
+      ],
+      "conferredUnitAbilities": [
+        "Invulnerable Save 4+",
+        "Feel No Pain 4+ against Psychic Attacks"
+      ],
+      "abilities": [
+        {
+          "name": "Psychic Hood",
+          "text": "While this model is leading a unit, models in that unit have the Feel No Pain 4+ ability against Psychic Attacks.",
+          "from": "Librarian",
+          "applies": "Feel No Pain 4+ against Psychic Attacks"
+        }
+      ],
+      "models": [
+        {
+          "name": "Inner Circle Companion",
+          "models": 6,
+          "woundsPerModel": 3,
+          "statline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "3+",
+            "w": "3",
+            "ld": "6+",
+            "oc": "2"
+          },
+          "weapons": [
+            {
+              "name": "Calibanite Greatsword - Sweep",
+              "type": "Melee",
+              "range": "Melee",
+              "attacks": "5",
+              "skill": "3+",
+              "strength": "6",
+              "ap": "-2",
+              "damage": "1",
+              "abilities": [
+                "Sustained Hits 2"
+              ],
+              "modelsCarrying": 6
+            }
+          ]
+        },
+        {
+          "name": "Librarian",
+          "models": 1,
+          "woundsPerModel": 4,
+          "statline": {
+            "m": "6\"",
+            "t": "4",
+            "sv": "3+",
+            "w": "4",
+            "ld": "6+",
+            "oc": "1"
+          },
+          "weapons": [
+            {
+              "name": "Smite - Witchfire",
+              "type": "Ranged",
+              "range": "24\"",
+              "attacks": "D6",
+              "skill": "3+",
+              "strength": "5",
+              "ap": "-1",
+              "damage": "D3",
+              "abilities": [
+                "Psychic"
+              ],
+              "modelsCarrying": 1
+            }
+          ],
+          "isLeader": true
+        }
+      ],
+      "appliedModifiers": [
+        "Invulnerable Save 4+",
+        "Feel No Pain 4+ against Psychic Attacks"
+      ]
+    },
+    {
+      "name": "Ballistus Dreadnought",
+      "points": 150,
+      "totalModels": 1,
+      "keywords": [
+        "Vehicle",
+        "Walker",
+        "Ballistus Dreadnought",
+        "Faction: Adeptus Astartes"
+      ],
+      "invulnerableSaves": [],
+      "feelNoPains": [],
+      "abilities": [
+        {
+          "name": "Ballistus Strike",
+          "text": "Each time this model makes a ranged attack that targets a unit that is not Below Half-strength, you can re-roll the Hit roll.",
+          "from": "Ballistus Dreadnought"
+        }
+      ],
+      "models": [
+        {
+          "name": "Ballistus Dreadnought",
+          "models": 1,
+          "woundsPerModel": 12,
+          "statline": {
+            "m": "8\"",
+            "t": "10",
+            "sv": "2+",
+            "w": "12",
+            "ld": "6+",
+            "oc": "4"
+          },
+          "weapons": [
+            {
+              "name": "Ballistus Lascannon",
+              "type": "Ranged",
+              "range": "48\"",
+              "attacks": "2",
+              "skill": "3+",
+              "strength": "12",
+              "ap": "-3",
+              "damage": "D6+1",
+              "modelsCarrying": 1
+            },
+            {
+              "name": "Ballistus Missile Launcher - Frag",
+              "type": "Ranged",
+              "range": "48\"",
+              "attacks": "2D6",
+              "skill": "3+",
+              "strength": "5",
+              "ap": "0",
+              "damage": "1",
+              "abilities": [
+                "Blast"
+              ],
+              "modelsCarrying": 1
+            },
+            {
+              "name": "Armoured Feet",
+              "type": "Melee",
+              "range": "Melee",
+              "attacks": "5",
+              "skill": "3+",
+              "strength": "7",
+              "ap": "0",
+              "damage": "1",
+              "modelsCarrying": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
