@@ -134,14 +134,22 @@
 
 		<section class="csim-run">
 			<label class="csim-field">Iterations
-				<input type="number" min="100" max="100000" step="1000" @bind="_iterations" />
+				<input type="number" min="100" max="100000" step="1000" @bind="_iterations"
+					   title="How many games to simulate. More runs give a steadier average but take longer." />
 			</label>
 			<label class="csim-field">Seed
-				<input type="number" @bind="_seed" placeholder="random" />
+				<input type="number" @bind="_seed" placeholder="random"
+					   title="Leave empty for fresh dice every run. Enter any number to replay the exact same dice, so two setups can be compared without luck getting in the way." />
 			</label>
 			<button class="csim-btn primary" type="button" @onclick="RunAsync" disabled="@(_running || !CanRun)">
 				@(_running ? $"Running… {_progress:P0}" : "Run simulation")
 			</button>
+			@* The seed is the one control here whose purpose is not self-evident, so spell it out. *@
+			<p class="csim-run-hint">
+				<strong>Seed</strong> is optional. Empty means fresh dice each run. Type any number (e.g. <code>1</code>)
+				to lock the dice: the same setup then always gives the identical result, so when you change one thing
+				you see that change alone rather than a different roll of the dice.
+			</p>
 		</section>
 
 		@if (_result is not null)

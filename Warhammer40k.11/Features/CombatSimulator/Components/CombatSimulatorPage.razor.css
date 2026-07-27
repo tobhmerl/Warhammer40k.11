@@ -396,6 +396,27 @@
     font-size: 1rem;
 }
 
+/* Explains the Seed field below the run row; full width so it never squeezes the inputs. */
+.csim-run-hint {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-dim, #9fb4a8);
+}
+
+.csim-run-hint strong {
+    color: var(--text, #d8e6dd);
+}
+
+.csim-run-hint code {
+    font-size: 0.74rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 4px;
+    background: rgba(127, 227, 176, 0.12);
+    color: var(--accent, #5cc99a);
+}
+
 /* Stacked label + control (used in the run row and weapon rows). */
 .csim-field,
 .csim ::deep .csim-field {
