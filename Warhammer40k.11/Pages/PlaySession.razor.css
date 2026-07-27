@@ -165,6 +165,14 @@ html[data-scroll="up"] .hud.sticky {
     font-size: 0.76rem;
 }
 
+/* The focused unit's always-on chip strip, directly under the ribbon header: all of a unit's written rules
+   (invuln/FNP/Warlord, then its always-on abilities) sit in the same panel as the actions usable right now. */
+.now-chips {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
 .now-actions {
     display: grid;
     grid-template-columns: repeat(var(--now-columns, 3), minmax(0, 1fr));
@@ -663,8 +671,9 @@ html[data-scroll="up"] .hud.sticky {
     overflow: visible;
 }
 
-/* Count badge on a deck pill: abilities usable now (green) | stratagems usable now (amber). A segment shows
-   "–" when its count is zero, so "2 | –" = two abilities and no stratagem, "– | 1" = one stratagem only. */
+/* Count badge on a deck pill: abilities usable now (green) | always-on abilities (grey) | stratagems usable
+   now (blue, matching the stratagem cards). A segment shows "–" when its count is zero, so "2 | 4 | –" = two
+   abilities now, four always-on rules and no stratagem. */
 .dd-badge {
     display: inline-flex;
     align-items: center;
@@ -686,8 +695,12 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--accent-strong);
 }
 
+.dd-always {
+    color: var(--text-dim);
+}
+
 .dd-strat {
-    color: #fbbf24;
+    color: #60a5fa;
 }
 
 .dd-sep {
@@ -696,6 +709,7 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .dd-ability.none,
+.dd-always.none,
 .dd-strat.none {
     color: var(--text-faint);
 }
@@ -719,8 +733,9 @@ html[data-scroll="up"] .hud.sticky {
     color: #04130d;
 }
 
-/* Against the bright active fill, force all three segments to the dark ink for legibility. */
+/* Against the bright active fill, force all segments to the dark ink for legibility. */
 .deck-dot.on .dd-ability,
+.deck-dot.on .dd-always,
 .deck-dot.on .dd-strat,
 .deck-dot.on .dd-sep {
     color: #04130d;

@@ -59,19 +59,24 @@ else
 						var index = i;
 						var u = ordered[index];
 						var dUsable = IsDead(u) ? 0 : AvailableNowCount(u);
+						var dAlways = IsDead(u) ? 0 : AlwaysAbilityCount(u);
 						var dStrat = IsDead(u) ? 0 : StratagemsNowCount(u);
 						var dShock = MyCommandPhase && NeedsBattleShock(u);
 						var dReanim = MyCommandPhase && !dShock && NeedsReanimation(u);
 						var dState = dShock ? " · battle-shock" : dReanim ? " · can reanimate" : "";
-						var dCounts = (dUsable > 0 || dStrat > 0) ? $" · {dUsable} ability/{dStrat} stratagem usable now" : "";
+						var dCounts = (dUsable > 0 || dAlways > 0 || dStrat > 0)
+							? $" · {dUsable} ability now/{dAlways} always/{dStrat} stratagem"
+							: "";
 						<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "") @(dShock ? "shocked" : "") @(dReanim ? "reanimate" : "")"
 								role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
 								title="@($"{u.Name}{dCounts}{dState}")" @onclick="() => SelectCard(index)">
 							<span class="dd-label">@DeckLabel(u)</span>
-							@if (dUsable > 0 || dStrat > 0)
+							@if (dUsable > 0 || dAlways > 0 || dStrat > 0)
 							{
 								<span class="dd-badge" aria-hidden="true">
 									<span class="dd-ability @(dUsable > 0 ? "" : "none")">@(dUsable > 0 ? dUsable.ToString() : "–")</span>
+									<span class="dd-sep">|</span>
+									<span class="dd-always @(dAlways > 0 ? "" : "none")">@(dAlways > 0 ? dAlways.ToString() : "–")</span>
 									<span class="dd-sep">|</span>
 									<span class="dd-strat @(dStrat > 0 ? "" : "none")">@(dStrat > 0 ? dStrat.ToString() : "–")</span>
 								</span>
@@ -128,6 +133,100 @@ else
 			var nowBuffs = NowBuffs;
 			var nowRules = UsableArmyRules;
 			var nowStrats = AffordableNowStratagems;
+
+			@* One shared chip strip (invuln / FNP / Warlord, then the always-on abilities). It lives in the Now
+			   ribbon in focus mode — where the ribbon is scoped to the active unit, so all of a unit's written
+			   rules sit in one place — and on the unit card in list mode, where the ribbon is army-wide. *@
+			RenderFragment<BattleUnit> unitChips = u =>
+			@<span class="u-chips">
+				@{
+					var uDead = IsDead(u);
+					var uEffectAlways = u.CombinedAbilities.Where(IsEffectAlways).ToList();
+					var uKeyword = u.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
+					var uAlways = u.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
+					var uCore = u.CoreAbilities;
+					var uHasAbilityLine = !uDead && (uKeyword.Count > 0 || uAlways.Count > 0 || uCore.Count > 0 || uEffectAlways.Count > 0);
+				}
+				@* Line 1 — Invulnerable, Feel No Pain, then Warlord (fixed slots; "-" placeholder when absent) *@
+				<span class="chip-line">
+					@if (u.InvulnerableSaves.Count > 0)
+					{
+						@foreach (var inv in u.InvulnerableSaves)
+						{
+							<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
+								@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
+							</span>
+						}
+					}
+					else
+					{
+						<span class="chip ph" aria-hidden="true">— inv</span>
+					}
+					@if (u.FeelNoPains.Count > 0)
+					{
+						@foreach (var fnp in u.FeelNoPains)
+						{
+							<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
+								FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
+							</span>
+						}
+					}
+					else
+					{
+						<span class="chip ph" aria-hidden="true">— FNP</span>
+					}
+					@if (u.IsWarlord)
+					{
+						<span class="chip warlord">Warlord</span>
+					}
+				</span>
+				@* Line 2 — always-available abilities and keywords; current-window actions are the ribbon's cards. *@
+				<span class="chip-line">
+					@if (uHasAbilityLine)
+					{
+						@foreach (var a in uKeyword)
+						{
+							<span class="chip keyword" role="button" tabindex="0"
+								  title="@($"{a.Ability.Name} — tap to read its rules")"
+								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
+								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
+								@a.ManualKeyword
+							</span>
+						}
+						@foreach (var a in uAlways)
+						{
+							<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
+								  title="@($"{a.Ability.Name} — tap to read its rules")"
+								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
+								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
+								@a.Ability.Name
+							</span>
+						}
+						@foreach (var a in uEffectAlways)
+						{
+							<span class="chip effect toggle @(IsEffectActive(u, a) ? "on" : "")" role="button" tabindex="0"
+								  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
+								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
+								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
+								@a.Ability.Name
+							</span>
+						}
+						@foreach (var a in uCore)
+						{
+							<span class="chip ability" role="button" tabindex="0"
+								  title="@($"{a.Ability.Name} — tap to read its rules")"
+								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
+								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
+								@a.Ability.Name
+							</span>
+						}
+					}
+					else
+					{
+						<span class="chip ph" aria-hidden="true">— always-on</span>
+					}
+				</span>
+			</span>;
 		}
 		<section class="now-ribbon" aria-label="Available now">
 			<div class="now-head">
@@ -135,6 +234,10 @@ else
 				<strong>@NowContextLabel</strong>
 				<span class="now-count">@AvailableNowTotal</span>
 			</div>
+			@if (NowUnit is { } chipUnit)
+			{
+				<div class="now-chips">@unitChips(chipUnit)</div>
+			}
 			@if (AvailableNowTotal == 0)
 			{
 				<p class="now-empty">Nothing scheduled for this battle window.</p>
@@ -233,12 +336,6 @@ else
 					var collapsed = IsCollapsed(unit);
 					var reanimate = MyCommandPhase && NeedsReanimation(unit);
 					var battleShock = MyCommandPhase && NeedsBattleShock(unit);
-					var effectAlways = unit.CombinedAbilities.Where(IsEffectAlways).ToList();
-					var keywordAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
-					var alwaysAbilities = unit.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
-					var coreAbilities = unit.CoreAbilities;
-					var warlordShown = unit.IsWarlord;
-					var hasAbilityLine = !dead && (keywordAbilities.Count > 0 || alwaysAbilities.Count > 0 || coreAbilities.Count > 0 || effectAlways.Count > 0);
 					<li class="unit @(dead ? "dead" : "") @((reanimate || battleShock) ? "attention" : "")" @key="unit.Id">
 						<div class="u-head">
 							<button class="u-toggle" type="button" @onclick="() => ToggleCard(unit)"
@@ -248,104 +345,12 @@ else
 									@if (!_cardSwipe)
 									{
 										<span class="u-name">@unit.Name</span>
+										@* List mode only: here the Now ribbon is army-wide, so each card carries its own chip
+										   strip. In focus mode the ribbon is scoped to this unit and shows the chips instead. *@
+										@unitChips(unit)
 									}
-									<span class="u-chips">
-											@* Line 1 — Invulnerable, Feel No Pain, then Warlord (fixed slots; "-" placeholder when absent) *@
-											<span class="chip-line">
-												@if (unit.InvulnerableSaves.Count > 0)
-												{
-													@foreach (var inv in unit.InvulnerableSaves)
-													{
-														<span class="chip inv @(inv.UnitWide ? "scope-unit" : "scope-model")" title="@(inv.UnitWide ? "Whole unit" : inv.ModelName + " only")">
-															@inv.Value inv<span class="scope">@(inv.UnitWide ? "unit" : inv.ModelName)</span>
-														</span>
-													}
-												}
-												else
-												{
-													<span class="chip ph" aria-hidden="true">— inv</span>
-												}
-												@if (unit.FeelNoPains.Count > 0)
-												{
-													@foreach (var fnp in unit.FeelNoPains)
-													{
-														<span class="chip fnp @(fnp.UnitWide ? "scope-unit" : "scope-model")" title="@(fnp.UnitWide ? "Whole unit" : fnp.ModelName + " only")">
-															FNP @fnp.Value<span class="scope">@(fnp.UnitWide ? "unit" : fnp.ModelName)</span>
-														</span>
-													}
-												}
-												else
-												{
-													<span class="chip ph" aria-hidden="true">— FNP</span>
-												}
-												@if (warlordShown)
-												{
-													<span class="chip warlord">Warlord</span>
-												}
-											</span>
-										@* Line 2 — always-available abilities and keywords; current-window actions live only in the Now ribbon. *@
-											<span class="chip-line">
-												@if (hasAbilityLine)
-												{
-													@foreach (var a in keywordAbilities)
-													{
-														<span class="chip keyword" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.ManualKeyword
-														</span>
-													}
-													@foreach (var a in alwaysAbilities)
-													{
-														<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
-														</span>
-													}
-													@foreach (var a in effectAlways)
-													{
-														<span class="chip effect toggle @(IsEffectActive(unit, a) ? "on" : "")" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
-														</span>
-													}
-													@foreach (var a in coreAbilities)
-													{
-														<span class="chip ability" role="button" tabindex="0"
-															  title="@($"{a.Ability.Name} — tap to read its rules")"
-															  @onclick="() => OpenAbilityCard(unit, a)" @onclick:stopPropagation="true"
-															  @onkeydown="e => OnAbilityChipKey(e, unit, a)" @onkeydown:stopPropagation="true">
-															@a.Ability.Name
-														</span>
-													}
-												}
-												else
-												{
-													<span class="chip ph" aria-hidden="true">— always-on</span>
-												}
-											</span>
-										</span>
 								</span>
 							</button>
-							@if (UnitTracksWounds(unit))
-							{
-								<span class="u-models" title="@($"Wounds remaining — {GroupModels(unit)} {(GroupModels(unit) == 1 ? "model" : "models")} alive")">
-									<span class="um-value @(dead ? "gone" : "")">@GroupWounds(unit)<span class="um-max">/@GroupWoundsMax(unit)</span></span>
-									<span class="um-label">wounds</span>
-								</span>
-							}
-							else
-							{
-								<span class="u-models" title="Models remaining">
-									<span class="um-value @(dead ? "gone" : "")">@GroupModels(unit)</span>
-									<span class="um-label">@(GroupModels(unit) == 1 ? "model" : "models")</span>
-								</span>
-							}
 						</div>
 
 						@if (!collapsed)
@@ -1774,14 +1779,6 @@ else
 
 	private int GroupModels(BattleUnit unit) => unit.Parts.Sum(PartModelsAlive);
 
-	// True when every part of the unit tracks wounds (fixed Wounds), so the header can show a wound pool.
-	private bool UnitTracksWounds(BattleUnit unit) => unit.Parts.All(p => p.TracksWounds);
-
-	// The unit's current / maximum total wound pool, summed across the bodyguard and any attached Leaders.
-	private int GroupWounds(BattleUnit unit) => unit.Parts.Sum(PartCurrent);
-
-	private int GroupWoundsMax(BattleUnit unit) => unit.Parts.Sum(p => p.TrackMax);
-
 	private bool IsDead(BattleUnit unit) => unit.Parts.All(PartDown);
 
 	private string TotalAttacks(BattlePart part, WeaponProfile weapon, IReadOnlyList<StatModifier> weaponMods) =>
@@ -1966,6 +1963,13 @@ else
 	// True when this ability is a once-per-battle item the player has already ticked "used" for this unit.
 	private bool IsOncePerBattleUsedAbility(BattleUnit unit, BattleAbility ability) =>
 		IsOncePerBattleAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability));
+
+	// The unit's always-on written rules — the chip strip's second line (keyword, always-available and core
+	// abilities plus conditional effects that aren't scheduled now). Drives the deck pill's "always" segment.
+	private int AlwaysAbilityCount(BattleUnit unit) =>
+		unit.CombinedAbilities.Count(a => IsEffectAlways(a)
+			|| (!HasEffectKeywords(a) && (a.HasManualKeyword || a.IsAlwaysAvailable)))
+		+ unit.CoreAbilities.Count;
 
 	private static string EffectLabel(BattleAbility ability) =>
 		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));

@@ -3,6 +3,9 @@
 ## Project Guidelines
 - For this repo (Warhammer40k.11), ignore architecture changes proposed in specs (e.g., new projects like TombWorld.UI/TombWorld.Data, SQLite, MAUI/native). Always translate new requirements into the existing architecture: Blazor WASM (Warhammer40k.11) + Azure Functions isolated API (Warhammer40k.Api) + shared Warhammer40k.Core + Azure Table Storage persistence, with SWA built-in auth.
 
+## Git Workflow
+- For this repo (Warhammer40k.11), commit and push small, low-risk changes directly to `main` (Push to `main` triggers the Azure Static Web Apps deployment). For larger or riskier changes, implement them on a feature branch with a prior rollback tag, commit/push there, and merge into `main` with `--no-ff` after user approval; delete merged feature branches locally and on origin.
+
 ## Active work — Necron Army Builder
 - **Master plan & resume doc:** `docs/army-builder-plan.md` — delivered in packets **AB1–AB9**. On a fresh session, read it and continue from its **Current status** section.
 - **Catalogue seed data:** `Warhammer40k.Api/Seed/necron-catalogue-seed.json` (52 datasheets + 4 pantheon bindings) — load it, do not hand-type units.
