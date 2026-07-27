@@ -99,4 +99,43 @@ public class NativeNecronSourceTests
 
         Assert.Empty(plain.InheritedEffects);
     }
+
+    // Immortals led by a Plasmancer: "Harbinger of Destruction" makes a ranged Hit roll of 5+ a critical hit.
+    private static CombatUnit MapImmortalsWithPlasmancer(bool applied)
+    {
+        var catalogue = CatalogueProvider.LoadEmbedded();
+        var roster = new Roster
+        {
+            Units =
+            [
+                new RosterUnit { Id = "bodyguard", DatasheetId = "immortals", ModelCount = 10 },
+                new RosterUnit { Id = "leader", DatasheetId = "plasmancer", ModelCount = 1, AttachedToRosterUnitId = "bodyguard" },
+            ],
+        };
+        if (applied)
+            roster.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility("plasmancer", "Harbinger of Destruction")).ApplyToUnit = true;
+
+        var battle = BattleRoster.Build(roster, catalogue);
+        return NativeNecronSource.FromBattleUnit(battle, battle.Units.Single());
+    }
+
+    [Fact]
+    public void Plasmancer_critical_hit_on_five_reaches_ranged_weapons()
+    {
+        var combat = MapImmortalsWithPlasmancer(applied: true);
+
+        var ranged = combat.AllWeapons.Where(w => !w.IsMelee).ToList();
+        Assert.NotEmpty(ranged);
+        Assert.All(ranged, w => Assert.Equal(5, w.CriticalHitOn));
+        Assert.Contains(combat.InheritedEffects, e => e.Contains("Critical hit 5+", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Plasmancer_critical_hit_does_not_reach_melee_weapons()
+    {
+        var combat = MapImmortalsWithPlasmancer(applied: true);
+
+        // The ability is worded for ranged attacks only, so melee keeps the unmodified 6+.
+        Assert.All(combat.AllWeapons.Where(w => w.IsMelee), w => Assert.Null(w.CriticalHitOn));
+    }
 }

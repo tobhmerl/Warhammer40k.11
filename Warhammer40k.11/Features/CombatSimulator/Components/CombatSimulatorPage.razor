@@ -262,13 +262,60 @@
 			return;
 		try
 		{
-			var battle = BattleRoster.Build(roster, _catalogue);
+			// The simulator answers "what does this unit do when it attacks", so every effect the roster
+			// already grants counts — including the detachment's buffs and the leader/enhancement conferrals
+			// that Play Mode only applies once ticked. Built from a copy so the stored roster is untouched.
+			var detachments = roster.DetachmentIds
+				.Select(DetachmentCatalogue.FindById)
+				.OfType<Detachment>()
+				.ToList();
+			var battle = BattleRoster.Build(WithAllConferralsApplied(roster), _catalogue, detachments);
 			_native.AddRange(NativeNecronSource.FromBattleRoster(battle));
 		}
 		catch
 		{
 			// A roster that can't be built (missing datasheet, etc.) leaves the pool empty.
 		}
+	}
+
+	/// <summary>
+	/// A shallow copy of <paramref name="roster"/> whose ability schedules all have "apply to unit" set, so
+	/// leader conferrals and enhancements reach the simulator without the player having to tick them in Play
+	/// Mode setup. Units are shared (never mutated); only the schedule list is rebuilt.
+	/// </summary>
+	private Roster WithAllConferralsApplied(Roster roster)
+	{
+		var copy = new Roster
+		{
+			Id = roster.Id,
+			Name = roster.Name,
+			Faction = roster.Faction,
+			PointsLimit = roster.PointsLimit,
+			DetachmentId = roster.DetachmentId,
+			DetachmentIds = roster.DetachmentIds,
+			Units = roster.Units,
+			AbilitySchedules = roster.AbilitySchedules
+				.Select(s => new AbilitySchedule { Key = s.Key, Windows = s.Windows, ApplyToUnit = true, ManualKeyword = s.ManualKeyword })
+				.ToList(),
+		};
+
+		foreach (var unit in roster.Units)
+		{
+			// Every conferral a leader's datasheet can hand down.
+			if (_catalogue.FindById(unit.DatasheetId) is { } sheet)
+			{
+				foreach (var conferral in sheet.LeaderConferrals.Where(c => !string.IsNullOrEmpty(c.SourceAbility)))
+					copy.GetOrCreateSchedule(AbilityScheduleKeys.ForUnitAbility(sheet.Id, conferral.SourceAbility)).ApplyToUnit = true;
+			}
+
+			// A setup-assigned enhancement's stat modifiers.
+			if (!string.IsNullOrEmpty(unit.AssignedEnhancementId))
+				copy.GetOrCreateSchedule(AbilityScheduleKeys.ForEnhancement(unit.AssignedEnhancementId)).ApplyToUnit = true;
+		}
+
+		// Conditional detachment buffs are deliberately left off: they depend on board state ("+1 to Hit while
+		// the target is on an objective"), so they stay a manual choice in the modifier panel.
+		return copy;
 	}
 
 	// Rebuilds the whole page state from the persisted snapshot (imported army, selections, modifiers).
