@@ -69,8 +69,13 @@ public sealed class AttackResolver
         foreach (var weapon in _config.Weapons)
             ResolveWeapon(weapon, tally);
 
-        // Effective damage is capped at the unit's starting total wounds.
-        tally.EffectiveDamage = Math.Min(tally.DamageDealt, _totalWounds);
+        // Wounds that actually came off the target: what the wound pool lost. This is NOT the damage rolled,
+        // because damage spilling past a dying model's last wound is discarded (a D2 hit on a 1-wound model
+        // removes 1 wound, not 2). Capping the rolled damage at the unit total would over-report that overkill.
+        var remaining = 0;
+        for (var i = 0; i < _woundPool.Count; i++)
+            remaining += _woundPool[i];
+        tally.EffectiveDamage = _totalWounds - remaining;
         tally.ModelsSlain = CountSlain();
     }
 

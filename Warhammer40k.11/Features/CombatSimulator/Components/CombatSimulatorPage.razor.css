@@ -643,6 +643,18 @@
     margin: 0 0 0.5rem;
 }
 
+/* Explains the gap between damage rolled and wounds removed — muted, since it is a footnote to the funnel. */
+.csim ::deep .csim-overkill {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-dim, #9fb4a8);
+    margin: 0 0 0.75rem;
+}
+
+.csim ::deep .csim-overkill strong {
+    color: var(--text, #d8e6dd);
+}
+
 .csim ::deep .csim-wipe strong {
     color: var(--accent-strong, #7fe3b0);
 }

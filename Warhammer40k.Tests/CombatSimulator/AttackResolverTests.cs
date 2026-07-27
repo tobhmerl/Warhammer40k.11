@@ -259,4 +259,36 @@ public class AttackResolverTests
         var cf = result.ExpectedValue.Damage;
         Assert.True(Math.Abs(mc - cf) / Math.Max(0.01, cf) < 0.05, $"MC {mc} vs CF {cf}");
     }
+
+    [Fact]
+    public void Effective_damage_counts_wounds_removed_not_damage_rolled()
+    {
+        // D2 weapon into 1-wound models: every failed save wastes a point of overkill, so the wounds actually
+        // removed must equal the models slain rather than twice that. This is the number the results screen
+        // reports, so it has to reconcile with "models destroyed".
+        var result = Run(Weapon(a: "1", skill: 2, s: "10", ap: -4, d: "2", models: 20),
+            Target(toughness: 4, save: 7, wounds: 1, models: 20));
+
+        Assert.Equal(result.Funnel.ModelsSlain, result.Funnel.EffectiveDamage, 1);
+        Assert.True(result.Funnel.DamageDealt > result.Funnel.EffectiveDamage,
+            $"rolled {result.Funnel.DamageDealt} should exceed removed {result.Funnel.EffectiveDamage}");
+    }
+
+    [Fact]
+    public void Effective_damage_never_exceeds_the_units_wound_pool()
+    {
+        var result = Run(Weapon(a: "6", skill: 2, s: "10", ap: -4, d: "3", models: 10),
+            Target(toughness: 4, save: 7, wounds: 2, models: 5));
+
+        Assert.True(result.EffectiveDamage.Max <= 10, $"max {result.EffectiveDamage.Max} exceeds the 10-wound pool");
+    }
+
+    [Fact]
+    public void Effective_damage_equals_damage_rolled_when_nothing_is_wasted()
+    {
+        // D1 into 1-wound models with no overkill possible: the two figures must agree exactly.
+        var result = Run(Weapon(a: "1", skill: 3, s: "4", ap: 0, d: "1", models: 10), Target(toughness: 4, save: 3));
+
+        Assert.Equal(result.Funnel.DamageDealt, result.Funnel.EffectiveDamage, 3);
+    }
 }

@@ -11,7 +11,7 @@
 		</div>
 		<div class="csim-big" title="@($"Exact average {Exact(Result.EffectiveDamage.Mean)}")">
 			<span class="csim-big-num">@Whole(Result.EffectiveDamage.Mean)</span>
-			<span class="csim-big-label">wounds dealt</span>
+			<span class="csim-big-label">of @TargetWounds wounds removed</span>
 			<span class="csim-big-sub">@Range(Result.EffectiveDamage) per game</span>
 		</div>
 	</div>
@@ -19,17 +19,29 @@
 	<p class="csim-plain">
 		On average, this attack lands <strong>@Whole(Result.Funnel.Hits) hits</strong>.
 		<strong>@Whole(WoundsCaused)</strong> of those wound the target, the defender fails
-		<strong>@Whole(FailedSaves) saves</strong>, and <strong>@Whole(Result.Funnel.EffectiveDamage) wounds</strong>
-		get through — destroying <strong>@Whole(Result.Funnel.ModelsSlain) of @TargetModels models</strong>.
+		<strong>@Whole(FailedSaves) saves</strong>, and those roll <strong>@Whole(Result.Funnel.DamageDealt) damage</strong>.
+		That removes <strong>@Whole(Result.Funnel.EffectiveDamage) of @TargetWounds wounds</strong> —
+		destroying <strong>@Whole(Result.Funnel.ModelsSlain) of @TargetModels models</strong>.
 	</p>
 
 	<ul class="csim-steps">
 		<li class="csim-step" title="@($"Exact average {Exact(Result.Funnel.Hits)}")"><span class="csim-step-label">Hits landed</span> <span class="csim-step-num">@Whole(Result.Funnel.Hits)</span></li>
 		<li class="csim-step" title="@($"Exact average {Exact(WoundsCaused)}")"><span class="csim-step-label">Of those, wounds caused</span> <span class="csim-step-num">@Whole(WoundsCaused)</span></li>
 		<li class="csim-step" title="@($"Exact average {Exact(FailedSaves)}")"><span class="csim-step-label">Saves the defender failed</span> <span class="csim-step-num">@Whole(FailedSaves)</span></li>
-		<li class="csim-step" title="@($"Exact average {Exact(Result.Funnel.EffectiveDamage)}")"><span class="csim-step-label">Wounds that got through</span> <span class="csim-step-num">@Whole(Result.Funnel.EffectiveDamage)</span></li>
+		<li class="csim-step" title="@($"Exact average {Exact(Result.Funnel.DamageDealt)} — the damage rolled, before overkill on a dying model is discarded")"><span class="csim-step-label">Damage rolled</span> <span class="csim-step-num">@Whole(Result.Funnel.DamageDealt)</span></li>
+		<li class="csim-step" title="@($"Exact average {Exact(Result.Funnel.EffectiveDamage)} of {TargetWounds} — damage past a model's last wound is lost, so this is usually below the damage rolled")"><span class="csim-step-label">Wounds actually removed</span> <span class="csim-step-num">@Whole(Result.Funnel.EffectiveDamage)</span></li>
 		<li class="csim-step strong" title="@($"Exact average {Exact(Result.Funnel.ModelsSlain)}")"><span class="csim-step-label">Models destroyed</span> <span class="csim-step-num">@Whole(Result.Funnel.ModelsSlain)</span></li>
 	</ul>
+
+	@if (OverkillPerGame >= 1)
+	{
+		@* The gap between damage rolled and wounds removed is the single most confusing number here, so name it. *@
+		<p class="csim-overkill">
+			<strong>@Whole(OverkillPerGame)</strong> damage per game is wasted as overkill — damage beyond a model's
+			last wound does not carry over to the next model. High-damage weapons lose the most against
+			many-models-few-wounds units.
+		</p>
+	}
 
 	<p class="csim-wipe">
 		Chance to wipe the whole unit: <strong>@P0(Result.ProbabilityWiped)</strong>
@@ -45,10 +57,14 @@
 @code {
 	[Parameter] public SimulationResult Result { get; set; } = new();
 	[Parameter] public int TargetModels { get; set; }
+	[Parameter] public int TargetWounds { get; set; }
 
 	// "Wounds caused" = successful wound rolls + lethal auto-wounds (everything that got past the to-wound step).
 	private double WoundsCaused => Result.Funnel.Wounds + Result.Funnel.LethalAutoWounds;
 	private double FailedSaves => Result.Funnel.FailedArmourSaves + Result.Funnel.FailedInvulnSaves;
+
+	// Damage rolled but never removed a wound, because it spilled past a dying model.
+	private double OverkillPerGame => Result.Funnel.DamageDealt - Result.Funnel.EffectiveDamage;
 
 	// Results are whole numbers: you either cause a wound or you don't, so an average of 1.6 is reported as the
 	// 1 you can count on. The precise average stays available as a tooltip, and the "usually X–Y" range below
