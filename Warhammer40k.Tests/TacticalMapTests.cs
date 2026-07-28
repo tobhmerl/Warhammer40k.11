@@ -16,6 +16,8 @@ public class TacticalMapTests
     [InlineData(new[] { "Vehicle" }, 90)]
     [InlineData(new[] { "Monster" }, 90)]
     [InlineData(new[] { "Mounted" }, 60)]
+    [InlineData(new[] { "Vehicle", "Titanic" }, 160)]
+    [InlineData(new[] { "Infantry", "Terminator" }, 40)]
     public void Base_size_defaults_follow_keywords(string[] keywords, int expectedMm)
     {
         Assert.Equal(expectedMm, BaseSizeDefaults.ForKeywords(keywords));
@@ -29,10 +31,44 @@ public class TacticalMapTests
     }
 
     [Fact]
-    public void Base_size_defaults_from_datasheet_use_its_keywords()
+    public void Known_datasheets_use_their_real_base_rather_than_the_keyword_guess()
     {
-        var vehicle = new Datasheet { Id = "monolith", Name = "Monolith", Keywords = ["Vehicle", "Titanic"] };
-        Assert.Equal(90, BaseSizeDefaults.ForDatasheet(vehicle));
+        // The Monolith is TITANIC but far larger than the generic titanic estimate; the table must win.
+        var monolith = new Datasheet { Id = "monolith", Name = "Monolith", Keywords = ["Vehicle", "Titanic"] };
+        Assert.Equal(180, BaseSizeDefaults.ForDatasheet(monolith));
+        Assert.True(BaseSizeDefaults.IsKnown("monolith"));
+    }
+
+    [Fact]
+    public void Datasheets_sharing_keywords_still_get_distinct_bases()
+    {
+        // Both are plain INFANTRY, so only an explicit entry can tell 32 mm from 50 mm.
+        var warriors = new Datasheet { Id = "necron-warriors", Name = "Necron Warriors", Keywords = ["Infantry", "Battleline"] };
+        var skorpekh = new Datasheet { Id = "skorpekh-destroyers", Name = "Skorpekh Destroyers", Keywords = ["Infantry"] };
+
+        Assert.Equal(32, BaseSizeDefaults.ForDatasheet(warriors));
+        Assert.Equal(50, BaseSizeDefaults.ForDatasheet(skorpekh));
+    }
+
+    [Fact]
+    public void Unknown_datasheets_fall_back_to_the_keyword_estimate()
+    {
+        var other = new Datasheet { Id = "some-space-marine-tank", Name = "Tank", Keywords = ["Vehicle"] };
+
+        Assert.False(BaseSizeDefaults.IsKnown(other.Id));
+        Assert.Equal(90, BaseSizeDefaults.ForDatasheet(other));
+    }
+
+    [Fact]
+    public void Token_radius_converts_millimetres_to_board_inches()
+    {
+        // A 32 mm base is 1.26" across, so it must occupy 0.63" of radius on a board measured in inches —
+        // this is what makes coherency and engagement range readable off the map.
+        var warrior = new MapToken { BaseMm = 32 };
+        Assert.Equal(0.63, Coherency.RadiusInches(warrior), 2);
+
+        var monolith = new MapToken { BaseMm = 180 };
+        Assert.Equal(3.54, Coherency.RadiusInches(monolith), 2);
     }
 
     [Fact]
@@ -190,5 +226,20 @@ public class TacticalMapTests
         // Index wraps around the palette length and never throws for large/negative indices.
         Assert.Equal(TokenStyle.Color(MapSide.Player, 0), TokenStyle.Color(MapSide.Player, TokenStyle.PlayerColors.Count));
         Assert.Equal(TokenStyle.PlayerColors[^1], TokenStyle.Color(MapSide.Player, -1));
+    }
+
+    [Fact]
+    public void Every_necron_datasheet_has_an_exact_base_size()
+    {
+        // A missing or misspelled id would silently fall back to a keyword guess and draw the model at the
+        // wrong size, which is exactly the failure this table exists to prevent.
+        var catalogue = Warhammer40k.Api.CatalogueProvider.LoadEmbedded();
+
+        var missing = catalogue.Datasheets
+            .Where(d => !BaseSizeDefaults.IsKnown(d.Id))
+            .Select(d => $"{d.Name} ({d.Id})")
+            .ToList();
+
+        Assert.True(missing.Count == 0, $"Datasheets without a base size: {string.Join(", ", missing)}");
     }
 }

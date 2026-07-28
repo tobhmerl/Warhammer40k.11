@@ -285,3 +285,13 @@
     font-size: .78rem;
     color: var(--muted, #9fb3aa);
 }
+
+/* Base-size picker: kept quiet, since it is a correction control rather than something to read constantly. */
+.legend-base {
+    font-size: .74rem;
+    padding: .1rem .2rem;
+    background: #0d1512;
+    color: var(--muted, #9fb3aa);
+    border: 1px solid var(--line, #2a3b34);
+    border-radius: 6px;
+}

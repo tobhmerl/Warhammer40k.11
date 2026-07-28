@@ -134,6 +134,15 @@
 						{
 							<span class="legend-stats">@LegendStats(g)</span>
 						}
+						<select class="legend-base" value="@g.BaseMm"
+								@onchange="e => SetUnitBaseAsync(g.Key, (string?)e.Value)"
+								title="Base diameter — tokens are drawn to this size against the board's inches"
+								aria-label="@($"Base size for {g.Name}")">
+							@foreach (var mm in BaseSizeOptions)
+							{
+								<option value="@mm" selected="@(mm == g.BaseMm)">@mm mm</option>
+							}
+						</select>
 						<span class="legend-count">@g.Count @(g.Count == 1 ? "model" : "models")</span>
 					</div>
 				}
@@ -277,7 +286,7 @@
 	}
 
 	// A distinct unit on the board (its models share a RosterUnitId), for the legend.
-	private sealed record UnitGroupView(string Key, string Name, string Abbrev, MapSide Side, int ColorIndex, int Count, double? MoveInches, double? WeaponRangeInches);
+	private sealed record UnitGroupView(string Key, string Name, string Abbrev, MapSide Side, int ColorIndex, int Count, double? MoveInches, double? WeaponRangeInches, int BaseMm);
 
 	private List<UnitGroupView> UnitGroups()
 	{
@@ -290,11 +299,25 @@
 			{
 				var first = grp.First();
 				return new UnitGroupView(grp.Key, first.Label, first.Abbrev, first.Side, first.ColorIndex, grp.Count(),
-					grp.Max(t => t.MoveInches), grp.Max(t => t.WeaponRangeInches));
+					grp.Max(t => t.MoveInches), grp.Max(t => t.WeaponRangeInches), first.BaseMm);
 			})
 			.OrderBy(g => g.Side)
 			.ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
 			.ToList();
+	}
+
+	// The base sizes actually used in 40k, offered as a picker so a wrong guess can be corrected without
+	// typing. Tokens are drawn from this value, so it directly governs whether positioning is trustworthy.
+	private static readonly int[] BaseSizeOptions = [25, 28, 32, 40, 50, 60, 80, 90, 100, 120, 130, 160, 170, 180];
+
+	// Applies a base size to every model of a unit and redraws it to scale.
+	private async Task SetUnitBaseAsync(string rosterUnitId, string? value)
+	{
+		if (_plan is null || !int.TryParse(value, out var mm) || mm <= 0)
+			return;
+		foreach (var token in _plan.Tokens.Where(t => string.Equals(t.RosterUnitId, rosterUnitId, StringComparison.Ordinal)))
+			token.BaseMm = mm;
+		await SavePlanAsync();
 	}
 
 	// e.g. "M 10″ · Guns 24″" — only the parts the unit actually has.
@@ -395,7 +418,9 @@
 		foreach (var unit in units)
 		{
 			var models = Math.Max(1, unit.ModelGroups.Sum(g => g.Count));
-			var baseMm = models == 1 ? 40 : 32; // heuristic: lone models are usually characters/monsters
+			// Imported units carry their datasheet keywords, so the base estimate uses those rather than
+			// guessing from the model count (which mistook every 1-model vehicle for a character).
+			var baseMm = BaseSizeDefaults.ForKeywords(unit.Keywords);
 			var diameter = baseMm / 25.4;
 			var abbrev = TokenStyle.Abbreviate(unit.Name);
 			var unitId = Guid.NewGuid().ToString("n");

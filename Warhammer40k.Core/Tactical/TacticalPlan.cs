@@ -126,35 +126,122 @@ public static class TacticalMaps
 }
 
 /// <summary>
-/// Sensible round-base diameters (mm) inferred from a datasheet's keywords, used to seed a token's base
-/// size when the player hasn't set one. Option B: the value is editable and stored on the plan, so these
-/// are only the starting point. Ovals/vehicles are approximated by their longer dimension for spacing.
+/// Round-base diameters (mm) used to draw a model to scale on the tactical map, where the board is measured
+/// in inches. Positioning is only trustworthy when the token matches the real base: coherency, engagement
+/// range and "does this fit through the gap" all depend on it.
 /// </summary>
+/// <remarks>
+/// Necron datasheets are listed explicitly because keywords alone cannot separate, say, a 32 mm Necron
+/// Warrior from a 50 mm Skorpekh Destroyer — both are simply INFANTRY. Other factions still fall back to the
+/// keyword heuristic, which is deliberately conservative rather than precise.
+/// Oval and rectangular bases are entered as their <b>longer</b> dimension: a round token of that size is the
+/// safe approximation, since it never claims a model fits somewhere it would not.
+/// The value stays editable and is stored on the plan, so these are a starting point, not a constraint.
+/// </remarks>
 public static class BaseSizeDefaults
 {
-    /// <summary>Fallback when no keyword matches (standard infantry).</summary>
+    /// <summary>Fallback when nothing matches (standard infantry).</summary>
     public const int Default = 32;
 
-    /// <summary>The default base diameter (mm) for a datasheet, from its keywords.</summary>
+    // Keyed by datasheet slug (the catalogue id). Values are the current GW base sizes; ovals use their
+    // long axis, noted in the comment where that applies.
+    private static readonly Dictionary<string, int> ByDatasheetId = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // ---- Infantry ----
+        ["necron-warriors"] = 32,
+        ["immortals"] = 32,
+        ["deathmarks"] = 32,
+        ["flayed-ones"] = 32,
+        ["cryptothralls"] = 40,
+        ["lychguard"] = 40,
+        ["triarch-praetorians"] = 40,
+        ["skorpekh-destroyers"] = 50,
+        ["ophydian-destroyers"] = 50,
+
+        // ---- Characters ----
+        ["overlord"] = 40,
+        ["overlord-with-translocation-shroud"] = 40,
+        ["royal-warden"] = 40,
+        ["plasmancer"] = 40,
+        ["chronomancer"] = 40,
+        ["geomancer"] = 40,
+        ["psychomancer"] = 40,
+        ["technomancer"] = 40,
+        ["hexmark-destroyer"] = 40,
+        ["orikan-the-diviner"] = 40,
+        ["trazyn-the-infinite"] = 40,
+        ["imotekh-the-stormlord"] = 40,
+        ["nekrosor-ammentar"] = 40,
+        ["illuminor-szeras"] = 80,
+        ["skorpekh-lord"] = 60,
+        ["lokhust-lord"] = 60,          // 60 mm oval (long axis)
+        ["catacomb-command-barge"] = 120, // 120 x 92 mm oval
+        ["the-silent-king"] = 130,      // 130 x 80 mm oval
+
+        // ---- C'tan ----
+        ["ctan-shard-of-the-deceiver"] = 60,
+        ["ctan-shard-of-the-nightbringer"] = 60,
+        ["ctan-shard-of-the-void-dragon"] = 100,
+        ["transcendent-ctan"] = 60,
+
+        // ---- Mounted / Beasts / Swarms ----
+        ["canoptek-scarab-swarms"] = 40,
+        ["tomb-blades"] = 60,           // 60 mm oval
+        ["lokhust-destroyers"] = 60,    // 60 mm oval
+        ["lokhust-heavy-destroyers"] = 60,
+        ["canoptek-wraiths"] = 60,      // 60 mm oval
+        ["canoptek-tomb-crawlers"] = 90,
+        ["canoptek-macrocytes"] = 90,
+
+        // ---- Vehicles ----
+        ["canoptek-spyders"] = 60,
+        ["canoptek-reanimator"] = 80,
+        ["canoptek-doomstalker"] = 80,
+        ["triarch-stalker"] = 80,
+        ["annihilation-barge"] = 120,   // 120 x 92 mm oval
+        ["ghost-ark"] = 120,            // 120 x 92 mm oval
+        ["doomsday-ark"] = 120,         // 120 x 92 mm oval
+        ["doom-scythe"] = 120,          // 120 x 92 mm oval
+        ["night-scythe"] = 120,
+        ["convergence-of-dominion"] = 80,
+
+        // ---- Titanic ----
+        ["monolith"] = 180,             // squared hull, approximated by its footprint
+        ["obelisk"] = 180,
+        ["tesseract-vault"] = 180,
+        ["seraptek-heavy-construct"] = 170,
+    };
+
+    /// <summary>The base diameter (mm) for a datasheet: the exact value when known, else a keyword guess.</summary>
     public static int ForDatasheet(Datasheet datasheet)
     {
         if (datasheet is null)
             return Default;
+        if (datasheet.Id is { Length: > 0 } id && ByDatasheetId.TryGetValue(id, out var known))
+            return known;
         return ForKeywords(datasheet.Keywords);
     }
 
-    /// <summary>The default base diameter (mm) for a set of unit keywords.</summary>
+    /// <summary>True when an exact base size is on file for this datasheet id (rather than a guess).</summary>
+    public static bool IsKnown(string? datasheetId) =>
+        datasheetId is { Length: > 0 } && ByDatasheetId.ContainsKey(datasheetId);
+
+    /// <summary>A keyword-based estimate, used for datasheets with no entry in the table.</summary>
     public static int ForKeywords(IEnumerable<string> keywords)
     {
         var set = new HashSet<string>(keywords ?? [], StringComparer.OrdinalIgnoreCase);
 
-        if (set.Contains("Titanic") || set.Contains("Monster") || set.Contains("Vehicle"))
+        if (set.Contains("Titanic") || set.Contains("Towering"))
+            return 160;
+        if (set.Contains("Vehicle") || set.Contains("Monster"))
             return 90;
         if (set.Contains("Mounted") || set.Contains("Beast"))
             return 60;
-        if (set.Contains("Epic Hero") || set.Contains("Character"))
-            return 40;
         if (set.Contains("Swarm"))
+            return 40;
+        if (set.Contains("Terminator") || set.Contains("Gravis"))
+            return 40;
+        if (set.Contains("Epic Hero") || set.Contains("Character"))
             return 40;
         // Standard infantry / everything else.
         return Default;
