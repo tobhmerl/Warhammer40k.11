@@ -48,12 +48,17 @@ else
 			var activeIdx = Math.Clamp(_activeCard, 0, ordered.Count - 1);
 			<div class="deck-bar" role="group" aria-label="Current unit">
 				<span class="deck-pos">
-					<span class="deck-name">@ordered[activeIdx].Name</span>
+					<span class="deck-name">@(_overview ? "Army overview" : ordered[activeIdx].Name)</span>
 				</span>
 			</div>
-			@if (ordered.Count > 1)
+			@if (ordered.Count > 0)
 			{
 				<div class="deck-dots" role="tablist" aria-label="Jump to unit — hold a pill to reorder" @ref="_dotsRef">
+					@* First pill: the army-wide overview of everything usable in this phase + turn. *@
+					<button type="button" class="deck-ov @(_overview ? "on" : "")" role="tab" aria-selected="@_overview" aria-label="Army overview"
+							title="@($"Army overview — everything usable in {BattlePhases.Label(_phase)}")" @onclick="ShowOverview">
+						<span class="dd-label" aria-hidden="true">◎</span>
+					</button>
 					@for (var i = 0; i < ordered.Count; i++)
 					{
 						var index = i;
@@ -67,8 +72,8 @@ else
 						var dCounts = (dUsable > 0 || dAlways > 0 || dStrat > 0)
 							? $" · {dUsable} ability now/{dAlways} always/{dStrat} stratagem"
 							: "";
-						<button type="button" class="deck-dot @(index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "") @(dShock ? "shocked" : "") @(dReanim ? "reanimate" : "")"
-								role="tab" aria-selected="@(index == _activeCard)" data-reorder-index="@index"
+						<button type="button" class="deck-dot @(!_overview && index == _activeCard ? "on" : "") @(IsDead(u) ? "dead" : "") @(dShock ? "shocked" : "") @(dReanim ? "reanimate" : "")"
+								role="tab" aria-selected="@(!_overview && index == _activeCard)" data-reorder-index="@index"
 								title="@($"{u.Name}{dCounts}{dState}")" @onclick="() => SelectCard(index)">
 							<span class="dd-label">@DeckLabel(u)</span>
 							@if (dUsable > 0 || dAlways > 0 || dStrat > 0)
@@ -228,6 +233,8 @@ else
 				</span>
 			</span>;
 		}
+		@if (!_overview)
+		{
 		<section class="now-ribbon" aria-label="Available now">
 			<div class="now-head">
 				<span class="now-kicker">Now</span>
@@ -295,9 +302,10 @@ else
 				</div>
 			}
 		</section>
+		}
 
 		@{ var usableRules = UsableArmyRules; }
-		@if (usableRules.Count > 0)
+		@if (!_overview && usableRules.Count > 0)
 		{
 			<section class="army-now" aria-label="Army rules usable now">
 				<span class="an-head">Army rules — usable now</span>
@@ -320,7 +328,79 @@ else
 			</section>
 		}
 
-		@if (_battle.Units.Count == 0)
+		@if (_overview)
+		{
+			@* Army overview — one row per unit listing everything that unit can do in the current phase + turn,
+			   plus the army-wide rules and stratagems. Same filters as the Now ribbon, same tap targets. *@
+			var ovRules = UsableArmyRules;
+			var ovUnits = OverviewUnits;
+			<section class="overview" aria-label="Army overview">
+				<div class="now-head">
+					<span class="now-kicker">Now</span>
+					<strong>Army overview · @BattlePhases.Label(_phase) · @(_turn == BattleTurn.Player ? "your turn" : "opponent's turn")</strong>
+					<span class="now-count">@(ovRules.Count + ovUnits.Sum(u => u.Total))</span>
+				</div>
+				@if (ovRules.Count > 0)
+				{
+					<div class="ov-unit army">
+						<div class="ov-name">Army-wide</div>
+						<div class="now-actions" style="--now-columns: 3">
+							@foreach (var rule in ovRules)
+							{
+								<button type="button" class="now-action rule" @onclick="() => OpenNowRule(rule)">
+									<span class="na-type">Army rule</span>
+									<strong>@rule.Name</strong>
+								</button>
+							}
+						</div>
+					</div>
+				}
+				@if (ovUnits.Count == 0)
+				{
+					<p class="now-empty">No unit has anything scheduled for this battle window.</p>
+				}
+				@foreach (var row in ovUnits)
+				{
+					<div class="ov-unit" @key="row.Unit.Id">
+						<div class="ov-name">
+							<button type="button" class="ov-jump" @onclick="() => FocusReminder(row.Unit)" title="Open this unit's card">@row.Unit.Name</button>
+							<span class="ov-count">@row.Total</span>
+						</div>
+						<div class="now-actions" style="--now-columns: 3">
+							@foreach (var label in row.Reminders)
+							{
+								<button type="button" class="now-action must" @onclick="() => FocusReminder(row.Unit)">
+									<span class="na-type">Must resolve</span>
+									<strong>@label</strong>
+								</button>
+							}
+							@foreach (var ability in row.Abilities)
+							{
+								<button type="button" class="now-action ability" @onclick="() => OpenAbilityCard(row.Unit, ability)">
+									<span class="na-type">@(HasEffectKeywords(ability) ? "Effect" : ability.IsEnhancement ? "Enhancement" : "Ability")</span>
+									<strong>@ability.Ability.Name</strong>
+								</button>
+							}
+							@foreach (var buff in row.Buffs)
+							{
+								<button type="button" class="now-action ability" @onclick="() => OpenBuffCard(row.Unit, buff)">
+									<span class="na-type">Detachment</span>
+									<strong>@buff.Label</strong>
+								</button>
+							}
+							@foreach (var strat in row.Stratagems)
+							{
+								<button type="button" class="now-action stratagem" @onclick="() => OpenOverviewStratagem(row.Unit, strat)">
+									<span class="na-type">Stratagem · @EffectiveCost(strat, row.Unit) CP</span>
+									<strong>@strat.Name</strong>
+								</button>
+							}
+						</div>
+					</div>
+				}
+			</section>
+		}
+		else if (_battle.Units.Count == 0)
 		{
 			<div class="card empty">
 				<p>This roster has no units yet.</p>
@@ -1337,7 +1417,75 @@ else
 
 	private sealed record NowReminder(BattleUnit Unit, string Label);
 
-	private BattleUnit? NowUnit => _cardSwipe ? ActiveUnit : null;
+	// ---- Army overview: one glance at everything the whole army can do in the current phase + turn ----
+	// Reached from the first pill of the unit selector; it replaces the card/list body (and the Now ribbon,
+	// which it supersedes) while it is open, so there is exactly one "what can I do now" surface on screen.
+	private bool _overview;
+
+	private sealed record OverviewRow(
+		BattleUnit Unit,
+		IReadOnlyList<string> Reminders,
+		IReadOnlyList<BattleAbility> Abilities,
+		IReadOnlyList<ConditionalUnitBuff> Buffs,
+		IReadOnlyList<StratView> Stratagems)
+	{
+		public int Total => Reminders.Count + Abilities.Count + Buffs.Count + Stratagems.Count;
+	}
+
+	// Every living unit that has something to do right now, in deck order. The per-category filters are the
+	// same ones the Now ribbon uses, so the overview can never disagree with a unit's own card.
+	private IReadOnlyList<OverviewRow> OverviewUnits
+	{
+		get
+		{
+			if (_battle is null)
+				return [];
+			var phaseStrats = PhaseTurnStratagems();
+			var rows = new List<OverviewRow>();
+			foreach (var unit in OrderedUnits)
+			{
+				if (IsDead(unit))
+					continue;
+				var reminders = new List<string>();
+				if (MyCommandPhase && NeedsBattleShock(unit))
+					reminders.Add("Take Battle-shock test");
+				if (MyCommandPhase && NeedsReanimation(unit))
+					reminders.Add("Resolve Reanimation Protocols");
+				var abilities = unit.CombinedAbilities
+					.Where(a => IsEffectNow(a) || IsUsableNow(a))
+					.Where(a => !IsOncePerBattleUsedAbility(unit, a))
+					.ToList();
+				var buffs = ConditionalBuffsFor(unit).ToList();
+				var strats = phaseStrats
+					.Where(s => StratagemAppliesTo(unit, s.Target))
+					.Where(s => CanAfford(s, unit))
+					.Where(s => !(IsOncePerBattleStrat(s) && IsOncePerBattleUsed(OncePerBattleStratKey(s))))
+					.ToList();
+				var row = new OverviewRow(unit, reminders, abilities, buffs, strats);
+				if (row.Total > 0)
+					rows.Add(row);
+			}
+			return rows;
+		}
+	}
+
+	private void ShowOverview()
+	{
+		_overview = true;
+		_overviewStratUnit = null;
+	}
+
+	// The unit an overview stratagem was opened for — so spending CP applies that unit's discount, exactly as
+	// tapping the same stratagem on the unit's own card would.
+	private BattleUnit? _overviewStratUnit;
+
+	private void OpenOverviewStratagem(BattleUnit unit, StratView stratagem)
+	{
+		_overviewStratUnit = unit;
+		_nowStratagem = stratagem;
+	}
+
+	private BattleUnit? NowUnit => !_overview && _cardSwipe ? ActiveUnit : null;
 
 	private IReadOnlyList<NowReminder> NowReminders
 	{
@@ -1386,6 +1534,7 @@ else
 		var index = _order.IndexOf(unit.Id);
 		if (index < 0)
 			return;
+		_overview = false;
 		_cardSwipe = true;
 		_activeCard = index;
 		_collapsed.Remove(unit.Id);
@@ -1397,9 +1546,17 @@ else
 
 	private void CloseNowRule() => _nowRule = null;
 
-	private void OpenNowStratagem(StratView stratagem) => _nowStratagem = stratagem;
+	private void OpenNowStratagem(StratView stratagem)
+	{
+		_overviewStratUnit = null;
+		_nowStratagem = stratagem;
+	}
 
-	private void CloseNowStratagem() => _nowStratagem = null;
+	private void CloseNowStratagem()
+	{
+		_nowStratagem = null;
+		_overviewStratUnit = null;
+	}
 
 	private static string? AbilityModelContext(BattleUnit unit, BattleAbility ability)
 	{
@@ -1443,6 +1600,7 @@ else
 		if (IsOncePerBattleStrat(stratagem))
 			SetOncePerBattleUsed(OncePerBattleStratKey(stratagem), true);
 		_nowStratagem = null;
+		_overviewStratUnit = null;
 	}
 
 	// Army rules whose text the user expanded (collapsed to the name by default), keyed by rule name.
@@ -1618,7 +1776,7 @@ else
 
 	// The unit the Stratagem panel is currently scoped to: in swipe mode the active card (the target), otherwise
 	// none — list mode isn't unit-targeted, so a row is discounted only when some eligible bearer unit exists.
-	private BattleUnit? StratContextUnit => _cardSwipe ? ActiveUnit : null;
+	private BattleUnit? StratContextUnit => _overview ? _overviewStratUnit : _cardSwipe ? ActiveUnit : null;
 
 	private int EffectiveCost(StratView stratagem, BattleUnit? forUnit)
 	{
@@ -2211,7 +2369,9 @@ else
 
 	private void SelectCard(int index)
 	{
-		if (GoToCard(index))
+		var leavingOverview = _overview;
+		_overview = false;
+		if (GoToCard(index) || leavingOverview)
 			StateHasChanged();
 	}
 

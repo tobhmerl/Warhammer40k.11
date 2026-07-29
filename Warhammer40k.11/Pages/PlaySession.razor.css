@@ -276,6 +276,61 @@ html[data-scroll="up"] .hud.sticky {
     margin-bottom: 1rem;
 }
 
+/* ---- Army overview ---- */
+/* One panel, one row per unit, so a whole turn's options read top-to-bottom in a single glance. It reuses
+   the Now ribbon's action chips (.now-actions / .now-action) so an action looks identical wherever you meet it. */
+.overview {
+    margin: 0.65rem 0 1rem;
+    padding: 0.65rem;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--accent-soft), var(--surface) 62%);
+    box-shadow: var(--shadow-inset);
+}
+
+.ov-unit {
+    margin-top: 0.6rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--border);
+}
+
+.ov-name {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+    color: var(--text-dim);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.ov-jump {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ov-jump:hover {
+    color: var(--accent-strong);
+    text-decoration: underline;
+}
+
+.ov-count {
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-faint);
+    font-size: 0.58rem;
+}
+
 /* ---- CP stepper, inline at the left of the HUD ---- */
 .cp {
     flex: none;
@@ -752,6 +807,39 @@ html[data-scroll="up"] .hud.sticky {
 .deck-dot:hover {
     border-color: var(--accent);
     color: var(--accent-strong);
+}
+
+/* The army-overview pill: first in the selector strip, a single glyph so it never crowds the unit pills.
+   It deliberately does NOT carry the .deck-dot class \u2014 that class marks the pills the long-press
+   drag-to-reorder handler owns, and the overview button is not part of the unit order. */
+.deck-ov {
+    flex: 0 0 auto;
+    height: 2rem;
+    width: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.deck-ov:hover {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+}
+
+.deck-ov.on {
+    color: #03150d;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
+    border-color: transparent;
+    box-shadow: var(--glow-sm);
 }
 
 .deck-dot.on {
