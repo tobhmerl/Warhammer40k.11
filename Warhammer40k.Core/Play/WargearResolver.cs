@@ -158,6 +158,10 @@ public static class WargearResolver
         foreach (var option in group.Options.Skip(1))
         {
             var want = selection?.Counts.FirstOrDefault(c => string.Equals(c.OptionId, option.Id, StringComparison.OrdinalIgnoreCase))?.Models ?? 0;
+            // An option may cap how many models can take it (e.g. only one Canoptek Tomb Crawler may carry a
+            // dimensional isolator), so a stale or hand-edited count can never put an illegal loadout in play.
+            if (option.MaxModels > 0)
+                want = Math.Min(want, option.MaxModels);
             var take = Math.Clamp(want, 0, remaining);
             assigned[option.Id] = take;
             remaining -= take;

@@ -3610,6 +3610,7 @@
           "name": "Weapon",
           "min": 0,
           "max": 1,
+          "perModel": true,
           "options": [
             {
               "id": "twin-gauss-reaper",
@@ -3617,7 +3618,8 @@
             },
             {
               "id": "dimensional-isolator",
-              "name": "Dimensional isolator"
+              "name": "Dimensional isolator",
+              "maxModels": 1
             }
           ]
         }

@@ -207,7 +207,7 @@ else
 									<span class="loadout-step">
 										<button type="button" class="lstep" disabled="@(isDefault || count == 0)" @onclick="() => StepPerModel(u, group, opt, -1)" aria-label="Fewer">−</button>
 										<span class="loadout-count @(count > 0 ? "has" : "")">@count</span>
-										<button type="button" class="lstep" disabled="@(isDefault || PerModelRemaining(u, group) == 0)" @onclick="() => StepPerModel(u, group, opt, 1)" aria-label="More">+</button>
+										<button type="button" class="lstep" disabled="@(isDefault || PerModelRemaining(u, group) == 0 || count >= PerModelCap(u, opt))" @onclick="() => StepPerModel(u, group, opt, 1)" aria-label="More">+</button>
 									</span>
 								</div>
 							}
@@ -257,6 +257,22 @@ else
 							<option value="@t.Id">@t.Name</option>
 						}
 					</select>
+				</div>
+			}
+
+			@if (sheet.IsRetinue)
+			{
+				@* A retinue joins a Bodyguard unit that is already led by a Cryptek — it is not a Leader. *@
+				<div class="cfg-block">
+					<span class="cfg-label">Join unit</span>
+					<select class="input" value="@(u.AttachedToRosterUnitId ?? "")" @onchange="e => SetAttachment(u, e.Value?.ToString())">
+						<option value="">Not joined</option>
+						@foreach (var t in RetinueTargets(u))
+						{
+							<option value="@t.Id">@t.Name</option>
+						}
+					</select>
+					<span class="cfg-hint">Can join one unit led by a @sheet.RetinueLeaderKeyword model (one retinue per unit).</span>
 				</div>
 			}
 
@@ -1061,8 +1077,14 @@ else
 	{
 		var selection = unit.Wargear.FirstOrDefault(w => string.Equals(w.GroupId, group.Id, StringComparison.OrdinalIgnoreCase));
 		var stored = selection?.Counts.FirstOrDefault(c => string.Equals(c.OptionId, optionId, StringComparison.OrdinalIgnoreCase))?.Models ?? 0;
-		return Math.Clamp(stored, 0, unit.ModelCount);
+		var option = group.Options.FirstOrDefault(o => string.Equals(o.Id, optionId, StringComparison.OrdinalIgnoreCase));
+		return Math.Clamp(stored, 0, PerModelCap(unit, option));
 	}
+
+	// The most models that may take an option: its own cap when the datasheet sets one (e.g. only one of the two
+	// Canoptek Tomb Crawlers may carry a dimensional isolator), otherwise the whole unit.
+	private static int PerModelCap(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearOption? option) =>
+		option is { MaxModels: > 0 } capped ? Math.Min(capped.MaxModels, unit.ModelCount) : unit.ModelCount;
 
 	// Models still on the default (first) option — how many are free to be reassigned to another option.
 	private static int PerModelRemaining(RosterUnit unit, Warhammer40k.Core.Catalogue.WargearGroup group) =>
@@ -1091,11 +1113,12 @@ else
 			selection.Counts.Add(entry);
 		}
 
-		// Cap so this option plus the OTHER non-default options never exceed the unit size (default keeps the rest).
+		// Cap so this option plus the OTHER non-default options never exceed the unit size (default keeps the rest),
+		// and never exceed this option's own model cap.
 		var others = group.Options.Skip(1)
 			.Where(o => !string.Equals(o.Id, option.Id, StringComparison.OrdinalIgnoreCase))
 			.Sum(o => StoredPerModelCount(unit, group, o.Id));
-		entry.Models = Math.Clamp(entry.Models + delta, 0, Math.Max(0, unit.ModelCount - others));
+		entry.Models = Math.Clamp(entry.Models + delta, 0, Math.Min(Math.Max(0, unit.ModelCount - others), PerModelCap(unit, option)));
 
 		// Keep storage minimal: drop zero entries, and an empty selection (an all-default unit stores nothing).
 		selection.Counts.RemoveAll(c => c.Models <= 0);
@@ -1549,6 +1572,56 @@ else
 			if (otherSheet is not null && sheet.LeaderTargetIds.Contains(otherSheet.Id, StringComparer.OrdinalIgnoreCase))
 				yield return (other.Id, otherSheet.Name);
 		}
+	}
+
+	// Units a retinue (Canoptek Tomb Crawlers / Cryptothralls) may join: any unit that already has a Leader
+	// attached carrying the required keyword — the retinue joins the BODYGUARD, not the Cryptek itself.
+	private IEnumerable<(string Id, string Name)> RetinueTargets(RosterUnit retinue)
+	{
+		var sheet = SheetFor(retinue);
+		if (sheet is null || _roster is null || string.IsNullOrEmpty(sheet.RetinueLeaderKeyword))
+			yield break;
+
+		foreach (var host in _roster.Units)
+		{
+			if (ReferenceEquals(host, retinue))
+				continue;
+			var hostSheet = SheetFor(host);
+			if (hostSheet is null || hostSheet.IsRetinue)
+				continue;
+			if (LeadersOf(host).Any(l => l.Keywords.Any(k => KeywordMatches(k, sheet.RetinueLeaderKeyword))))
+				yield return (host.Id, HostLabel(host, hostSheet));
+		}
+	}
+
+	// The datasheets of the Leaders attached to a unit (a retinue is never one).
+	private IEnumerable<Datasheet> LeadersOf(RosterUnit host)
+	{
+		if (_roster is null)
+			yield break;
+		foreach (var other in _roster.Units)
+		{
+			if (!string.Equals(other.AttachedToRosterUnitId, host.Id, StringComparison.Ordinal))
+				continue;
+			if (SheetFor(other) is { IsRetinue: false } sheet)
+				yield return sheet;
+		}
+	}
+
+	// "Immortals (led by Chronomancer)" — names the Leader so two same-name units stay tellable apart.
+	private string HostLabel(RosterUnit host, Datasheet hostSheet)
+	{
+		var leaders = LeadersOf(host).Select(l => l.Name).ToList();
+		return leaders.Count == 0 ? hostSheet.Name : $"{hostSheet.Name} (led by {string.Join(", ", leaders)})";
+	}
+
+	// A datasheet keyword matches when it equals the wanted one, or is its qualified "Prefix: Value" form.
+	private static bool KeywordMatches(string datasheetKeyword, string wanted)
+	{
+		if (string.Equals(datasheetKeyword, wanted, StringComparison.OrdinalIgnoreCase))
+			return true;
+		var colon = datasheetKeyword.IndexOf(':');
+		return colon >= 0 && string.Equals(datasheetKeyword[(colon + 1)..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private IEnumerable<UnitEntry> PickerUnits()

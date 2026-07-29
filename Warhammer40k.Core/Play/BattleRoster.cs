@@ -110,22 +110,28 @@ public sealed class BattleRoster
                 .FirstOrDefault(e => e is not null);
         }
 
-        // Second pass: fold attached Leaders into their bodyguard; a dangling attachment stays standalone.
+        // Second pass: fold attached Leaders — and joined retinues — into their host; a dangling link stays standalone.
         var attachedToHost = new Dictionary<string, List<BattlePart>>(StringComparer.Ordinal);
         var absorbed = new HashSet<string>(StringComparer.Ordinal);
         foreach (var unit in roster.Units)
         {
             if (string.IsNullOrEmpty(unit.AttachedToRosterUnitId))
                 continue;
-            if (!parts.TryGetValue(unit.Id, out var leaderPart))
+            if (!parts.TryGetValue(unit.Id, out var attachedPart))
                 continue;
             if (!parts.ContainsKey(unit.AttachedToRosterUnitId))
-                continue; // dangling → leave the leader as its own group
+                continue; // dangling → leave the attached unit as its own group
 
-            leaderPart.IsLeader = true;
+            // A retinue (Canoptek Tomb Crawlers / Cryptothralls) joins the Bodyguard unit but is NOT a Leader:
+            // its models simply count as part of that unit, raising its Starting Strength.
+            if (attachedPart.Datasheet.IsRetinue)
+                attachedPart.IsRetinue = true;
+            else
+                attachedPart.IsLeader = true;
+
             if (!attachedToHost.TryGetValue(unit.AttachedToRosterUnitId, out var list))
                 attachedToHost[unit.AttachedToRosterUnitId] = list = new List<BattlePart>();
-            list.Add(leaderPart);
+            list.Add(attachedPart);
             absorbed.Add(unit.Id);
         }
 
@@ -136,8 +142,8 @@ public sealed class BattleRoster
                 continue;
             var primary = parts[id];
             var members = new List<BattlePart> { primary };
-            if (attachedToHost.TryGetValue(id, out var leaders))
-                members.AddRange(leaders);
+            if (attachedToHost.TryGetValue(id, out var joined))
+                members.AddRange(joined);
             units.Add(new BattleUnit(members, roster));
         }
 
@@ -499,6 +505,10 @@ public sealed class BattleUnit
         var partsWithOwnSave = 0;
         var ownValues = new HashSet<string>(StringComparer.Ordinal);
 
+        // Saves a joined retinue grants to a specific model in the host group (Cryptothralls' Bound Creation:
+        // "While this unit is in the same unit as a CRYPTEK model, that CRYPTEK model has Feel No Pain 4+").
+        var retinueGrants = RetinueGrantedSaves(parse);
+
         foreach (var part in Parts)
         {
             string? own = null;
@@ -506,6 +516,10 @@ public sealed class BattleUnit
             foreach (var ability in part.Datasheet.Abilities)
             {
                 if (parse(ability) is not { } save)
+                    continue;
+                // A "…that KEYWORD model has…" conferral is never the carrier's own save — it is handed to the
+                // named model below (and grants nothing at all while the retinue stands alone).
+                if (RetinueConferralKeyword(ability) is not null)
                     continue;
                 // Wargear-granted saves (e.g. a Nanoscarab amulet's Feel No Pain) only count when that wargear is chosen.
                 if (!WargearResolver.IsAbilityActive(part.Datasheet, part.Unit, ability.Name))
@@ -526,12 +540,12 @@ public sealed class BattleUnit
             }
 
             // A part's own Feel No Pain stated only in its factionRules: the primary's is the unit's save;
-            // an attached Leader's belongs to that single model.
+            // an attached Leader's — or a joined retinue's — belongs to those models only.
             if (fromFactionRule)
                 foreach (var rule in part.Datasheet.FactionRules)
                     if (PhaseClassifier.FeelNoPainFromFactionRule(rule) is { } value)
                     {
-                        if (part.IsLeader)
+                        if (part.IsLeader || part.IsRetinue)
                         {
                             if (own is null || string.CompareOrdinal(value, own) < 0)
                                 own = value;
@@ -542,6 +556,15 @@ public sealed class BattleUnit
                         }
                     }
 
+            // A joined retinue's conferral lands on the model whose keyword it names, never on the retinue itself.
+            if (!part.IsRetinue)
+                foreach (var (keyword, value) in retinueGrants)
+                    if (part.Datasheet.Keywords.Any(k => SaveKeywordMatches(k, keyword))
+                        && (own is null || string.CompareOrdinal(value, own) < 0))
+                    {
+                        own = value;
+                    }
+
             if (own is not null)
             {
                 partsWithOwnSave++;
@@ -549,7 +572,6 @@ public sealed class BattleUnit
                 models.Add(new SaveBadge(own, UnitWide: false, ModelName: part.Datasheet.Name));
             }
         }
-
         // When every part of an attached group has its own save at the same value, the whole unit shares it —
         // collapse the separate per-model chips into one unit-wide chip (e.g. Imotekh's own 4+ invuln plus the
         // Lychguard's Dispersion Shield 4+ → a single "4+ unit" chip instead of two).
@@ -568,6 +590,58 @@ public sealed class BattleUnit
             if (badge.Value != unitValue && !result.Any(r => r.Value == badge.Value && r.ModelName == badge.ModelName))
                 result.Add(badge);
         return result;
+    }
+
+    // Saves a joined retinue confers on a named model of the host group, keyed by the keyword it names.
+    // Cryptothralls' Bound Creation is the only such ability today; parsing it generically keeps the rule in
+    // one place instead of special-casing a datasheet name.
+    private Dictionary<string, string> RetinueGrantedSaves(Func<Ability, (string Value, SaveScope Scope)?> parse)
+    {
+        var grants = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in Parts)
+        {
+            if (!part.IsRetinue)
+                continue;
+            foreach (var ability in part.Datasheet.Abilities)
+            {
+                if (RetinueConferralKeyword(ability) is not { } keyword || parse(ability) is not { } save)
+                    continue;
+                if (!grants.TryGetValue(keyword, out var existing) || string.CompareOrdinal(save.Value, existing) < 0)
+                    grants[keyword] = save.Value;
+            }
+        }
+        return grants;
+    }
+
+    /// <summary>
+    /// The keyword named by a "while this unit is in the same unit as a KEYWORD model, that model has …"
+    /// conferral, or null when the ability is not one. The seed writes these with non-breaking spaces, so the
+    /// text is normalised before matching.
+    /// </summary>
+    private static string? RetinueConferralKeyword(Ability ability)
+    {
+        const string marker = "in the same unit as a";
+        var text = (ability.Text ?? "").Replace('\u00A0', ' ');
+        var start = text.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+            return null;
+
+        var rest = text[(start + marker.Length)..].TrimStart();
+        var end = rest.IndexOf(" model", StringComparison.OrdinalIgnoreCase);
+        if (end <= 0)
+            return null;
+
+        var keyword = rest[..end].Trim();
+        return keyword.Length == 0 ? null : keyword;
+    }
+
+    /// <summary>A datasheet keyword matches when it equals the wanted one, or is its qualified "Prefix: Value" form.</summary>
+    private static bool SaveKeywordMatches(string datasheetKeyword, string wanted)
+    {
+        if (string.Equals(datasheetKeyword, wanted, StringComparison.OrdinalIgnoreCase))
+            return true;
+        var colon = datasheetKeyword.IndexOf(':');
+        return colon >= 0 && string.Equals(datasheetKeyword[(colon + 1)..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Total trackable wound pool (sum of parts with a fixed Wounds value), or null when none are fixed.</summary>
@@ -855,6 +929,13 @@ public sealed class BattlePart
 
     /// <summary>True when this part is a Leader attached to the group's primary unit.</summary>
     public bool IsLeader { get; internal set; }
+
+    /// <summary>
+    /// True when this part is a <i>retinue</i> joined to the group's primary unit (Canoptek Tomb Crawlers'
+    /// "Canoptek Retinue" / Cryptothralls' "Cryptek Retinue"). Its models count as part of the Bodyguard unit,
+    /// but it is not a Leader — so it never takes the Leader marker, nor confers Leader-only effects.
+    /// </summary>
+    public bool IsRetinue { get; internal set; }
 
     /// <summary>
     /// The Enhancement assigned to this part's character in setup (resolved from the selected detachment), or

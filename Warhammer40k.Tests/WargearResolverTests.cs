@@ -295,4 +295,68 @@ public class WargearResolverTests
         Assert.False(WargearResolver.IsAbilityActive(sheet, Unit("gear", ("equip", ["nanoscarab-amulet"])), "Resurrection orb")); // the other option
         Assert.True(WargearResolver.IsAbilityActive(sheet, Unit("gear", ("equip", ["resurrection-orb"])), "Resurrection orb"));
     }
+
+    // ---- Capped per-model options (Canoptek Tomb Crawlers: only one may take the dimensional isolator) ----
+
+    private static Datasheet TombCrawlers() => new()
+    {
+        Id = "canoptek-tomb-crawlers",
+        Name = "Canoptek Tomb Crawlers",
+        Weapons = [W("Claws", "Melee"), W("Twin gauss reaper"), W("Dimensional isolator")],
+        WargearGroups =
+        [
+            new WargearGroup
+            {
+                Id = "weapon", Name = "Weapon", PerModel = true,
+                Options =
+                [
+                    new() { Id = "twin-gauss-reaper", Name = "Twin gauss reaper" },
+                    new() { Id = "dimensional-isolator", Name = "Dimensional isolator", MaxModels = 1 },
+                ],
+            },
+        ],
+    };
+
+    private static RosterUnit CrawlerUnit(int isolators) => new()
+    {
+        Id = "u1",
+        DatasheetId = "canoptek-tomb-crawlers",
+        ModelCount = 2,
+        Wargear = isolators == 0 ? [] :
+        [
+            new WargearSelection
+            {
+                GroupId = "weapon",
+                Counts = [new WargearOptionCount { OptionId = "dimensional-isolator", Models = isolators }],
+            },
+        ],
+    };
+
+    [Fact]
+    public void Tomb_crawlers_default_to_two_twin_gauss_reapers()
+    {
+        var resolved = WargearResolver.ResolveWeapons(TombCrawlers(), CrawlerUnit(0));
+
+        Assert.Equal(2, resolved.Single(r => r.Weapon.Name == "Twin gauss reaper").Models);
+        Assert.DoesNotContain(resolved, r => r.Weapon.Name == "Dimensional isolator");
+    }
+
+    [Fact]
+    public void One_tomb_crawler_can_swap_to_a_dimensional_isolator()
+    {
+        var resolved = WargearResolver.ResolveWeapons(TombCrawlers(), CrawlerUnit(1));
+
+        Assert.Equal(1, resolved.Single(r => r.Weapon.Name == "Twin gauss reaper").Models);
+        Assert.Equal(1, resolved.Single(r => r.Weapon.Name == "Dimensional isolator").Models);
+    }
+
+    [Fact]
+    public void A_second_dimensional_isolator_is_capped_away()
+    {
+        // Even if a stale roster stores 2, the option's MaxModels keeps the illegal loadout out of play.
+        var resolved = WargearResolver.ResolveWeapons(TombCrawlers(), CrawlerUnit(2));
+
+        Assert.Equal(1, resolved.Single(r => r.Weapon.Name == "Dimensional isolator").Models);
+        Assert.Equal(1, resolved.Single(r => r.Weapon.Name == "Twin gauss reaper").Models);
+    }
 }

@@ -445,8 +445,8 @@ else
 											<div class="sl-top">
 												@if (unit.Parts.Count > 1)
 												{
-													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="@($"{part.Datasheet.Name}{(part.IsLeader ? " (Leader)" : "")} — highlight this model's weapons; tap again to clear")">
-														@(ShortName(part.Datasheet.Name) + (part.IsLeader ? " *" : ""))
+													<button type="button" class="sname-btn @(IsMemberSelected(unit, part) ? "on" : "")" @onclick="() => ToggleMember(unit, part)" title="@($"{part.Datasheet.Name}{MemberRole(part)} — highlight this model's weapons; tap again to clear")">
+														@(ShortName(part.Datasheet.Name) + MemberMark(part))
 													</button>
 												}
 												else
@@ -2375,11 +2375,20 @@ else
 			StateHasChanged();
 	}
 
+	// How a member of a group relates to it: a Leader carries "*", a joined retinue (Canoptek Tomb Crawlers /
+	// Cryptothralls, whose models count as part of the Bodyguard unit) carries "+" — deliberately distinct, so
+	// a retinue is never mistaken for a Leader on the card.
+	private static string MemberMark(BattlePart part) =>
+		part.IsLeader ? " *" : part.IsRetinue ? " +" : "";
+
+	private static string MemberRole(BattlePart part) =>
+		part.IsLeader ? " (Leader)" : part.IsRetinue ? " (joined retinue)" : "";
+
 	// The deck button's label: one meaningful word. For an attached (led) unit we label by the bodyguard — the
 	// part the leader joined — not the character. "Necron Warriors" → "Warriors"; "Imotekh the Stormlord" → "Imotekh".
 	private static string DeckLabel(BattleUnit unit)
 	{
-		var bodyguard = unit.Parts.FirstOrDefault(p => !p.IsLeader) ?? unit.Parts.FirstOrDefault();
+		var bodyguard = unit.Parts.FirstOrDefault(p => !p.IsLeader && !p.IsRetinue) ?? unit.Parts.FirstOrDefault();
 		var name = bodyguard?.Datasheet.Name;
 		return ShortName(string.IsNullOrWhiteSpace(name) ? unit.Name : name);
 	}

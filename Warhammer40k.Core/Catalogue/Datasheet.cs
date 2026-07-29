@@ -67,6 +67,20 @@ public sealed class Datasheet
     [JsonPropertyName("leaderTargetIds")] public List<string> LeaderTargetIds { get; set; } = [];
 
     /// <summary>
+    /// True when the datasheet has a <i>retinue</i> ability — Canoptek Tomb Crawlers' "Canoptek Retinue" or
+    /// Cryptothralls' "Cryptek Retinue". Such a unit is not a Leader: it joins a unit that is already being
+    /// led by a <see cref="RetinueLeaderKeyword"/> model, and its models then count as part of that
+    /// Bodyguard unit (increasing its Starting Strength).
+    /// </summary>
+    [JsonPropertyName("isRetinue")] public bool IsRetinue { get; set; }
+
+    /// <summary>
+    /// The keyword the host unit's Leader must have for a retinue to join it (always "Cryptek" today),
+    /// parsed from the retinue ability text. Empty when <see cref="IsRetinue"/> is false.
+    /// </summary>
+    [JsonPropertyName("retinueLeaderKeyword")] public string RetinueLeaderKeyword { get; set; } = "";
+
+    /// <summary>
     /// Effects this Leader confers on the unit it leads, parsed once at load from its "While this model is
     /// leading a unit, …" abilities (see <see cref="LeaderConferralParser"/>). Drives Play Mode's applied
     /// weapon abilities / stat buffs instead of showing the raw ability text.

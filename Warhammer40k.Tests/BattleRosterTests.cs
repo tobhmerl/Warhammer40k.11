@@ -95,6 +95,65 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Joined_cryptothralls_give_the_cryptek_model_feel_no_pain()
+    {
+        // Bound Creation: "While this unit is in the same unit as a CRYPTEK model, that CRYPTEK model has the
+        // Feel No Pain 4+ ability." The save belongs to the Cryptek, not to the whole unit nor the thralls.
+        var cryptek = Sheet("chronomancer", "Chronomancer");
+        cryptek.Keywords = ["Faction: Necrons", "Character", "Cryptek"];
+        var thralls = Sheet("cryptothralls", "Cryptothralls", wounds: "3", abilities:
+        [
+            new Ability
+            {
+                Name = "Bound Creation",
+                Text = "While this unit is in the same unit as a CRYPTEK\u00a0model, that CRYPTEK model has the Feel No Pain\u00a04+ ability.",
+            },
+        ]);
+        thralls.IsRetinue = true;
+        thralls.RetinueLeaderKeyword = "Cryptek";
+        var catalogue = Catalogue(Sheet("immortals", "Immortals"), cryptek, thralls);
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("host", "immortals", models: 5),
+                Unit("lead", "chronomancer", attachedTo: "host"),
+                Unit("ret", "cryptothralls", models: 2, attachedTo: "host"),
+            ],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, catalogue).Units);
+
+        var badge = Assert.Single(group.FeelNoPains);
+        Assert.Equal("4+", badge.Value);
+        Assert.False(badge.UnitWide);
+        Assert.Equal("Chronomancer", badge.ModelName);
+    }
+
+    [Fact]
+    public void Unjoined_cryptothralls_confer_no_feel_no_pain()
+    {
+        var cryptek = Sheet("chronomancer", "Chronomancer");
+        cryptek.Keywords = ["Faction: Necrons", "Character", "Cryptek"];
+        var thralls = Sheet("cryptothralls", "Cryptothralls", wounds: "3", abilities:
+        [
+            new Ability
+            {
+                Name = "Bound Creation",
+                Text = "While this unit is in the same unit as a CRYPTEK\u00a0model, that CRYPTEK model has the Feel No Pain\u00a04+ ability.",
+            },
+        ]);
+        thralls.IsRetinue = true;
+        var catalogue = Catalogue(cryptek, thralls);
+        // The thralls stand alone, so nothing is conferred and they claim no save of their own.
+        var roster = new Roster { Units = [Unit("lead", "chronomancer"), Unit("ret", "cryptothralls", models: 2)] };
+
+        var battle = BattleRoster.Build(roster, catalogue);
+
+        Assert.All(battle.Units, u => Assert.Empty(u.FeelNoPains));
+    }
+
+    [Fact]
     public void Skips_units_whose_datasheet_is_missing()
     {
         var catalogue = Catalogue(Sheet("overlord", "Overlord"));
@@ -103,6 +162,36 @@ public class BattleRosterTests
         var battle = BattleRoster.Build(roster, catalogue);
 
         Assert.Single(battle.Units);
+    }
+
+    [Fact]
+    public void Joined_retinue_merges_into_the_host_without_becoming_a_leader()
+    {
+        // Canoptek Retinue: the Tomb Crawlers join a Cryptek-led unit, and their models count as part of that
+        // Bodyguard unit (raising its Starting Strength) — but they are a retinue, never a Leader.
+        var cryptek = Sheet("chronomancer", "Chronomancer");
+        var crawlers = Sheet("tomb-crawlers", "Canoptek Tomb Crawlers", wounds: "3");
+        crawlers.IsRetinue = true;
+        crawlers.RetinueLeaderKeyword = "Cryptek";
+        var catalogue = Catalogue(Sheet("immortals", "Immortals"), cryptek, crawlers);
+        var roster = new Roster
+        {
+            Units =
+            [
+                Unit("host", "immortals", models: 5),
+                Unit("lead", "chronomancer", attachedTo: "host"),
+                Unit("ret", "tomb-crawlers", models: 2, attachedTo: "host"),
+            ],
+        };
+
+        var group = Assert.Single(BattleRoster.Build(roster, catalogue).Units);
+
+        Assert.Equal(3, group.Parts.Count);
+        Assert.Equal(8, group.ModelCount);
+        Assert.True(group.Parts[1].IsLeader);
+        Assert.False(group.Parts[1].IsRetinue);
+        Assert.True(group.Parts[2].IsRetinue);
+        Assert.False(group.Parts[2].IsLeader);
     }
 
     [Fact]

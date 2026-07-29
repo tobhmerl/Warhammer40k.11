@@ -57,6 +57,12 @@ public static class CatalogueSeedLoader
                 && NormalizeWhitespace(leaderText).Contains("already been attached", StringComparison.OrdinalIgnoreCase);
             d.LeaderTargetIds.Clear();
 
+            // A retinue unit (Canoptek Tomb Crawlers, Cryptothralls) is NOT a Leader: it joins a unit that is
+            // already being led by a Cryptek, and its models then count as part of that Bodyguard unit.
+            var retinueKeyword = GetRetinueLeaderKeyword(d);
+            d.IsRetinue = retinueKeyword is not null;
+            d.RetinueLeaderKeyword = retinueKeyword ?? "";
+
             // Structured effects this Leader confers on the unit it leads (e.g. [LETHAL HITS], Feel No Pain,
             // +1 to Hit) — derived once here so Play Mode never re-parses ability text at runtime.
             d.LeaderConferrals = LeaderConferralParser.Parse(d.Abilities);
@@ -96,6 +102,37 @@ public static class CatalogueSeedLoader
             || a.Text.Contains("can be attached to the following", StringComparison.OrdinalIgnoreCase));
         return ability?.Text;
     }
+
+    /// <summary>
+    /// The keyword a host unit's Leader must have for this unit's retinue ability to join it, or <c>null</c>
+    /// when the datasheet has no retinue ability. Parsed from the "… can join one other unit from your army
+    /// that is being led by a CRYPTEK model …" clause shared by Canoptek Tomb Crawlers and Cryptothralls.
+    /// </summary>
+    private static string? GetRetinueLeaderKeyword(Datasheet d)
+    {
+        foreach (var ability in d.Abilities)
+        {
+            var cleaned = CleanText(ability.Text);
+            var start = cleaned.IndexOf(RetinueMarker, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+                continue;
+
+            var rest = cleaned[(start + RetinueMarker.Length)..].TrimStart();
+            var end = rest.IndexOf(" model", StringComparison.OrdinalIgnoreCase);
+            if (end <= 0)
+                continue;
+
+            // The seed writes the keyword in CAPS; title-case it so it matches the datasheet keyword lists.
+            var keyword = rest[..end].Trim();
+            return keyword.Length == 0 ? null : TitleCase(keyword);
+        }
+        return null;
+    }
+
+    private const string RetinueMarker = "can join one other unit from your army that is being led by a";
+
+    private static string TitleCase(string word) =>
+        word.Length == 0 ? word : char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant();
 
     private static bool HasAbilityText(Datasheet d, string needle) =>
         d.Abilities.Any(a => NormalizeWhitespace(a.Text).Contains(needle, StringComparison.OrdinalIgnoreCase));

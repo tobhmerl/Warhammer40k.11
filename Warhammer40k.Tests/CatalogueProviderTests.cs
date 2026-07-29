@@ -155,4 +155,47 @@ public class CatalogueProviderTests
         var provider = new CatalogueProvider();
         Assert.Same(provider.Catalogue, provider.Catalogue);
     }
+
+    // ---------- Retinue units (Canoptek Retinue / Cryptek Retinue) ----------
+
+    // The two seed entries write the clause differently — one with ^^** keyword markup, the other with
+    // non-breaking spaces — so both must survive CleanText to reach the same derived keyword.
+    [Theory]
+    [InlineData("canoptek-tomb-crawlers")]
+    [InlineData("cryptothralls")]
+    public void Derives_retinue_flag_and_leader_keyword(string id)
+    {
+        var sheet = Get(id);
+        Assert.True(sheet.IsRetinue);
+        Assert.Equal("Cryptek", sheet.RetinueLeaderKeyword);
+    }
+
+    [Fact]
+    public void A_retinue_unit_is_not_a_leader()
+    {
+        Assert.False(Get("canoptek-tomb-crawlers").HasLeaderAbility);
+        Assert.False(Get("cryptothralls").HasLeaderAbility);
+    }
+
+    [Fact]
+    public void Ordinary_units_are_not_retinues()
+    {
+        Assert.False(Get("immortals").IsRetinue);
+        Assert.False(Get("overlord").IsRetinue);
+    }
+
+    [Fact]
+    public void Tomb_crawlers_offer_only_the_two_legal_weapon_loadouts()
+    {
+        // 2 models: both take a twin gauss reaper, or one swaps to a dimensional isolator (never two).
+        var group = Assert.Single(Get("canoptek-tomb-crawlers").WargearGroups);
+        Assert.True(group.PerModel);
+        Assert.Collection(group.Options,
+            o => Assert.Equal("Twin gauss reaper", o.Name),
+            o =>
+            {
+                Assert.Equal("Dimensional isolator", o.Name);
+                Assert.Equal(1, o.MaxModels);
+            });
+    }
 }

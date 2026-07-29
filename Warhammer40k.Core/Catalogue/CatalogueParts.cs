@@ -95,6 +95,13 @@ public sealed class WargearOption
 
     /// <summary>Points delta — always 0 today (wargear is free, §3); kept for forward-compatibility.</summary>
     [JsonPropertyName("pointDelta")] public int PointDelta { get; set; }
+
+    /// <summary>
+    /// For a <see cref="WargearGroup.PerModel"/> group, the greatest number of models that may take this
+    /// option (0 = no cap). Models a datasheet's "one model can be equipped with…" clause — e.g. only one
+    /// of the two Canoptek Tomb Crawlers may swap its twin gauss reaper for a dimensional isolator.
+    /// </summary>
+    [JsonPropertyName("maxModels")] public int MaxModels { get; set; }
 }
 
 /// <summary>A Pantheon of Woe Necrodermal Binding: a points surcharge applied to a specific Monster datasheet (rule R10).</summary>

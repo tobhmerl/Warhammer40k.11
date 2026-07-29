@@ -446,6 +446,97 @@ public class RosterValidatorTests
         Assert.Equal(ValidationSeverity.Info, info.Severity);
     }
 
+    // ---------- R7: retinue (Canoptek Tomb Crawlers / Cryptothralls) ----------
+
+    private static CatalogueData RetinueCat() => Cat(
+        Sheet("chronomancer", "Chronomancer", configure: d =>
+        {
+            Character(d);
+            d.HasLeaderAbility = true;
+            d.AllowsCoLeader = true;
+            d.LeaderTargetIds = ["immortals"];
+            d.Keywords = ["Faction: Necrons", "Cryptek"];
+        }),
+        Sheet("overlord", "Overlord", configure: d =>
+        {
+            Character(d);
+            d.HasLeaderAbility = true;
+            d.LeaderTargetIds = ["immortals"];
+            d.Keywords = ["Faction: Necrons", "Overlord"];
+        }),
+        Sheet("immortals", "Immortals"),
+        Sheet("tomb-crawlers", "Canoptek Tomb Crawlers", models: 2, configure: d =>
+        {
+            d.IsRetinue = true;
+            d.RetinueLeaderKeyword = "Cryptek";
+        }),
+        Sheet("cryptothralls", "Cryptothralls", models: 2, configure: d =>
+        {
+            d.IsRetinue = true;
+            d.RetinueLeaderKeyword = "Cryptek";
+        }));
+
+    [Fact]
+    public void R7_allows_retinue_joining_a_cryptek_led_unit()
+    {
+        var host = Unit("immortals");
+        var roster = Roster(ValidDetachment, 2000, host,
+            Unit("chronomancer", configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("tomb-crawlers", 2, configure: u => u.AttachedToRosterUnitId = host.Id));
+
+        Assert.Empty(Run(new LeaderAttachRule(), roster, RetinueCat()));
+    }
+
+    [Fact]
+    public void R7_flags_retinue_joining_a_unit_that_is_not_cryptek_led()
+    {
+        var host = Unit("immortals");
+        var roster = Roster(ValidDetachment, 2000, host,
+            Unit("overlord", configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("tomb-crawlers", 2, configure: u => u.AttachedToRosterUnitId = host.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, RetinueCat()),
+            m => m.Text.Contains("can only join a unit led by a Cryptek"));
+    }
+
+    [Fact]
+    public void R7_flags_retinue_joining_an_unled_unit()
+    {
+        var host = Unit("immortals");
+        var roster = Roster(ValidDetachment, 2000, host,
+            Unit("tomb-crawlers", 2, configure: u => u.AttachedToRosterUnitId = host.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, RetinueCat()),
+            m => m.Text.Contains("can only join a unit led by a Cryptek"));
+    }
+
+    [Fact]
+    public void R7_flags_two_retinues_on_one_host()
+    {
+        var host = Unit("immortals");
+        var roster = Roster(ValidDetachment, 2000, host,
+            Unit("chronomancer", configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("tomb-crawlers", 2, configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("cryptothralls", 2, configure: u => u.AttachedToRosterUnitId = host.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, RetinueCat()),
+            m => m.Text.Contains("more than one retinue unit"));
+    }
+
+    [Fact]
+    public void R7_retinue_does_not_count_as_a_second_leader()
+    {
+        // An Overlord leading the unit plus a joined retinue is legal: the retinue is not a Leader.
+        var host = Unit("immortals");
+        var roster = Roster(ValidDetachment, 2000, host,
+            Unit("overlord", configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("chronomancer", configure: u => u.AttachedToRosterUnitId = host.Id),
+            Unit("cryptothralls", 2, configure: u => u.AttachedToRosterUnitId = host.Id));
+
+        Assert.DoesNotContain(Run(new LeaderAttachRule(), roster, RetinueCat()),
+            m => m.Text.Contains("more than one Leader"));
+    }
+
     // ---------- R8: unit size ----------
 
     [Fact]
