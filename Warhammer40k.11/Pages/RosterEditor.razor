@@ -246,7 +246,7 @@ else
 				</div>
 			}
 
-			@if (sheet.HasLeaderAbility)
+			@if (sheet.HasLeaderAbility || AttachGrantingEnhancement(u) is not null)
 			{
 				<div class="cfg-block">
 					<span class="cfg-label">Attach to</span>
@@ -1564,14 +1564,33 @@ else
 		if (sheet is null || _roster is null)
 			yield break;
 
+		// An Enhancement can widen where its bearer may attach (Murdermind opens up DESTROYER CULT units), so the
+		// list is the datasheet's own Leader targets plus whatever the assigned Enhancement permits.
+		var enhancement = AttachGrantingEnhancement(leader);
+
 		foreach (var other in _roster.Units)
 		{
 			if (ReferenceEquals(other, leader))
 				continue;
 			var otherSheet = SheetFor(other);
-			if (otherSheet is not null && sheet.LeaderTargetIds.Contains(otherSheet.Id, StringComparer.OrdinalIgnoreCase))
+			if (otherSheet is null)
+				continue;
+			if (sheet.LeaderTargetIds.Contains(otherSheet.Id, StringComparer.OrdinalIgnoreCase))
 				yield return (other.Id, otherSheet.Name);
+			else if (enhancement is not null && enhancement.AllowsAttachTo(otherSheet))
+				yield return (other.Id, $"{otherSheet.Name} ({enhancement.Name})");
 		}
+	}
+
+	// The unit's assigned Enhancement when it widens attachment targets (today only Murdermind), else null.
+	private Enhancement? AttachGrantingEnhancement(RosterUnit unit)
+	{
+		if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
+			return null;
+		var enhancement = _detachments
+			.Select(d => d.FindEnhancement(unit.AssignedEnhancementId))
+			.FirstOrDefault(e => e is not null);
+		return enhancement is { GrantsAttachment: true } ? enhancement : null;
 	}
 
 	// Units a retinue (Canoptek Tomb Crawlers / Cryptothralls) may join: any unit that already has a Leader

@@ -378,6 +378,17 @@ public static class DetachmentCatalogue
             new StatModifier { Target = StatTarget.Attacks, Delta = 2, WeaponClass = WeaponClass.Melee, Label = "+2 A" },
         ];
 
+        // Murdermind is the one Enhancement that changes WHERE its bearer may attach: it opens up any
+        // DESTROYER CULT unit (excluding CHARACTER units), which no datasheet's Leader ability lists. Its +3"
+        // Move applies to the bearer alone (unlike Destroyer Ankh's unit-wide +2").
+        var murdermind = d.FindEnhancement("murdermind")!;
+        murdermind.AttachTargetKeywords = ["Destroyer Cult"];
+        murdermind.AttachTargetExcludedKeywords = ["Character"];
+        murdermind.StatModifiers =
+        [
+            new StatModifier { Target = StatTarget.Move, Delta = 3, Label = "+3\" M" },
+        ];
+
         d.Stratagems =
         [
             new Stratagem

@@ -721,4 +721,33 @@ public class DetachmentCatalogueTests
         Assert.True(undying.AppliesInTurn(BattleTurn.Opponent));
         Assert.False(undying.AppliesInTurn(BattleTurn.Player));
     }
+
+    [Fact]
+    public void Murdermind_opens_attachment_to_destroyer_cult_units_and_adds_three_inches_of_move()
+    {
+        var murdermind = DetachmentCatalogue.FindById("cursed-legion")!.FindEnhancement("murdermind")!;
+
+        Assert.True(murdermind.GrantsAttachment);
+        Assert.Equal(["Destroyer Cult"], murdermind.AttachTargetKeywords);
+        Assert.Equal(["Character"], murdermind.AttachTargetExcludedKeywords);
+
+        // +3" Move on the BEARER only (Destroyer Ankh is the unit-wide one).
+        var move = Assert.Single(murdermind.StatModifiers);
+        Assert.Equal(StatTarget.Move, move.Target);
+        Assert.Equal(3, move.Delta);
+        Assert.False(move.AffectsWholeUnit);
+        Assert.False(murdermind.AffectsWholeUnit);
+    }
+
+    [Fact]
+    public void Only_murdermind_widens_attachment_targets()
+    {
+        var granting = DetachmentCatalogue.BuiltIn
+            .SelectMany(d => d.Enhancements)
+            .Where(e => e.GrantsAttachment)
+            .Select(e => e.Id)
+            .ToList();
+
+        Assert.Equal(["murdermind"], granting);
+    }
 }

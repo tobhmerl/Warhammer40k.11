@@ -137,6 +137,34 @@ public sealed class Enhancement
     public string EffectSummary => string.Join("; ", StatModifiers.Select(m => m.Describe()));
 
     /// <summary>
+    /// Unit keywords this Enhancement lets its bearer attach to, over and above the datasheet's own Leader
+    /// targets — e.g. Murdermind's "can be attached to a DESTROYER CULT unit". Empty (the default) means the
+    /// Enhancement changes nothing about attachment, which is true of every other Enhancement.
+    /// </summary>
+    public List<string> AttachTargetKeywords { get; set; } = [];
+
+    /// <summary>Keywords excluded from <see cref="AttachTargetKeywords"/> (Murdermind: "excluding CHARACTER units").</summary>
+    public List<string> AttachTargetExcludedKeywords { get; set; } = [];
+
+    /// <summary>True when this Enhancement widens its bearer's legal attachment targets at all.</summary>
+    public bool GrantsAttachment => AttachTargetKeywords.Count > 0;
+
+    /// <summary>
+    /// True when this Enhancement lets its bearer attach to <paramref name="target"/>: the target carries every
+    /// required keyword and none of the excluded ones. Shared by the setup dropdown and rule R7 so both agree
+    /// on what a legal target is.
+    /// </summary>
+    public bool AllowsAttachTo(Datasheet target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        if (!GrantsAttachment)
+            return false;
+        if (AttachTargetExcludedKeywords.Any(k => target.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase)))
+            return false;
+        return AttachTargetKeywords.All(k => target.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// True when <paramref name="datasheet"/> satisfies this enhancement's keyword constraints. This is only
     /// the per-enhancement constraint; whether the unit can take Enhancements at all
     /// (<see cref="Catalogue.Datasheet.CanTakeEnhancements"/>) is checked separately by rule R6.

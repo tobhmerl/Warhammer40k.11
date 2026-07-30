@@ -537,6 +537,99 @@ public class RosterValidatorTests
             m => m.Text.Contains("more than one Leader"));
     }
 
+    // ---------- R7: Murdermind (Enhancement-granted attachment) ----------
+
+    private const string CursedLegion = "cursed-legion";
+
+    private static CatalogueData MurdermindCat() => Cat(
+        Sheet("technomancer", "Technomancer", configure: d =>
+        {
+            Character(d);
+            d.HasLeaderAbility = true;
+            d.LeaderTargetIds = ["immortals"];
+            d.Keywords = ["Faction: Necrons", "Character", "Cryptek"];
+        }),
+        Sheet("immortals", "Immortals"),
+        Sheet("skorpekh-destroyers", "Skorpekh Destroyers", models: 3, configure: d =>
+            d.Keywords = ["Faction: Necrons", "Infantry", "Destroyer Cult"]),
+        Sheet("lokhust-lord", "Lokhust Lord", configure: d =>
+        {
+            Character(d);
+            d.Keywords = ["Faction: Necrons", "Character", "Destroyer Cult"];
+        }),
+        Sheet("cryptothralls", "Cryptothralls", models: 2, configure: d =>
+        {
+            d.IsRetinue = true;
+            d.RetinueLeaderKeyword = "Cryptek";
+            d.Keywords = ["Faction: Necrons", "Infantry", "Cryptothralls"];
+        }));
+
+    private static RosterUnit Murdermind(string targetId) =>
+        Unit("technomancer", configure: u =>
+        {
+            u.AttachedToRosterUnitId = targetId;
+            u.AssignedEnhancementId = "murdermind";
+        });
+
+    [Fact]
+    public void R7_murdermind_allows_attaching_to_a_destroyer_cult_unit()
+    {
+        // Skorpekh Destroyers are not on the Technomancer's Leader list — Murdermind is what permits this.
+        var destroyers = Unit("skorpekh-destroyers", 3);
+        var roster = Roster(CursedLegion, 2000, destroyers, Murdermind(destroyers.Id));
+
+        Assert.DoesNotContain(Run(new LeaderAttachRule(), roster, MurdermindCat()),
+            m => m.Text.Contains("cannot be attached"));
+    }
+
+    [Fact]
+    public void R7_murdermind_does_not_allow_attaching_to_a_character_unit()
+    {
+        // "excluding CHARACTER units" — a Lokhust Lord has DESTROYER CULT but is a Character.
+        var lord = Unit("lokhust-lord");
+        var roster = Roster(CursedLegion, 2000, lord, Murdermind(lord.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, MurdermindCat()),
+            m => m.Text.Contains("cannot be attached"));
+    }
+
+    [Fact]
+    public void R7_murdermind_does_not_allow_attaching_to_a_non_destroyer_cult_unit()
+    {
+        // Necron Warriors would be illegal; Immortals stay legal only because they are on the Leader list.
+        var warriors = Unit("skorpekh-destroyers", 3);
+        var cat = MurdermindCat();
+        cat.FindById("skorpekh-destroyers")!.Keywords = ["Faction: Necrons", "Infantry"]; // strip Destroyer Cult
+        var roster = Roster(CursedLegion, 2000, warriors, Murdermind(warriors.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, cat),
+            m => m.Text.Contains("cannot be attached"));
+    }
+
+    [Fact]
+    public void R7_without_murdermind_a_destroyer_cult_unit_is_still_an_illegal_target()
+    {
+        var destroyers = Unit("skorpekh-destroyers", 3);
+        var roster = Roster(CursedLegion, 2000, destroyers,
+            Unit("technomancer", configure: u => u.AttachedToRosterUnitId = destroyers.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, MurdermindCat()),
+            m => m.Text.Contains("cannot be attached"));
+    }
+
+    [Fact]
+    public void R7_murdermind_blocks_a_non_destroyer_cult_retinue_from_joining()
+    {
+        // "the bearer's unit cannot contain any models without the DESTROYER CULT keyword" — Cryptothralls
+        // could normally join a Cryptek-led unit, but not one whose Cryptek carries Murdermind.
+        var destroyers = Unit("skorpekh-destroyers", 3);
+        var roster = Roster(CursedLegion, 2000, destroyers, Murdermind(destroyers.Id),
+            Unit("cryptothralls", 2, configure: u => u.AttachedToRosterUnitId = destroyers.Id));
+
+        Assert.Contains(Run(new LeaderAttachRule(), roster, MurdermindCat()),
+            m => m.Text.Contains("cannot contain models without the Destroyer Cult keyword"));
+    }
+
     // ---------- R8: unit size ----------
 
     [Fact]

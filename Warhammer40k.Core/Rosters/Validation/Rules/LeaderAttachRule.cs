@@ -50,6 +50,17 @@ public sealed class LeaderAttachRule : IRosterRule
                         $"{sheet.Name} can only join a unit led by a {sheet.RetinueLeaderKeyword} model; {targetName} is not.", unit.Id);
                 }
 
+                // Murdermind's "the bearer's unit cannot contain any models without the DESTROYER CULT keyword":
+                // a retinue that lacks the keyword may not join a unit whose Leader carries such an Enhancement.
+                if (RestrictingEnhancement(context, target) is { } restriction
+                    && !restriction.Enhancement.AttachTargetKeywords.All(k => sheet.Keywords.Contains(k, StringComparer.OrdinalIgnoreCase)))
+                {
+                    var needed = string.Join(", ", restriction.Enhancement.AttachTargetKeywords);
+                    yield return ValidationMessage.Error(Id,
+                        $"{sheet.Name} cannot join {HostName(context, target.Id)}: {restriction.BearerName}'s {restriction.Enhancement.Name} " +
+                        $"means that unit cannot contain models without the {needed} keyword.", unit.Id);
+                }
+
                 if (!retinuesByHost.TryGetValue(target.Id, out var retinues))
                     retinuesByHost[target.Id] = retinues = [];
                 retinues.Add(sheet);
@@ -57,7 +68,12 @@ public sealed class LeaderAttachRule : IRosterRule
             }
 
             var targetSheet = context.DatasheetFor(target);
+            // An Enhancement may widen where its bearer can attach (Murdermind → any DESTROYER CULT unit).
+            var byEnhancement = targetSheet is not null
+                && AttachGrantingEnhancement(context, unit) is { } granted
+                && granted.AllowsAttachTo(targetSheet);
             if (targetSheet is not null
+                && !byEnhancement
                 && !sheet.LeaderTargetIds.Contains(targetSheet.Id, StringComparer.OrdinalIgnoreCase))
             {
                 yield return ValidationMessage.Error(Id, $"{sheet.Name} cannot be attached to {targetSheet.Name}.", unit.Id);
@@ -88,6 +104,31 @@ public sealed class LeaderAttachRule : IRosterRule
                     $"{HostName(context, hostId)} cannot have more than one retinue unit joined to it.", hostId);
             }
         }
+    }
+
+    /// <summary>The Enhancement assigned to <paramref name="unit"/> when it widens attachment targets, else null.</summary>
+    private static Enhancement? AttachGrantingEnhancement(RosterValidationContext context, RosterUnit unit)
+    {
+        if (string.IsNullOrEmpty(unit.AssignedEnhancementId))
+            return null;
+        var enhancement = context.FindEnhancement(unit.AssignedEnhancementId);
+        return enhancement is { GrantsAttachment: true } ? enhancement : null;
+    }
+
+    /// <summary>
+    /// The attachment-widening Enhancement carried by a Leader attached to <paramref name="host"/>, if any.
+    /// Such an Enhancement (Murdermind) also constrains which models the host unit may contain.
+    /// </summary>
+    private static (Enhancement Enhancement, string BearerName)? RestrictingEnhancement(RosterValidationContext context, RosterUnit host)
+    {
+        foreach (var (unit, sheet) in context.ResolvedUnits())
+        {
+            if (sheet.IsRetinue || !string.Equals(unit.AttachedToRosterUnitId, host.Id, StringComparison.Ordinal))
+                continue;
+            if (AttachGrantingEnhancement(context, unit) is { } enhancement)
+                return (enhancement, sheet.Name);
+        }
+        return null;
     }
 
     /// <summary>True when <paramref name="host"/> has a Leader attached whose datasheet carries <paramref name="keyword"/>.</summary>
