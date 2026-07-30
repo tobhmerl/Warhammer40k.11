@@ -41,7 +41,7 @@ else if (_notFound || _roster is null || _battle is null)
 }
 else
 {
-	<div class="play">
+	<div class="play @(_overview ? "wide" : null)">
 		@if (_cardSwipe && OrderedUnits.Count > 0)
 		{
 			var ordered = OrderedUnits;
@@ -330,72 +330,153 @@ else
 
 		@if (_overview)
 		{
-			@* Army overview — one row per unit listing everything that unit can do in the current phase + turn,
-			   plus the army-wide rules and stratagems. Same filters as the Now ribbon, same tap targets. *@
+			@* Army overview — a sticky phase header, the stratagems several units share (listed once), then
+			   one compact row per unit carrying only what is specific or exceptional to it. *@
 			var ovRules = UsableArmyRules;
-			var ovUnits = OverviewUnits;
+			var ov = BuildOverview();
+			var ovTotal = ovRules.Count + ov.Total;
 			<section class="overview" aria-label="Army overview">
-				<div class="now-head">
-					<span class="now-kicker">Now</span>
-					<strong>Army overview · @BattlePhases.Label(_phase) · @(_turn == BattleTurn.Player ? "your turn" : "opponent's turn")</strong>
-					<span class="now-count">@(ovRules.Count + ovUnits.Sum(u => u.Total))</span>
+				<div class="ov-head">
+					<span class="ov-kicker">Now</span>
+					<span class="ov-crumbs">
+						<span class="ov-view">Army overview</span>
+						<span class="ov-sep" aria-hidden="true">·</span>
+						<span class="ov-phase">@BattlePhases.Label(_phase)</span>
+						<span class="ov-sep" aria-hidden="true">·</span>
+						<span class="ov-turn">@(_turn == BattleTurn.Player ? "Your turn" : "Opponent's turn")</span>
+					</span>
+					<span class="ov-total">@ovTotal @(ovTotal == 1 ? "relevant rule" : "relevant rules")</span>
 				</div>
+
+				@if (ovTotal == 0)
+				{
+					<p class="now-empty">Nothing scheduled for this battle window.</p>
+				}
+
 				@if (ovRules.Count > 0)
 				{
-					<div class="ov-unit army">
-						<div class="ov-name">Army-wide</div>
-						<div class="now-actions" style="--now-columns: 3">
+					<div class="ov-block">
+						<h3 class="ov-block-head">Army rules</h3>
+						<div class="ov-items">
 							@foreach (var rule in ovRules)
 							{
-								<button type="button" class="now-action rule" @onclick="() => OpenNowRule(rule)">
-									<span class="na-type">Army rule</span>
-									<strong>@rule.Name</strong>
+								<button type="button" class="ov-pill rule" @onclick="() => OpenNowRule(rule)">
+									<span class="ov-type">Army rule</span>
+									<span class="ov-label">@rule.Name</span>
 								</button>
 							}
 						</div>
 					</div>
 				}
-				@if (ovUnits.Count == 0)
+
+				@if (ov.General.Count > 0)
 				{
-					<p class="now-empty">No unit has anything scheduled for this battle window.</p>
+					<div class="ov-block">
+						<h3 class="ov-block-head">General stratagems</h3>
+						<ul class="ov-general">
+							@foreach (var entry in ov.General)
+							{
+								var key = StratKey(entry.Stratagem);
+								var open = _openGeneral.Contains(key);
+								<li class="ov-gen" @key="key">
+									<div class="ov-gen-row">
+										<button type="button" class="ov-pill stratagem grow" @onclick="() => OpenGeneralStratagem(entry.Stratagem)">
+											<span class="ov-type">Stratagem</span>
+											<span class="ov-label">@entry.Stratagem.Name</span>
+										</button>
+										<span class="ov-cp">@entry.Cost CP</span>
+										<button type="button" class="ov-elig" aria-expanded="@open"
+												@onclick="() => ToggleGeneral(key)"
+												title="Show the units this stratagem applies to">
+											<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
+											@entry.Units.Count @(entry.Units.Count == 1 ? "unit" : "units")
+										</button>
+									</div>
+									@if (open)
+									{
+										<div class="ov-elig-list">
+											@foreach (var u in entry.Units)
+											{
+												<button type="button" class="ov-chip" @onclick="() => FocusReminder(u)" title="Open this unit's card">@u.Name</button>
+											}
+										</div>
+									}
+								</li>
+							}
+						</ul>
+					</div>
 				}
-				@foreach (var row in ovUnits)
+
+				@if (ov.Rows.Count > 0)
 				{
-					<div class="ov-unit" @key="row.Unit.Id">
-						<div class="ov-name">
-							<button type="button" class="ov-jump" @onclick="() => FocusReminder(row.Unit)" title="Open this unit's card">@row.Unit.Name</button>
-							<span class="ov-count">@row.Total</span>
-						</div>
-						<div class="now-actions" style="--now-columns: 3">
-							@foreach (var label in row.Reminders)
+					<div class="ov-block">
+						<h3 class="ov-block-head">Unit rules</h3>
+						<ul class="ov-rows">
+							@foreach (var row in ov.Rows)
 							{
-								<button type="button" class="now-action must" @onclick="() => FocusReminder(row.Unit)">
-									<span class="na-type">Must resolve</span>
-									<strong>@label</strong>
-								</button>
+								<li class="ov-row" @key="row.Unit.Id">
+									<div class="ov-unit">
+										<button type="button" class="ov-jump" @onclick="() => FocusReminder(row.Unit)" title="Open this unit's card">@row.Unit.Name</button>
+										<span class="ov-count" title="@($"{row.Total} rules for this unit now")">@row.Total</span>
+									</div>
+									<div class="ov-items">
+										@foreach (var label in row.Reminders)
+										{
+											<button type="button" class="ov-pill must" @onclick="() => FocusReminder(row.Unit)">
+												<span class="ov-type">Must resolve</span>
+												<span class="ov-label">@label</span>
+											</button>
+										}
+										@foreach (var ability in row.Abilities)
+										{
+											<button type="button" class="ov-pill ability" @onclick="() => OpenAbilityCard(row.Unit, ability)">
+												<span class="ov-type">@(HasEffectKeywords(ability) ? "Effect" : ability.IsEnhancement ? "Enhancement" : "Ability")</span>
+												<span class="ov-label">@ability.Ability.Name</span>
+											</button>
+										}
+										@foreach (var buff in row.Buffs)
+										{
+											<button type="button" class="ov-pill ability" @onclick="() => OpenBuffCard(row.Unit, buff)">
+												<span class="ov-type">Detachment</span>
+												<span class="ov-label">@buff.Label</span>
+											</button>
+										}
+										@foreach (var strat in row.Stratagems)
+										{
+											var cost = EffectiveCost(strat, row.Unit);
+											<button type="button" class="ov-pill stratagem @(cost != strat.Cost ? "exception" : "")"
+													@onclick="() => OpenOverviewStratagem(row.Unit, strat)">
+												<span class="ov-type">Stratagem</span>
+												<span class="ov-label">@strat.Name</span>
+												<span class="ov-cp inline">@cost CP</span>
+											</button>
+										}
+									</div>
+								</li>
 							}
-							@foreach (var ability in row.Abilities)
-							{
-								<button type="button" class="now-action ability" @onclick="() => OpenAbilityCard(row.Unit, ability)">
-									<span class="na-type">@(HasEffectKeywords(ability) ? "Effect" : ability.IsEnhancement ? "Enhancement" : "Ability")</span>
-									<strong>@ability.Ability.Name</strong>
-								</button>
-							}
-							@foreach (var buff in row.Buffs)
-							{
-								<button type="button" class="now-action ability" @onclick="() => OpenBuffCard(row.Unit, buff)">
-									<span class="na-type">Detachment</span>
-									<strong>@buff.Label</strong>
-								</button>
-							}
-							@foreach (var strat in row.Stratagems)
-							{
-								<button type="button" class="now-action stratagem" @onclick="() => OpenOverviewStratagem(row.Unit, strat)">
-									<span class="na-type">Stratagem · @EffectiveCost(strat, row.Unit) CP</span>
-									<strong>@strat.Name</strong>
-								</button>
-							}
-						</div>
+						</ul>
+					</div>
+				}
+
+				@if (ov.OtherUnits.Count > 0)
+				{
+					@* Units with nothing of their own left after de-duplication — their eligibility already
+					   lives in the General section, so they are collapsed instead of taking a whole row. *@
+					<div class="ov-block">
+						<button type="button" class="ov-other-toggle" aria-expanded="@_otherUnitsOpen" @onclick="ToggleOtherUnits">
+							<span class="chev" aria-hidden="true">@(_otherUnitsOpen ? "▾" : "▸")</span>
+							Other eligible units
+							<span class="ov-count">@ov.OtherUnits.Count</span>
+						</button>
+						@if (_otherUnitsOpen)
+						{
+							<div class="ov-elig-list">
+								@foreach (var u in ov.OtherUnits)
+								{
+									<button type="button" class="ov-chip" @onclick="() => FocusReminder(u)" title="Open this unit's card">@u.Name</button>
+								}
+							</div>
+						}
 					</div>
 				}
 			</section>
@@ -933,7 +1014,7 @@ else
 				</label>
 			}
 			<button class="btn primary" type="button" @onclick="UseNowStratagem">
-				Use · @EffectiveCost(nowStratagem, StratContextUnit) CP
+				Use · @OpenStratagemCost(nowStratagem) CP
 			</button>
 		}
 	</Sheet>
@@ -1432,47 +1513,118 @@ else
 		public int Total => Reminders.Count + Abilities.Count + Buffs.Count + Stratagems.Count;
 	}
 
-	// Every living unit that has something to do right now, in deck order. The per-category filters are the
-	// same ones the Now ribbon uses, so the overview can never disagree with a unit's own card.
-	private IReadOnlyList<OverviewRow> OverviewUnits
+	// A stratagem several units share at its normal cost — listed once in the General section instead of once
+	// per unit, with the units it covers kept for the expandable eligibility list.
+	private sealed record OverviewStratagem(StratView Stratagem, int Cost, IReadOnlyList<BattleUnit> Units);
+
+	// The whole overview, derived in one pass: the shared stratagems, the units with something of their own,
+	// and the units whose only options are already covered by the General section.
+	private sealed record OverviewModel(
+		IReadOnlyList<OverviewStratagem> General,
+		IReadOnlyList<OverviewRow> Rows,
+		IReadOnlyList<BattleUnit> OtherUnits)
 	{
-		get
+		public int Total => General.Count + Rows.Sum(r => r.Total);
+	}
+
+	// Identity of the actual stratagem: two entries only merge when they are the same stratagem from the same
+	// source, so a Core stratagem never merges with a detachment one that happens to share a name.
+	private static string StratKey(StratView s) => s.Source + "|" + s.Id;
+
+	// Builds the overview from exactly the filters the Now ribbon uses, so the two can never disagree. The
+	// only thing that differs is presentation: a stratagem usable by two or more units at its normal cost is
+	// hoisted into the General section, while unit-specific ones — and any unit whose cost differs from the
+	// normal one (e.g. an Overlord's −1 CP) — stay on the unit's own row.
+	private OverviewModel BuildOverview()
+	{
+		if (_battle is null)
+			return new OverviewModel([], [], []);
+
+		var phaseStrats = PhaseTurnStratagems()
+			.Where(s => !(IsOncePerBattleStrat(s) && IsOncePerBattleUsed(OncePerBattleStratKey(s))))
+			.ToList();
+
+		// Pass 1: per-unit eligibility, plus the cost each eligible unit actually pays.
+		var eligible = new Dictionary<string, List<(BattleUnit Unit, int Cost)>>(StringComparer.Ordinal);
+		var stratById = new Dictionary<string, StratView>(StringComparer.Ordinal);
+		var live = OrderedUnits.Where(u => !IsDead(u)).ToList();
+		foreach (var unit in live)
 		{
-			if (_battle is null)
-				return [];
-			var phaseStrats = PhaseTurnStratagems();
-			var rows = new List<OverviewRow>();
-			foreach (var unit in OrderedUnits)
+			foreach (var s in phaseStrats)
 			{
-				if (IsDead(unit))
+				if (!StratagemAppliesTo(unit, s.Target) || !CanAfford(s, unit))
 					continue;
-				var reminders = new List<string>();
-				if (MyCommandPhase && NeedsBattleShock(unit))
-					reminders.Add("Take Battle-shock test");
-				if (MyCommandPhase && NeedsReanimation(unit))
-					reminders.Add("Resolve Reanimation Protocols");
-				var abilities = unit.CombinedAbilities
-					.Where(a => IsEffectNow(a) || IsUsableNow(a))
-					.Where(a => !IsOncePerBattleUsedAbility(unit, a))
-					.ToList();
-				var buffs = ConditionalBuffsFor(unit).ToList();
-				var strats = phaseStrats
-					.Where(s => StratagemAppliesTo(unit, s.Target))
-					.Where(s => CanAfford(s, unit))
-					.Where(s => !(IsOncePerBattleStrat(s) && IsOncePerBattleUsed(OncePerBattleStratKey(s))))
-					.ToList();
-				var row = new OverviewRow(unit, reminders, abilities, buffs, strats);
-				if (row.Total > 0)
-					rows.Add(row);
+				var key = StratKey(s);
+				stratById[key] = s;
+				if (!eligible.TryGetValue(key, out var list))
+					eligible[key] = list = [];
+				list.Add((unit, EffectiveCost(s, unit)));
 			}
-			return rows;
 		}
+
+		// Pass 2: a stratagem is "general" when two or more units can use it at the printed cost.
+		var general = new List<OverviewStratagem>();
+		var generalKeys = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var (key, units) in eligible)
+		{
+			var s = stratById[key];
+			var atNormalCost = units.Where(u => u.Cost == s.Cost).Select(u => u.Unit).ToList();
+			if (atNormalCost.Count < 2)
+				continue;
+			generalKeys.Add(key);
+			general.Add(new OverviewStratagem(s, s.Cost, atNormalCost));
+		}
+		general = general
+			.OrderBy(g => g.Cost)
+			.ThenBy(g => g.Stratagem.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
+		// Pass 3: unit rows keep everything that is genuinely about that unit — its reminders, abilities and
+		// detachment buffs, plus stratagems that are unit-specific or priced differently for it.
+		var rows = new List<OverviewRow>();
+		var others = new List<BattleUnit>();
+		foreach (var unit in live)
+		{
+			var reminders = new List<string>();
+			if (MyCommandPhase && NeedsBattleShock(unit))
+				reminders.Add("Take Battle-shock test");
+			if (MyCommandPhase && NeedsReanimation(unit))
+				reminders.Add("Resolve Reanimation Protocols");
+
+			var abilities = unit.CombinedAbilities
+				.Where(a => IsEffectNow(a) || IsUsableNow(a))
+				.Where(a => !IsOncePerBattleUsedAbility(unit, a))
+				.ToList();
+			var buffs = ConditionalBuffsFor(unit).ToList();
+
+			var strats = new List<StratView>();
+			var coveredByGeneral = false;
+			foreach (var s in phaseStrats)
+			{
+				if (!StratagemAppliesTo(unit, s.Target) || !CanAfford(s, unit))
+					continue;
+				// Priced differently for this unit (a CP discount) → an exception worth showing on the row.
+				if (EffectiveCost(s, unit) != s.Cost || !generalKeys.Contains(StratKey(s)))
+					strats.Add(s);
+				else
+					coveredByGeneral = true;
+			}
+
+			var row = new OverviewRow(unit, reminders, abilities, buffs, strats);
+			if (row.Total > 0)
+				rows.Add(row);
+			else if (coveredByGeneral)
+				others.Add(unit);
+		}
+
+		return new OverviewModel(general, rows, others);
 	}
 
 	private void ShowOverview()
 	{
 		_overview = true;
 		_overviewStratUnit = null;
+		_stratNormalCost = false;
 	}
 
 	// The unit an overview stratagem was opened for — so spending CP applies that unit's discount, exactly as
@@ -1482,8 +1634,38 @@ else
 	private void OpenOverviewStratagem(BattleUnit unit, StratView stratagem)
 	{
 		_overviewStratUnit = unit;
+		_stratNormalCost = false;
 		_nowStratagem = stratagem;
 	}
+
+	// A General entry targets no particular unit, so the CP discount — which only applies when a Stratagem is
+	// used to target the bearer's own unit — does not come into play: it is always the printed cost.
+	private bool _stratNormalCost;
+
+	private void OpenGeneralStratagem(StratView stratagem)
+	{
+		_overviewStratUnit = null;
+		_stratNormalCost = true;
+		_nowStratagem = stratagem;
+	}
+
+	// The cost the open Stratagem sheet shows and spends.
+	private int OpenStratagemCost(StratView stratagem) =>
+		_stratNormalCost ? stratagem.Cost : EffectiveCost(stratagem, StratContextUnit);
+
+	// General entries whose eligible-unit list the player expanded, keyed by StratKey.
+	private readonly HashSet<string> _openGeneral = new(StringComparer.Ordinal);
+
+	private void ToggleGeneral(string key)
+	{
+		if (!_openGeneral.Remove(key))
+			_openGeneral.Add(key);
+	}
+
+	// The collapsed "Other eligible units" group at the foot of the overview.
+	private bool _otherUnitsOpen;
+
+	private void ToggleOtherUnits() => _otherUnitsOpen = !_otherUnitsOpen;
 
 	private BattleUnit? NowUnit => !_overview && _cardSwipe ? ActiveUnit : null;
 
@@ -1549,6 +1731,7 @@ else
 	private void OpenNowStratagem(StratView stratagem)
 	{
 		_overviewStratUnit = null;
+		_stratNormalCost = false;
 		_nowStratagem = stratagem;
 	}
 
@@ -1556,6 +1739,7 @@ else
 	{
 		_nowStratagem = null;
 		_overviewStratUnit = null;
+		_stratNormalCost = false;
 	}
 
 	private static string? AbilityModelContext(BattleUnit unit, BattleAbility ability)
@@ -1595,12 +1779,13 @@ else
 	{
 		if (_nowStratagem is not { } stratagem)
 			return;
-		UseStratagem(stratagem, StratContextUnit);
+		StepCp(-OpenStratagemCost(stratagem));
 		// A once-per-battle stratagem is consumed when used, so mark it used automatically.
 		if (IsOncePerBattleStrat(stratagem))
 			SetOncePerBattleUsed(OncePerBattleStratKey(stratagem), true);
 		_nowStratagem = null;
 		_overviewStratUnit = null;
+		_stratNormalCost = false;
 	}
 
 	// Army rules whose text the user expanded (collapsed to the name by default), keyed by rule name.
@@ -1787,8 +1972,6 @@ else
 	}
 
 	private bool CanAfford(StratView stratagem, BattleUnit? forUnit) => _cp >= EffectiveCost(stratagem, forUnit);
-
-	private void UseStratagem(StratView stratagem, BattleUnit? forUnit) => StepCp(-EffectiveCost(stratagem, forUnit));
 
 	private void StepCp(int delta)
 	{

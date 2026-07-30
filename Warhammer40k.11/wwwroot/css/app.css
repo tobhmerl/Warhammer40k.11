@@ -110,8 +110,9 @@ body {
 
 /* Fixed, darkened cover image as a calm backdrop for every page. A
    position:fixed pseudo-element is used instead of background-attachment:fixed
-   because the latter is unreliable on iOS Safari. The dark veil keeps the image
-   subtle so page content stays readable. */
+   because the latter is unreliable on iOS Safari. The veil is deliberately heavy:
+   the image should stay atmospheric but must never compete with body text,
+   which matters most on dense in-game surfaces like the Army overview. */
 body::before {
     content: "";
     position: fixed;
@@ -119,7 +120,7 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background-image:
-        linear-gradient(180deg, rgba(7, 11, 10, 0.35), rgba(7, 11, 10, 0.55)),
+        linear-gradient(180deg, rgba(7, 11, 10, 0.62), rgba(7, 11, 10, 0.78)),
         url("../background.jpg");
     background-position: center, center;
     background-size: cover, cover;

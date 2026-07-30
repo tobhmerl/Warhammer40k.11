@@ -6,6 +6,12 @@
     padding-bottom: calc(7rem + env(safe-area-inset-bottom));
 }
 
+/* The Army overview is a scanning surface, not a reading column — it earns the extra width to fit far more
+   units on one screen. The card/list modes keep the narrower measure. */
+.play.wide {
+    max-width: 72rem;
+}
+
 .back {
     display: inline-block;
     margin: 1.5rem 0 0.5rem;
@@ -277,44 +283,302 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 /* ---- Army overview ---- */
-/* One panel, one row per unit, so a whole turn's options read top-to-bottom in a single glance. It reuses
-   the Now ribbon's action chips (.now-actions / .now-action) so an action looks identical wherever you meet it. */
+/* Built for reading at arm's length mid-game: a sticky phase header, the stratagems several units share
+   listed once, then one compact row per unit carrying only what is specific to it. Surfaces are opaque
+   (not translucent over the cover image) so text contrast stays high. */
 .overview {
-    margin: 0.65rem 0 1rem;
-    padding: 0.65rem;
+    margin: 0.5rem 0 1rem;
+    padding: 0 0 0.6rem;
     border: 1px solid var(--accent-line);
     border-radius: var(--radius);
-    background: linear-gradient(135deg, var(--accent-soft), var(--surface) 62%);
+    background: var(--surface);
     box-shadow: var(--shadow-inset);
 }
 
-.ov-unit {
-    margin-top: 0.6rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid var(--border);
+/* Sticky so the phase/turn you are reading against never scrolls away. */
+.ov-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid var(--border-strong);
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--surface-2);
 }
 
-.ov-name {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 0.35rem;
-    color: var(--text-dim);
-    font-size: 0.62rem;
+.ov-kicker {
+    color: var(--accent-strong);
+    font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
 
+.ov-crumbs {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: var(--text);
+    font-size: 0.82rem;
+}
+
+.ov-phase,
+.ov-turn {
+    font-weight: 700;
+}
+
+.ov-phase {
+    color: var(--accent-strong);
+}
+
+.ov-sep {
+    color: var(--text-faint);
+}
+
+/* A counted, labelled total — never a bare number. */
+.ov-total {
+    flex: none;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #04130d;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ov-block {
+    padding: 0.6rem 0.65rem 0;
+}
+
+.ov-block-head {
+    margin: 0 0 0.4rem;
+    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- Compact rule pills (shared by the general list and the unit rows) ---- */
+.ov-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.ov-pill {
+    min-height: 44px; /* comfortable touch target */
+    min-width: 0;
+    padding: 0.3rem 0.55rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.05rem;
+    border: 1px solid var(--border-strong);
+    border-left-width: 3px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ov-pill:hover {
+    border-color: var(--accent);
+    border-left-color: currentColor;
+}
+
+.ov-pill:focus-visible,
+.ov-elig:focus-visible,
+.ov-chip:focus-visible,
+.ov-jump:focus-visible,
+.ov-other-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* The type label always carries the meaning; colour only reinforces it. */
+.ov-type {
+    color: var(--text-faint);
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.ov-label {
+    max-width: 22ch;
+    overflow: hidden;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Semantic edges: effects/abilities green-teal, stratagems blue, must-resolve amber. */
+.ov-pill.ability {
+    border-left-color: rgba(52, 211, 153, 0.85);
+    background: rgba(52, 211, 153, 0.07);
+}
+
+.ov-pill.stratagem {
+    border-left-color: rgba(96, 165, 250, 0.85);
+    background: rgba(96, 165, 250, 0.07);
+}
+
+.ov-pill.rule {
+    border-left-color: var(--accent);
+}
+
+.ov-pill.must {
+    border-left-color: rgba(251, 191, 36, 0.9);
+    background: rgba(251, 191, 36, 0.1);
+}
+
+.ov-pill.grow {
+    flex: 1 1 auto;
+}
+
+/* A cost that differs from the printed one (e.g. an Overlord's −1 CP) is an exception worth spotting. */
+.ov-pill.exception {
+    border-color: var(--accent);
+}
+
+.ov-cp {
+    flex: none;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid rgba(96, 165, 250, 0.55);
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.14);
+    color: var(--text);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ov-cp.inline {
+    margin-top: 0.1rem;
+    padding: 0 0.3rem;
+    font-size: 0.62rem;
+}
+
+.ov-pill.exception .ov-cp.inline {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #04130d;
+}
+
+/* ---- General stratagems: one entry per stratagem, with its eligible units on demand ---- */
+.ov-general,
+.ov-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ov-gen + .ov-gen {
+    margin-top: 0.3rem;
+}
+
+.ov-gen-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ov-elig {
+    flex: none;
+    min-height: 44px;
+    padding: 0.2rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.ov-elig:hover {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+}
+
+.ov-elig-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.3rem 0 0.15rem;
+}
+
+.ov-chip {
+    min-height: 32px;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-3);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.ov-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+}
+
+/* ---- Unit rows: name at the left, its own rules flowing at the right ---- */
+.ov-row {
+    display: grid;
+    grid-template-columns: minmax(0, 32%) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-top: 1px solid var(--border);
+}
+
+.ov-row:first-child {
+    border-top: 0;
+}
+
+.ov-unit {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-top: 0.35rem;
+}
+
 .ov-jump {
+    min-width: 0;
     padding: 0;
     border: 0;
     background: none;
-    color: inherit;
+    color: var(--text);
     font: inherit;
-    letter-spacing: inherit;
-    text-transform: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    /* No extra tracking here — long "Warriors + Overlord" names must stay readable. */
+    letter-spacing: 0;
     text-align: left;
+    overflow-wrap: anywhere;
     cursor: pointer;
 }
 
@@ -324,11 +588,60 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .ov-count {
+    flex: none;
+    min-width: 1.25rem;
     padding: 0.05rem 0.35rem;
     border: 1px solid var(--border-strong);
     border-radius: 999px;
-    color: var(--text-faint);
-    font-size: 0.58rem;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* ---- "Other eligible units": everything already covered by the general list ---- */
+.ov-other-toggle {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.3rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 0.72rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ov-other-toggle:hover {
+    color: var(--accent-strong);
+}
+
+/* Small screens: stack the unit name above its rules; pills may span the full width. */
+@media (max-width: 640px) {
+    .ov-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.25rem;
+    }
+
+    .ov-unit {
+        padding-top: 0;
+    }
+
+    .ov-label {
+        max-width: none;
+    }
+
+    .ov-gen-row {
+        flex-wrap: wrap;
+    }
+
+    .ov-pill.grow {
+        flex: 1 1 100%;
+    }
 }
 
 /* ---- CP stepper, inline at the left of the HUD ---- */
