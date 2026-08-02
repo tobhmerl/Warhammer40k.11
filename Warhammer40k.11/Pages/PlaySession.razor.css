@@ -2730,7 +2730,7 @@ html[data-scroll="up"] .hud.sticky {
     table-layout: fixed;
     width: 100%;
     /* Unit column + a 6.25rem (100px) floor per rule column: past that, the container scrolls. */
-    min-width: calc(15rem + var(--mx-cols, 1) * 6.25rem);
+    min-width: calc(8.5rem + var(--mx-cols, 1) * 6.25rem);
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.78rem;
@@ -2763,15 +2763,15 @@ html[data-scroll="up"] .hud.sticky {
     border-bottom: 2px solid var(--border-strong);
 }
 
-/* The unit column sticks to the left; the two corner cells stick on both axes. It takes a little
-   over 40% of the width so combined names have room to breathe. */
+/* The unit column sticks to the left; the two corner cells stick on both axes. Short pill-style
+   labels keep it narrow, leaving the width to the rule columns. */
 .mx-corner,
 .mx-unit {
     position: sticky;
     left: 0;
     z-index: 5;
-    width: min(42%, 22rem);
-    min-width: 11rem;
+    width: min(30%, 13rem);
+    min-width: 8.5rem;
     background: var(--surface-2);
     border-right: 2px solid var(--border-strong);
     text-align: left;
@@ -2861,64 +2861,55 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--accent-strong);
 }
 
-/* --- Unit rows --- */
+/* --- Unit rows: one line each, so a whole army fits without scrolling vertically. --- */
 .mx-unit-btn {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: baseline;
+    gap: 0.3rem;
     width: 100%;
-    min-height: 2.6rem;
-    padding: 0.35rem 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.3rem 0.45rem;
     border: 0;
     background: transparent;
     color: var(--text);
     font: inherit;
     text-align: left;
+    white-space: nowrap;
     cursor: pointer;
 }
 
-.mx-unit-names {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.05rem;
-}
-
-/* Names wrap to a second line rather than being cut; the tooltip still carries the full string. */
+/* The same one-word label as the unit pills; the full combined name lives in the tooltip. */
 .mx-unit-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 0.8rem;
     font-weight: 700;
-    overflow-wrap: anywhere;
 }
 
-.mx-unit-lead {
+.mx-lead {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--text-faint);
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 500;
-    overflow-wrap: anywhere;
 }
 
 .mx-models {
     flex: none;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.18rem;
-    padding: 0.1rem 0.35rem;
+    margin-left: auto;
+    min-width: 1.35rem;
+    padding: 0.06rem 0.32rem;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--surface);
     color: var(--text-dim);
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 800;
-}
-
-.mx-models-tag {
-    font-size: 0.54rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-faint);
+    text-align: center;
 }
 
 /* Zebra striping plus a consistent hairline: rows stay easy to follow across many columns. */
@@ -2960,7 +2951,7 @@ html[data-scroll="up"] .hud.sticky {
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 2.6rem;
+    min-height: 2.5rem;
     padding: 0;
     border: 0;
     background: transparent;
@@ -3010,7 +3001,7 @@ html[data-scroll="up"] .hud.sticky {
     box-shadow: inset 0 -2px 0 rgba(126, 231, 255, 0.55);
 }
 
-/* Phones: the unit column narrows but keeps two lines, and rule columns hold their readable
+/* Phones: the unit column stays tight and single-line, and rule columns hold their readable
    floor and scroll horizontally rather than shrinking the text away. */
 @media (max-width: 560px) {
     .mx-scroll {
@@ -3019,19 +3010,20 @@ html[data-scroll="up"] .hud.sticky {
 
     .mx-corner,
     .mx-unit {
-        width: 9.5rem;
-        min-width: 9.5rem;
+        width: 7.5rem;
+        min-width: 7.5rem;
     }
 
     .mx-table {
-        min-width: calc(9.5rem + var(--mx-cols, 1) * 5.75rem);
+        min-width: calc(7.5rem + var(--mx-cols, 1) * 5.75rem);
     }
 
     .mx-unit-name {
         font-size: 0.74rem;
     }
 
-    .mx-models-tag {
+    /* The leader suffix drops out first; it is still in the row tooltip and on the unit card. */
+    .mx-lead {
         display: none;
     }
 }

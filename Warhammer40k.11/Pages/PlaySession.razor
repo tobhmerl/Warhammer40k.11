@@ -421,19 +421,16 @@ else
 											var leaders = MatrixUnitLeaders(row.Unit);
 											<tr class="mx-row @(_matrixRowUnitId == row.Unit.Id ? "sel" : "")" @key="row.Unit.Id">
 												<th class="mx-unit" scope="row">
+													@* The same one-word label the unit pills use, so every row is a single line:
+													   the whole army fits on an iPhone without scrolling vertically too. *@
 													<button type="button" class="mx-unit-btn" title="@($"{row.Unit.Name} — {row.Unit.ModelCount} {(row.Unit.ModelCount == 1 ? "model" : "models")} · open this unit's card")"
 															@onclick="() => OpenMatrixUnit(row.Unit)">
-														<span class="mx-unit-names">
-															<span class="mx-unit-name">@MatrixUnitName(row.Unit)</span>
-															@if (leaders is not null)
-															{
-																@* Attached Leaders get their own muted line so neither name is cut. *@
-																<span class="mx-unit-lead">@leaders</span>
-															}
-														</span>
-														<span class="mx-models" title="Models in this unit">
-															@row.Unit.ModelCount<span class="mx-models-tag">@(row.Unit.ModelCount == 1 ? "model" : "models")</span>
-														</span>
+														<span class="mx-unit-name">@DeckLabel(row.Unit)</span>
+														@if (leaders is not null)
+														{
+															<span class="mx-lead" title="@leaders">@leaders</span>
+														}
+														<span class="mx-models" title="Models in this unit">@row.Unit.ModelCount</span>
 													</button>
 												</th>
 												@foreach (var column in mx.Columns)
