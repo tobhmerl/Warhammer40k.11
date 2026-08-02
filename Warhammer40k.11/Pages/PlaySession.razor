@@ -335,25 +335,117 @@ else
 			var ovRules = UsableArmyRules;
 			var ov = BuildOverview();
 			var ovTotal = ovRules.Count + ov.Total;
+			var mx = _overviewMatrix ? BuildMatrix() : null;
+			var mxRows = mx is null ? [] : VisibleMatrixRows(mx);
+			var headTotal = mx?.ColumnCount ?? ovTotal;
 			<section class="overview" aria-label="Army overview">
 				<div class="ov-head">
 					<span class="ov-kicker">Now</span>
 					<span class="ov-crumbs">
-						<span class="ov-view">Army overview</span>
+						<span class="ov-view">@(_overviewMatrix ? "Battle matrix" : "Army overview")</span>
 						<span class="ov-sep" aria-hidden="true">·</span>
 						<span class="ov-phase">@BattlePhases.Label(_phase)</span>
 						<span class="ov-sep" aria-hidden="true">·</span>
 						<span class="ov-turn">@(_turn == BattleTurn.Player ? "Your turn" : "Opponent's turn")</span>
+						@if (mx is not null)
+						{
+							<span class="ov-sep" aria-hidden="true">·</span>
+							<span class="ov-units">@mxRows.Count @(mxRows.Count == 1 ? "unit" : "units")</span>
+						}
 					</span>
-					<span class="ov-total">@ovTotal @(ovTotal == 1 ? "relevant rule" : "relevant rules")</span>
+					<span class="ov-total">@headTotal @(headTotal == 1 ? "relevant rule" : "relevant rules")</span>
+					@* Card view keeps the readable long-form pills; matrix view is the fast scan. *@
+					<div class="ov-modes" role="group" aria-label="Overview layout">
+						<button type="button" class="ov-mode @(_overviewMatrix ? "on" : "")"
+								aria-pressed="@_overviewMatrix" @onclick="() => SetOverviewMatrix(true)" title="Matrix view">Matrix</button>
+						<button type="button" class="ov-mode @(!_overviewMatrix ? "on" : "")"
+								aria-pressed="@(!_overviewMatrix)" @onclick="() => SetOverviewMatrix(false)" title="Card view">Cards</button>
+					</div>
 				</div>
 
-				@if (ovTotal == 0)
+				@if (_overviewMatrix && mx is not null)
+				{
+					@* Rows = units, columns = the rules relevant in this window, X = it applies. The unit
+					   column and both header rows are sticky, so the grid stays readable while scrolling
+					   in either direction on a tablet. *@
+					<div class="mx-tools">
+						<button type="button" class="mx-filter @(_matrixOnlyActive ? "on" : "")"
+								aria-pressed="@_matrixOnlyActive" @onclick="ToggleMatrixOnlyActive">
+							Only units with rules
+						</button>
+					</div>
+
+					@if (mx.ColumnCount == 0 || mxRows.Count == 0)
+					{
+						<p class="now-empty">Nothing scheduled for this battle window.</p>
+					}
+					else
+					{
+						<div class="mx-scroll" role="region" aria-label="Battle matrix" tabindex="0">
+							<table class="mx-table">
+								<thead>
+									<tr class="mx-groups">
+										<th class="mx-corner" scope="col"><span class="mx-corner-label">Unit</span></th>
+										@foreach (var group in mx.Groups)
+										{
+											<th class="mx-group @GroupClass(group.Kind)" colspan="@group.Columns.Count" scope="colgroup" @key="group.Title">
+												@group.Title
+											</th>
+										}
+									</tr>
+									<tr class="mx-heads">
+										<th class="mx-corner mx-corner-b" scope="col"><span class="mx-corner-label">@mxRows.Count</span></th>
+										@foreach (var column in mx.Columns)
+										{
+											<th class="mx-head @GroupClass(column.Kind) @(_matrixColumnKey == column.Key ? "sel" : "")" scope="col" @key="column.Key">
+												<button type="button" class="mx-head-btn" title="@($"{column.Label} — {column.Detail} · {column.Count} {(column.Count == 1 ? "unit" : "units")}")"
+														@onclick="() => OpenMatrixColumn(column)">
+													<span class="mx-head-label">@column.Label</span>
+													<span class="mx-head-count">@column.Count</span>
+												</button>
+											</th>
+										}
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var row in mxRows)
+									{
+										<tr class="mx-row @(_matrixRowUnitId == row.Unit.Id ? "sel" : "")" @key="row.Unit.Id">
+											<th class="mx-unit" scope="row">
+												<button type="button" class="mx-unit-btn" title="@($"{row.Unit.Name} — open this unit's card")"
+														@onclick="() => OpenMatrixUnit(row.Unit)">
+													<span class="mx-unit-name">@row.Unit.Name</span>
+													<span class="mx-unit-count">@row.Count</span>
+												</button>
+											</th>
+											@foreach (var column in mx.Columns)
+											{
+												var on = column.AppliesTo(row.Unit);
+												<td class="mx-cell @GroupClass(column.Kind) @(on ? "on" : "") @(_matrixColumnKey == column.Key ? "sel" : "")" @key="column.Key">
+													@if (on)
+													{
+														<button type="button" class="mx-x" title="@($"{column.Label} — {row.Unit.Name}")"
+																aria-label="@($"{column.Label} applies to {row.Unit.Name}")"
+																@onclick="() => OpenMatrixCell(column, row.Unit)">
+															<span aria-hidden="true">✕</span>
+														</button>
+													}
+												</td>
+											}
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				}
+
+				@if (!_overviewMatrix && ovTotal == 0)
 				{
 					<p class="now-empty">Nothing scheduled for this battle window.</p>
 				}
 
-				@if (ovRules.Count > 0)
+				@if (!_overviewMatrix && ovRules.Count > 0)
 				{
 					<div class="ov-block">
 						<h3 class="ov-block-head">Army rules</h3>
@@ -369,7 +461,7 @@ else
 					</div>
 				}
 
-				@if (ov.General.Count > 0)
+				@if (!_overviewMatrix && ov.General.Count > 0)
 				{
 					<div class="ov-block">
 						<h3 class="ov-block-head">General stratagems</h3>
@@ -407,7 +499,7 @@ else
 					</div>
 				}
 
-				@if (ov.Rows.Count > 0)
+				@if (!_overviewMatrix && ov.Rows.Count > 0)
 				{
 					<div class="ov-block">
 						<h3 class="ov-block-head">Unit rules</h3>
@@ -458,9 +550,9 @@ else
 					</div>
 				}
 
-				@if (ov.OtherUnits.Count > 0)
+				@if (!_overviewMatrix && ov.OtherUnits.Count > 0)
 				{
-					@* Units with nothing of their own left after de-duplication — their eligibility already
+					@* Units with nothing of their own left after de-duplication
 					   lives in the General section, so they are collapsed instead of taking a whole row. *@
 					<div class="ov-block">
 						<button type="button" class="ov-other-toggle" aria-expanded="@_otherUnitsOpen" @onclick="ToggleOtherUnits">
