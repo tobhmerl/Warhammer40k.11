@@ -33,6 +33,7 @@ public partial class PlaySession
         MatrixKind Kind,
         string Label,
         string Detail,
+        int? Cp,
         IReadOnlyDictionary<string, object?> Applies)
     {
         public int Count => Applies.Count;
@@ -75,7 +76,8 @@ public partial class PlaySession
                 "R|" + rule.Name,
                 MatrixKind.ArmyRule,
                 rule.Name,
-                rule.Text,
+                "Army rule",
+                null,
                 live.ToDictionary(u => u.Id, _ => (object?)rule, StringComparer.Ordinal)))
             .ToList();
         if (armyRules.Count > 0)
@@ -112,7 +114,7 @@ public partial class PlaySession
             .Where(needed)
             .ToDictionary(u => u.Id, _ => (object?)null, StringComparer.Ordinal);
         if (applies.Count > 0)
-            into.Add(new MatrixColumn("M|" + label, MatrixKind.Reminder, label, detail, applies));
+            into.Add(new MatrixColumn("M|" + label, MatrixKind.Reminder, label, detail, null, applies));
     }
 
     private List<MatrixColumn> BuildStratagemColumns(IReadOnlyList<BattleUnit> live)
@@ -135,7 +137,8 @@ public partial class PlaySession
                 StratKey(strat),
                 MatrixKind.Stratagem,
                 strat.Name,
-                $"{strat.Cost} CP · {strat.Source}",
+                strat.Source,
+                strat.Cost,
                 applies));
         }
 
@@ -173,13 +176,23 @@ public partial class PlaySession
         }
 
         return byKey
-            .Select(kv => new MatrixColumn(kv.Key, kv.Value.Kind, kv.Value.Label, kv.Value.Detail, kv.Value.Applies))
+            .Select(kv => new MatrixColumn(kv.Key, kv.Value.Kind, kv.Value.Label, kv.Value.Detail, null, kv.Value.Applies))
             .OrderByDescending(c => c.Count)
             .ThenBy(c => c.Label, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
     // ---- View state ----------------------------------------------------------------------------
+
+    // The unit's own name, without the "+ Leader" suffix BattleUnit.Name appends — the leaders get
+    // their own line in the cell so neither has to be truncated.
+    private static string MatrixUnitName(BattleUnit unit) => unit.Primary.Datasheet.Name;
+
+    // "+ Plasmancer", or "+ Overlord + Plasmancer" when more than one model is attached.
+    private static string? MatrixUnitLeaders(BattleUnit unit) =>
+        unit.Parts.Count < 2
+            ? null
+            : "+ " + string.Join(" + ", unit.Parts.Skip(1).Select(p => p.Datasheet.Name));
 
     // The colour accent a group / column / cell carries, so a rule's type reads without a legend.
     private static string GroupClass(MatrixKind kind) => kind switch

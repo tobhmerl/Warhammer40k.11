@@ -9,7 +9,7 @@
 /* The Army overview is a scanning surface, not a reading column — it earns the extra width to fit far more
    units on one screen. The card/list modes keep the narrower measure. */
 .play.wide {
-    max-width: 72rem;
+    max-width: 88rem;
 }
 
 .back {
@@ -2712,10 +2712,12 @@ html[data-scroll="up"] .hud.sticky {
     color: var(--accent-strong);
 }
 
-/* The single scroll container: both axes scroll here so the sticky offsets stay predictable. */
+/* The single scroll container: both axes scroll here so the sticky offsets stay predictable.
+   The table fills it, and only falls back to horizontal scrolling once the rule columns can no
+   longer hold their readable minimum width. */
 .mx-scroll {
-    margin: 0.45rem 0.65rem 0;
-    max-height: min(62vh, 40rem);
+    margin: 0.45rem 0.65rem 0.1rem;
+    max-height: min(64vh, 42rem);
     overflow: auto;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
@@ -2725,10 +2727,14 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .mx-table {
+    table-layout: fixed;
+    width: 100%;
+    /* Unit column + a 6.25rem (100px) floor per rule column: past that, the container scrolls. */
+    min-width: calc(15rem + var(--mx-cols, 1) * 6.25rem);
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.72rem;
-    line-height: 1.15;
+    font-size: 0.78rem;
+    line-height: 1.2;
 }
 
 /* --- Header rows: group band, then one cell per rule. Both stick to the top. --- */
@@ -2736,14 +2742,14 @@ html[data-scroll="up"] .hud.sticky {
     position: sticky;
     top: 0;
     z-index: 4;
-    height: 1.35rem;
-    padding: 0 0.4rem;
-    border-bottom: 1px solid var(--border-strong);
+    height: 1.4rem;
+    padding: 0 0.5rem;
+    border-bottom: 1px solid var(--border);
     background: var(--surface-2);
-    color: var(--text-dim);
+    color: var(--text-faint);
     font-size: 0.58rem;
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     text-align: left;
     white-space: nowrap;
@@ -2751,60 +2757,61 @@ html[data-scroll="up"] .hud.sticky {
 
 .mx-heads th {
     position: sticky;
-    top: 1.35rem;
+    top: 1.4rem;
     z-index: 4;
     background: var(--surface-2);
-    border-bottom: 1px solid var(--border-strong);
+    border-bottom: 2px solid var(--border-strong);
 }
 
-/* The unit column sticks to the left; the two corner cells stick on both axes. */
+/* The unit column sticks to the left; the two corner cells stick on both axes. It takes a little
+   over 40% of the width so combined names have room to breathe. */
 .mx-corner,
 .mx-unit {
     position: sticky;
     left: 0;
     z-index: 5;
+    width: min(42%, 22rem);
+    min-width: 11rem;
     background: var(--surface-2);
-    border-right: 1px solid var(--border-strong);
+    border-right: 2px solid var(--border-strong);
     text-align: left;
 }
 
 .mx-corner {
     z-index: 6;
-    min-width: 8.5rem;
 }
 
 .mx-corner-label {
     display: block;
-    padding: 0 0.45rem;
+    padding: 0.3rem 0.55rem;
     color: var(--text-faint);
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
 .mx-head {
-    width: 3.1rem;
-    max-width: 3.1rem;
     padding: 0;
     vertical-align: bottom;
+    border-left: 1px solid var(--border);
 }
 
-/* Compact horizontal labels, clipped to two lines; the full name lives in the tooltip and in
-   the detail sheet a tap away, so no rotated text is needed. */
+/* Rule name over up to two readable lines, then a meta row carrying the CP badge and how many
+   units are eligible — both explicitly labelled, never bare numbers. */
 .mx-head-btn {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.1rem;
+    justify-content: flex-end;
+    gap: 0.22rem;
     width: 100%;
-    padding: 0.3rem 0.28rem;
+    min-height: 3.4rem;
+    padding: 0.4rem 0.45rem 0.35rem;
     border: 0;
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-size: 0.63rem;
-    font-weight: 600;
     text-align: left;
     cursor: pointer;
 }
@@ -2815,92 +2822,182 @@ html[data-scroll="up"] .hud.sticky {
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
-.mx-head-count {
+.mx-head-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
     color: var(--text-faint);
-    font-size: 0.56rem;
-    font-weight: 700;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.mx-cp {
+    padding: 0.02rem 0.28rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-dim);
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.mx-head-units {
+    white-space: nowrap;
+}
+
+.mx-head.sel {
+    background: var(--accent-soft);
+}
+
+.mx-head.sel .mx-head-label {
+    color: var(--accent-strong);
 }
 
 /* --- Unit rows --- */
 .mx-unit-btn {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     width: 100%;
-    padding: 0.3rem 0.45rem;
+    min-height: 2.6rem;
+    padding: 0.35rem 0.5rem;
     border: 0;
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-size: 0.7rem;
-    font-weight: 600;
     text-align: left;
     cursor: pointer;
 }
 
-.mx-unit-name {
+.mx-unit-names {
     flex: 1 1 auto;
     min-width: 0;
-    max-width: 11rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
 }
 
-.mx-unit-count {
-    flex: none;
-    color: var(--text-faint);
-    font-size: 0.6rem;
+/* Names wrap to a second line rather than being cut; the tooltip still carries the full string. */
+.mx-unit-name {
+    font-size: 0.8rem;
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
-.mx-row + .mx-row th,
-.mx-row + .mx-row td {
+.mx-unit-lead {
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.mx-models {
+    flex: none;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.18rem;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.mx-models-tag {
+    font-size: 0.54rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+/* Zebra striping plus a consistent hairline: rows stay easy to follow across many columns. */
+.mx-row:nth-child(even) th,
+.mx-row:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.022);
+}
+
+.mx-row th,
+.mx-row td {
     border-top: 1px solid var(--border);
 }
 
-.mx-row.sel .mx-unit,
-.mx-row.sel .mx-cell {
+.mx-row:hover th,
+.mx-row:hover td,
+.mx-row.sel th,
+.mx-row.sel td {
     background: var(--accent-soft);
 }
 
-/* --- Cells --- */
+.mx-row.sel .mx-unit-name {
+    color: var(--accent-strong);
+}
+
+/* --- Cells: neutral by default, so only the ticks and the active row carry accent. --- */
 .mx-cell {
-    width: 3.1rem;
     padding: 0;
     text-align: center;
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
 }
 
 .mx-cell.sel {
-    background: var(--accent-soft);
+    background: rgba(var(--accent-rgb), 0.07);
 }
 
-.mx-x {
-    display: block;
+.mx-tick {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    min-height: 1.85rem;
+    min-height: 2.6rem;
+    padding: 0;
     border: 0;
     background: transparent;
+    cursor: pointer;
+}
+
+/* A rounded check chip: the symbol carries the meaning, colour is only reinforcement. */
+.mx-tick-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--accent-line);
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.12);
     color: var(--accent-strong);
-    font: inherit;
     font-size: 0.8rem;
     font-weight: 800;
     line-height: 1;
-    cursor: pointer;
+}
+
+.mx-tick:hover .mx-tick-dot,
+.mx-tick:focus-visible .mx-tick-dot {
+    background: rgba(var(--accent-rgb), 0.26);
+    border-color: var(--accent-strong);
 }
 
 /* --- Rule-type accents: a thin tint per group, enough to separate without noise. --- */
 .mx-group.k-must,
 .mx-head.k-must {
-    box-shadow: inset 0 -2px 0 rgba(251, 191, 36, 0.75);
+    box-shadow: inset 0 -2px 0 rgba(251, 191, 36, 0.7);
 }
 
 .mx-group.k-rule,
 .mx-head.k-rule {
-    box-shadow: inset 0 -2px 0 rgba(139, 168, 255, 0.7);
+    box-shadow: inset 0 -2px 0 rgba(139, 168, 255, 0.65);
 }
 
 .mx-group.k-strat,
@@ -2910,38 +3007,31 @@ html[data-scroll="up"] .hud.sticky {
 
 .mx-group.k-ability,
 .mx-head.k-ability {
-    box-shadow: inset 0 -2px 0 rgba(126, 231, 255, 0.6);
+    box-shadow: inset 0 -2px 0 rgba(126, 231, 255, 0.55);
 }
 
-.mx-cell.on.k-must .mx-x {
-    color: #fbbf24;
-}
-
-.mx-cell.on.k-rule .mx-x {
-    color: #8ba8ff;
-}
-
-.mx-cell.on.k-ability .mx-x {
-    color: #7ee7ff;
-}
-
-/* Phones: tighter columns and a shorter unit column, still scrolling rather than stacking. */
+/* Phones: the unit column narrows but keeps two lines, and rule columns hold their readable
+   floor and scroll horizontally rather than shrinking the text away. */
 @media (max-width: 560px) {
-    .mx-corner {
-        min-width: 6.5rem;
+    .mx-scroll {
+        margin-inline: 0.4rem;
+    }
+
+    .mx-corner,
+    .mx-unit {
+        width: 9.5rem;
+        min-width: 9.5rem;
+    }
+
+    .mx-table {
+        min-width: calc(9.5rem + var(--mx-cols, 1) * 5.75rem);
     }
 
     .mx-unit-name {
-        max-width: 6.5rem;
+        font-size: 0.74rem;
     }
 
-    .mx-head,
-    .mx-cell {
-        width: 2.5rem;
-        max-width: 2.5rem;
-    }
-
-    .mx-head-btn {
-        font-size: 0.58rem;
+    .mx-models-tag {
+        display: none;
     }
 }

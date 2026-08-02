@@ -382,61 +382,79 @@ else
 					else
 					{
 						<div class="mx-scroll" role="region" aria-label="Battle matrix" tabindex="0">
-							<table class="mx-table">
-								<thead>
-									<tr class="mx-groups">
-										<th class="mx-corner" scope="col"><span class="mx-corner-label">Unit</span></th>
-										@foreach (var group in mx.Groups)
-										{
-											<th class="mx-group @GroupClass(group.Kind)" colspan="@group.Columns.Count" scope="colgroup" @key="group.Title">
-												@group.Title
-											</th>
-										}
-									</tr>
-									<tr class="mx-heads">
-										<th class="mx-corner mx-corner-b" scope="col"><span class="mx-corner-label">@mxRows.Count</span></th>
-										@foreach (var column in mx.Columns)
-										{
-											<th class="mx-head @GroupClass(column.Kind) @(_matrixColumnKey == column.Key ? "sel" : "")" scope="col" @key="column.Key">
-												<button type="button" class="mx-head-btn" title="@($"{column.Label} — {column.Detail} · {column.Count} {(column.Count == 1 ? "unit" : "units")}")"
-														@onclick="() => OpenMatrixColumn(column)">
-													<span class="mx-head-label">@column.Label</span>
-													<span class="mx-head-count">@column.Count</span>
-												</button>
-											</th>
-										}
-									</tr>
-								</thead>
-								<tbody>
-									@foreach (var row in mxRows)
-									{
-										<tr class="mx-row @(_matrixRowUnitId == row.Unit.Id ? "sel" : "")" @key="row.Unit.Id">
-											<th class="mx-unit" scope="row">
-												<button type="button" class="mx-unit-btn" title="@($"{row.Unit.Name} — open this unit's card")"
-														@onclick="() => OpenMatrixUnit(row.Unit)">
-													<span class="mx-unit-name">@row.Unit.Name</span>
-													<span class="mx-unit-count">@row.Count</span>
-												</button>
+								<table class="mx-table" style="@($"--mx-cols: {mx.ColumnCount}")">
+									<thead>
+										<tr class="mx-groups">
+											<th class="mx-corner" scope="col"><span class="mx-corner-label">Unit</span></th>
+											@foreach (var group in mx.Groups)
+											{
+												<th class="mx-group @GroupClass(group.Kind)" colspan="@group.Columns.Count" scope="colgroup" @key="group.Title">
+													@group.Title
+												</th>
+											}
+										</tr>
+										<tr class="mx-heads">
+											<th class="mx-corner mx-corner-b" scope="col">
+												<span class="mx-corner-label">@mxRows.Count @(mxRows.Count == 1 ? "unit" : "units")</span>
 											</th>
 											@foreach (var column in mx.Columns)
 											{
-												var on = column.AppliesTo(row.Unit);
-												<td class="mx-cell @GroupClass(column.Kind) @(on ? "on" : "") @(_matrixColumnKey == column.Key ? "sel" : "")" @key="column.Key">
-													@if (on)
-													{
-														<button type="button" class="mx-x" title="@($"{column.Label} — {row.Unit.Name}")"
-																aria-label="@($"{column.Label} applies to {row.Unit.Name}")"
-																@onclick="() => OpenMatrixCell(column, row.Unit)">
-															<span aria-hidden="true">✕</span>
-														</button>
-													}
-												</td>
+												<th class="mx-head @GroupClass(column.Kind) @(_matrixColumnKey == column.Key ? "sel" : "")" scope="col" @key="column.Key">
+													<button type="button" class="mx-head-btn" title="@($"{column.Label} — {column.Detail} · applies to {column.Count} {(column.Count == 1 ? "unit" : "units")}")"
+															@onclick="() => OpenMatrixColumn(column)">
+														<span class="mx-head-label">@column.Label</span>
+														<span class="mx-head-meta">
+															@if (column.Cp is { } cp)
+															{
+																<span class="mx-cp">@cp CP</span>
+															}
+															<span class="mx-head-units">@column.Count @(column.Count == 1 ? "unit" : "units")</span>
+														</span>
+													</button>
+												</th>
 											}
 										</tr>
-									}
-								</tbody>
-							</table>
-						</div>
+									</thead>
+									<tbody>
+										@foreach (var row in mxRows)
+										{
+											var leaders = MatrixUnitLeaders(row.Unit);
+											<tr class="mx-row @(_matrixRowUnitId == row.Unit.Id ? "sel" : "")" @key="row.Unit.Id">
+												<th class="mx-unit" scope="row">
+													<button type="button" class="mx-unit-btn" title="@($"{row.Unit.Name} — {row.Unit.ModelCount} {(row.Unit.ModelCount == 1 ? "model" : "models")} · open this unit's card")"
+															@onclick="() => OpenMatrixUnit(row.Unit)">
+														<span class="mx-unit-names">
+															<span class="mx-unit-name">@MatrixUnitName(row.Unit)</span>
+															@if (leaders is not null)
+															{
+																@* Attached Leaders get their own muted line so neither name is cut. *@
+																<span class="mx-unit-lead">@leaders</span>
+															}
+														</span>
+														<span class="mx-models" title="Models in this unit">
+															@row.Unit.ModelCount<span class="mx-models-tag">@(row.Unit.ModelCount == 1 ? "model" : "models")</span>
+														</span>
+													</button>
+												</th>
+												@foreach (var column in mx.Columns)
+												{
+													var on = column.AppliesTo(row.Unit);
+													<td class="mx-cell @(_matrixColumnKey == column.Key ? "sel" : "")" @key="column.Key">
+														@if (on)
+														{
+															<button type="button" class="mx-tick" title="@($"{column.Label} — {row.Unit.Name}")"
+																	aria-label="@($"{column.Label} applies to {row.Unit.Name}")"
+																	@onclick="() => OpenMatrixCell(column, row.Unit)">
+																<span class="mx-tick-dot" aria-hidden="true">✓</span>
+															</button>
+														}
+													</td>
+												}
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
 					}
 				}
 
