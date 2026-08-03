@@ -107,10 +107,22 @@ public sealed class Enhancement
     public List<StatModifier> StatModifiers { get; set; } = [];
 
     /// <summary>
-    /// When true, <see cref="StatModifiers"/> apply to <b>every model in the bearer's unit</b> (the whole
-    /// combat group in Play Mode), not just the bearer — e.g. Gauntlet of Compression's <c>+6"</c> Range.
+    /// When true, <see cref="StatModifiers"/> and <see cref="WeaponAbilityGrants"/> apply to <b>every model in
+    /// the bearer's unit</b> (the whole combat group in Play Mode), not just the bearer — e.g. Gauntlet of
+    /// Compression's <c>+6"</c> Range, or an Upgrade assigned to the unit as a whole.
     /// </summary>
     public bool AffectsWholeUnit { get; set; }
+
+    /// <summary>
+    /// Weapon abilities this Enhancement confers, in catalogue spelling (e.g. <c>"Rapid Fire 1"</c>). Scoped by
+    /// <see cref="WeaponAbilityClass"/> and, like <see cref="StatModifiers"/>, applied only once the player ticks
+    /// "Apply …" for it — the same mechanism as a Leader's conferral (e.g. a Skorpekh Lord's [LETHAL HITS]), so
+    /// Play Mode shows them as granted chips on the weapon rows instead of leaving the effect as prose.
+    /// </summary>
+    public List<string> WeaponAbilityGrants { get; set; } = [];
+
+    /// <summary>Which weapons <see cref="WeaponAbilityGrants"/> apply to. Defaults to all of them.</summary>
+    public DetachmentWeaponClass WeaponAbilityClass { get; set; } = DetachmentWeaponClass.Any;
 
     /// <summary>
     /// Keywords this Enhancement confers on its bearer (e.g. Destroyer Ankh grants <c>DESTROYER CULT</c>).
@@ -133,8 +145,29 @@ public sealed class Enhancement
     /// </summary>
     public List<string> ShootingAbilityOptions { get; set; } = [];
 
-    /// <summary>A compact one-line summary of <see cref="StatModifiers"/> for the "Applied: …" note; empty when none.</summary>
-    public string EffectSummary => string.Join("; ", StatModifiers.Select(m => m.Describe()));
+    /// <summary>
+    /// A compact one-line summary of what this Enhancement applies (its granted weapon abilities and
+    /// <see cref="StatModifiers"/>) for the "Apply …" checkbox and the "Applied: …" note; empty when it
+    /// applies nothing mechanical and its <see cref="Text"/> stays as prose.
+    /// </summary>
+    public string EffectSummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (WeaponAbilityGrants.Count > 0)
+                parts.Add($"{string.Join(", ", WeaponAbilityGrants)} on {WeaponAbilityScope()}");
+            parts.AddRange(StatModifiers.Select(m => m.Describe()));
+            return string.Join("; ", parts);
+        }
+    }
+
+    private string WeaponAbilityScope() => WeaponAbilityClass switch
+    {
+        DetachmentWeaponClass.Ranged => "ranged weapons",
+        DetachmentWeaponClass.Melee => "melee weapons",
+        _ => "weapons",
+    };
 
     /// <summary>
     /// Unit keywords this Enhancement lets its bearer attach to, over and above the datasheet's own Leader

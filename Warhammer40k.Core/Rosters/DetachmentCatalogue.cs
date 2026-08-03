@@ -72,6 +72,11 @@ public static class DetachmentCatalogue
                 Scope = EnhancementScope.Unit,
                 Eligibility = new EnhancementEligibility { RequiredKeywords = ["Immortals"] },
                 Text = "IMMORTALS unit only. This unit's ranged attacks have [RAPID FIRE 1].",
+                // An Upgrade assigned to the whole unit, so the grant reaches every model's ranged weapons
+                // once ticked — exactly like a Leader conferring [LETHAL HITS].
+                WeaponAbilityGrants = ["Rapid Fire 1"],
+                WeaponAbilityClass = DetachmentWeaponClass.Ranged,
+                AffectsWholeUnit = true,
             },
         ];
         d.Rules =

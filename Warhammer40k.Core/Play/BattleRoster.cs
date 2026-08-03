@@ -162,9 +162,10 @@ public sealed class BattleRoster
     }
 
     /// <summary>
-    /// Passive weapon abilities granted to this part's ranged (or melee) weapons, from two sources: a
-    /// <b>detachment</b> grant matched by keyword (e.g. CRYPTEK models gain [ASSAULT]), and an attached
-    /// <b>Leader's</b> conferral (e.g. a Skorpekh Lord gives the unit it leads [LETHAL HITS] on melee weapons).
+    /// Passive weapon abilities granted to this part's ranged (or melee) weapons, from three sources: a
+    /// <b>detachment</b> grant matched by keyword (e.g. CRYPTEK models gain [ASSAULT]), an attached
+    /// <b>Leader's</b> conferral (e.g. a Skorpekh Lord gives the unit it leads [LETHAL HITS] on melee weapons),
+    /// and a setup-assigned <b>Enhancement</b> (e.g. Tools of Dominion gives ranged attacks [RAPID FIRE 1]).
     /// Detachment grants target the model by keyword so they never spill onto a bodyguard; a Leader's conferral
     /// applies to every model in the unit it leads.
     /// </summary>
@@ -208,6 +209,24 @@ public sealed class BattleRoster
                         result.Add(ability);
                 }
             }
+        }
+
+        // A setup-assigned Enhancement can confer weapon abilities too (e.g. Tools of Dominion gives an
+        // IMMORTALS unit's ranged attacks [RAPID FIRE 1]). Gated on the same "Apply …" tick as its stat
+        // modifiers, and scoped to the bearer unless the Enhancement covers the whole unit.
+        foreach (var member in unit.Parts)
+        {
+            if (member.Enhancement is not { } enh || enh.WeaponAbilityGrants.Count == 0)
+                continue;
+            if (!ClassMatches(enh.WeaponAbilityClass, ranged))
+                continue;
+            if (!ReferenceEquals(member, part) && !enh.AffectsWholeUnit)
+                continue;
+            if (!Source.IsApplied(AbilityScheduleKeys.ForEnhancement(enh.Id)))
+                continue;
+            foreach (var ability in enh.WeaponAbilityGrants)
+                if (!result.Contains(ability, StringComparer.OrdinalIgnoreCase))
+                    result.Add(ability);
         }
 
         // A model's own permanent self-effects (e.g. Tomb Blades' Nebuloscope → ranged [IGNORES COVER]) apply

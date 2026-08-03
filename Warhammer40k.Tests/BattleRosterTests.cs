@@ -1061,6 +1061,65 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void Tools_of_Dominion_grants_Rapid_Fire_1_to_the_units_ranged_weapons_once_applied()
+    {
+        var immortals = Sheet("immortals", "Immortals", wounds: "1",
+            weapons:
+            [
+                new WeaponProfile { Name = "Gauss blaster", Type = "Ranged", Range = "24\"" },
+                new WeaponProfile { Name = "Close combat weapon", Type = "Melee", Range = "Melee" },
+            ]);
+        immortals.Keywords = ["Infantry", "Battleline", "Immortals"];
+        var hand = DetachmentCatalogue.FindById("hand-of-the-dynasty")!;
+        var roster = new Roster
+        {
+            DetachmentIds = [hand.Id],
+            Units = [Bearer("im", "immortals", "tools-of-dominion", models: 10)],
+        };
+        ApplyEnhancement(roster, "tools-of-dominion");
+
+        var battle = BattleRoster.Build(roster, Catalogue(immortals), [hand]);
+        var group = Assert.Single(battle.Units);
+
+        // The Upgrade is assigned to the whole unit, so every model's ranged weapons gain it — exactly like a
+        // Leader conferring [LETHAL HITS] — while melee weapons are untouched.
+        Assert.Contains("Rapid Fire 1", battle.GrantedWeaponAbilities(group, group.Primary, ranged: true),
+            StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Rapid Fire 1", battle.GrantedWeaponAbilities(group, group.Primary, ranged: false),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Tools_of_Dominion_grants_nothing_until_the_player_applies_it()
+    {
+        var immortals = Sheet("immortals", "Immortals", wounds: "1",
+            weapons: [new WeaponProfile { Name = "Gauss blaster", Type = "Ranged", Range = "24\"" }]);
+        immortals.Keywords = ["Infantry", "Battleline", "Immortals"];
+        var hand = DetachmentCatalogue.FindById("hand-of-the-dynasty")!;
+        var roster = new Roster
+        {
+            DetachmentIds = [hand.Id],
+            Units = [Bearer("im", "immortals", "tools-of-dominion", models: 10)],
+        };
+        // Deliberately no ApplyEnhancement: the effect waits on the "Apply …" tick, like every conferral.
+
+        var battle = BattleRoster.Build(roster, Catalogue(immortals), [hand]);
+        var group = Assert.Single(battle.Units);
+
+        Assert.DoesNotContain("Rapid Fire 1", battle.GrantedWeaponAbilities(group, group.Primary, ranged: true),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Tools_of_Dominion_summarises_its_grant_for_the_apply_checkbox()
+    {
+        var tools = DetachmentCatalogue.FindById("hand-of-the-dynasty")!.FindEnhancement("tools-of-dominion")!;
+
+        // Drives the "Apply …" checkbox in the configurator and the "Applied: …" note on the Play card.
+        Assert.Equal("Rapid Fire 1 on ranged weapons", tools.EffectSummary);
+    }
+
+    [Fact]
     public void Unit_wide_enhancement_buffs_every_models_ranged_weapons()
     {
         var overlord = Sheet("overlord", "Overlord", wounds: "4",
