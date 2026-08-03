@@ -198,4 +198,17 @@ public class CatalogueProviderTests
                 Assert.Equal(1, o.MaxModels);
             });
     }
+
+    [Theory]
+    [InlineData("canoptek-doomstalker", "Doomsday blaster", "Doomstalker limbs", "Twin gauss flayer")]
+    [InlineData("transcendent-ctan", "Crackling tendrils", "Seismic assault")]
+    public void Fixed_loadout_datasheets_carry_every_weapon_with_no_wargear_choice(string id, params string[] weapons)
+    {
+        // Both models come with their full loadout. They previously carried a seed-authoring artifact — an
+        // either/or "Wargear" group listing every weapon — which let the player pick one and drop the rest.
+        var sheet = Get(id);
+
+        Assert.Empty(sheet.WargearGroups);
+        Assert.Equal(weapons.Order(), sheet.Weapons.Select(w => w.Name).Order());
+    }
 }

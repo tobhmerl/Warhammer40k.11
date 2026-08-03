@@ -2188,24 +2188,7 @@
           "escalatedPoints": 360
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "2a64-2866-b350-a61b::6e5e-44c0-bed7-e909",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "crackling-tendrils",
-              "name": "Crackling tendrils"
-            },
-            {
-              "id": "seismic-assault",
-              "name": "Seismic assault"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Immortals",
@@ -3980,28 +3963,7 @@
           "points": 140
         }
       ],
-      "wargearGroups": [
-        {
-          "id": "2763-bfec-e510-6469::6b19-22ca-5345-bdd2",
-          "name": "Wargear",
-          "min": 0,
-          "max": 1,
-          "options": [
-            {
-              "id": "doomsday-blaster",
-              "name": "Doomsday blaster"
-            },
-            {
-              "id": "doomstalker-limbs",
-              "name": "Doomstalker limbs"
-            },
-            {
-              "id": "twin-gauss-flayer",
-              "name": "Twin gauss flayer"
-            }
-          ]
-        }
-      ]
+      "wargearGroups": []
     },
     {
       "name": "Canoptek Reanimator",
