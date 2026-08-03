@@ -10,12 +10,11 @@ namespace Warhammer40k.Core.Rosters;
 /// </summary>
 /// <remarks>
 /// The validation machinery (R6 enhancement eligibility, stratagem reference) is finalized; what's still
-/// missing for most detachments is <i>content</i> — the 11th-edition enhancement eligibility and stratagems.
-/// Detachments authored only with points (Skyshroud Spearhead, The Phaeron's Armoury, Starshatter Arsenal,
-/// Cursed Legion, Annihilation Legion, Awakened Dynasty, Canoptek Court, Hypercrypt Legion, Obeisance Phalanx)
-/// stay <see cref="Detachment.Enabled"/> = false until their rules are filled in here; R6 stays permissive for
-/// them meanwhile. Per-enhancement <c>Eligibility</c> and per-detachment <c>Stratagems</c> are empty pending
-/// §10/§11 — add keyword constraints / stratagem entries below to activate them (no engine change required).
+/// missing for a few detachments is <i>content</i> — the 11th-edition enhancement eligibility and stratagems.
+/// Still awaiting §10/§11 content: Skyshroud Spearhead, The Phaeron's Armoury and Annihilation Legion carry
+/// their rule and enhancement points but no per-enhancement <c>Eligibility</c>/<c>Text</c> and no
+/// <c>Stratagems</c>; R6 stays permissive for them meanwhile. Add keyword constraints / stratagem entries
+/// below to activate them (no engine change required).
 /// </remarks>
 public static class DetachmentCatalogue
 {
@@ -276,7 +275,8 @@ public static class DetachmentCatalogue
         return d;
     }
 
-    // Canoptek Court (3 DP) — "Power Matrix". Entirely board-state (objective control / zones), so prose only.
+    // Canoptek Court (3 DP) — "Power Matrix". The zone half is entirely board-state (objective control), and
+    // even the always-on half is a Hit re-roll rather than a characteristic change, so the rule stays prose.
     private static Detachment CanoptekCourt()
     {
         var d = Make("Canoptek Court", 3,
@@ -300,6 +300,85 @@ public static class DetachmentCatalogue
                     "opponent's Deployment zone, until the end of that phase that zone is within your Power Matrix.\n" +
                     "Each time a model in a CRYPTEK or CANOPTEK unit from your army makes an attack, re-roll a Hit " +
                     "roll of 1. If such a unit is wholly within your Power Matrix, you can re-roll the Hit roll instead.",
+            },
+        ];
+
+        // Enhancement display text (bearer's Play card) + R6 eligibility — all four are CRYPTEK model only.
+        Author(d, "autodivinator",
+            "CRYPTEK model only. Each time your opponent gains a CP as a result of an ability, roll one D6: " +
+            "on a 2+, you also gain 1CP.",
+            "Cryptek");
+        Author(d, "dimensional-sanctum",
+            "CRYPTEK model only. Models in the bearer's unit have the Infiltrators ability.\n" +
+            "Infiltrators: During Deployment, if every model in a unit has this ability, it can be set up anywhere " +
+            "on the battlefield that is more than 8\" horizontally from your opponent's Deployment zone and all " +
+            "enemy units.",
+            "Cryptek");
+        Author(d, "hyperphasic-fulcrum",
+            "CRYPTEK model only. While the bearer is leading a unit, if that unit is wholly within your army's " +
+            "Power Matrix, each time a model in that unit makes an attack, re-roll a Wound roll of 1.",
+            "Cryptek");
+        Author(d, "metalodermal-tesla-weave",
+            "CRYPTEK model only. Once per phase, when an enemy unit selects the bearer's unit as a target of a " +
+            "charge, roll one D6: on a 2-5, that enemy unit suffers D3 mortal wounds; on a 6, that enemy unit " +
+            "suffers 3 mortal wounds.",
+            "Cryptek");
+
+        d.Stratagems =
+        [
+            new Stratagem
+            {
+                Id = "solar-pulse", Name = "Solar Pulse", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Cryptek"],
+                When = "Start of your Shooting phase.",
+                Target = "One CRYPTEK model from your army.",
+                Effect = "Select one objective marker within 18\" of your CRYPTEK model. Until the end of the phase, weapons equipped by friendly NECRONS models have the [IGNORES COVER] ability while targeting units within range of that objective marker.",
+            },
+            new Stratagem
+            {
+                Id = "suboptimal-facade", Name = "Suboptimal Facade", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Charge],
+                RequiredUnitKeywords = ["Canoptek"],
+                When = "Your opponent's Charge phase, just after an enemy unit has declared a charge.",
+                Target = "One CANOPTEK unit from your army that was selected as a target of that charge and is wholly within your army's Power Matrix.",
+                Effect = "Your unit's Reanimation Protocols activate.",
+            },
+            new Stratagem
+            {
+                Id = "reactive-subroutines", Name = "Reactive Subroutines", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Movement],
+                RequiredUnitKeywords = ["Canoptek"],
+                When = "Your opponent's Movement phase, just after an enemy unit ends a Normal, Advance or Fall Back move.",
+                Target = "One CANOPTEK unit from your army that is within 8\" of that enemy unit.",
+                Effect = "Your unit can make a Normal move of up to 6\".",
+            },
+            new Stratagem
+            {
+                Id = "countertemporal-shift", Name = "Countertemporal Shift", Type = "Strategic Ploy", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting],
+                RequiredUnitKeywords = ["Canoptek"],
+                When = "Your opponent's Shooting phase, just after an enemy unit has selected its targets.",
+                Target = "One CANOPTEK unit from your army that was selected as the target of one or more of the attacking unit's attacks.",
+                Effect = "Until the end of the phase, your unit can only be selected as the target of a ranged attack if the attacking model is within 18\".",
+            },
+            new Stratagem
+            {
+                Id = "curse-of-the-cryptek", Name = "Curse of the Cryptek", Type = "Battle Tactic", CpCost = 1,
+                Turn = StratagemTurn.Opponent, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Cryptek"],
+                When = "Your opponent's Shooting phase or the Fight phase, just after an enemy unit has shot or fought.",
+                Target = "One CRYPTEK model from your army that was destroyed by one of the attacking unit's attacks. You can use this Stratagem on that model even though it was just destroyed.",
+                Effect = "Until the end of the battle, each time a friendly CANOPTEK model makes an attack that targets the attacking unit, add 1 to the Hit roll and add 1 to the Wound roll.",
+            },
+            new Stratagem
+            {
+                Id = "cynosure-of-eradication", Name = "Cynosure of Eradication", Type = "Battle Tactic", CpCost = 2,
+                Turn = StratagemTurn.Your, Phases = [BattlePhase.Shooting, BattlePhase.Fight],
+                RequiredUnitKeywords = ["Cryptek", "Canoptek"],
+                When = "The start of your Shooting phase or the start of the Fight phase.",
+                Target = "One CRYPTEK or CANOPTEK unit from your army that is wholly within your army's Power Matrix.",
+                Effect = "Until the end of the phase, weapons equipped by CRYPTEK or CANOPTEK models in your unit have the [DEVASTATING WOUNDS] ability.",
             },
         ];
         return d;

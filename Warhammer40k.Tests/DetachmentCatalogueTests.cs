@@ -562,6 +562,69 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Canoptek_Court_enhancements_are_Cryptek_only_with_text()
+    {
+        var court = DetachmentCatalogue.FindById("canoptek-court")!;
+
+        foreach (var (id, points) in new[]
+                 {
+                     ("autodivinator", 15),
+                     ("dimensional-sanctum", 20),
+                     ("hyperphasic-fulcrum", 15),
+                     ("metalodermal-tesla-weave", 10),
+                 })
+        {
+            var enh = court.FindEnhancement(id)!;
+            Assert.Equal(points, enh.Points);
+            Assert.False(string.IsNullOrWhiteSpace(enh.Text));
+            Assert.Contains("Cryptek", enh.Eligibility.RequiredKeywords);
+        }
+    }
+
+    [Fact]
+    public void Canoptek_Court_has_six_stratagems_filtered_by_phase_turn_and_keyword()
+    {
+        var court = DetachmentCatalogue.FindById("canoptek-court")!;
+        Assert.Equal(6, court.Stratagems.Count);
+        Assert.All(court.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.When)));
+        Assert.All(court.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Target)));
+        Assert.All(court.Stratagems, s => Assert.False(string.IsNullOrWhiteSpace(s.Effect)));
+
+        // Solar Pulse: 1CP Strategic Ploy, your Shooting phase, CRYPTEK-gated.
+        var solar = court.Stratagems.Single(s => s.Name == "Solar Pulse");
+        Assert.Equal("Strategic Ploy", solar.Type);
+        Assert.Equal(1, solar.CpCost);
+        Assert.True(solar.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(solar.AppliesInTurn(BattleTurn.Player));
+        Assert.False(solar.AppliesInTurn(BattleTurn.Opponent));
+        Assert.Equal(["Cryptek"], solar.RequiredUnitKeywords);
+
+        // The three reactive ploys all fire in the opponent's turn, each in its own phase.
+        foreach (var (name, phase) in new[]
+                 {
+                     ("Suboptimal Facade", BattlePhase.Charge),
+                     ("Reactive Subroutines", BattlePhase.Movement),
+                     ("Countertemporal Shift", BattlePhase.Shooting),
+                 })
+        {
+            var strat = court.Stratagems.Single(s => s.Name == name);
+            Assert.True(strat.AppliesInTurn(BattleTurn.Opponent));
+            Assert.False(strat.AppliesInTurn(BattleTurn.Player));
+            Assert.True(strat.AppliesInPhase(phase));
+            Assert.Equal(["Canoptek"], strat.RequiredUnitKeywords);
+        }
+
+        // Cynosure of Eradication: the only 2CP entry, open to either keyword, your Shooting or Fight phase.
+        var cynosure = court.Stratagems.Single(s => s.Name == "Cynosure of Eradication");
+        Assert.Equal("Battle Tactic", cynosure.Type);
+        Assert.Equal(2, cynosure.CpCost);
+        Assert.True(cynosure.AppliesInPhase(BattlePhase.Shooting));
+        Assert.True(cynosure.AppliesInPhase(BattlePhase.Fight));
+        Assert.False(cynosure.AppliesInPhase(BattlePhase.Command));
+        Assert.Equal(["Cryptek", "Canoptek"], cynosure.RequiredUnitKeywords);
+    }
+
+    [Fact]
     public void Starshatter_Arsenal_is_3DP_enabled_with_Relentless_Onslaught_and_a_non_Titanic_Assault_grant()
     {
         var starshatter = DetachmentCatalogue.FindById("starshatter-arsenal");
