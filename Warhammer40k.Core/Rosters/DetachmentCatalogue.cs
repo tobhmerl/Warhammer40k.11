@@ -448,6 +448,20 @@ public static class DetachmentCatalogue
             "attached to a DESTROYER CULT unit (excluding CHARACTER units). If you do, the bearer's unit cannot " +
             "contain any models without the DESTROYER CULT keyword. Add 3\" to the Move characteristic of the bearer.");
 
+        // Mark of the Nekrosor's +1 to Hit covers every attack made by every model in the bearer's unit, so it is
+        // data-driven (unit-wide) rather than prose: ticking "Apply +1 to Hit" improves the BS/WS of all their weapons.
+        d.FindEnhancement("mark-of-the-nekrosor")!.StatModifiers =
+        [
+            new StatModifier
+            {
+                Target = StatTarget.Skill,
+                Delta = 1,
+                WeaponClass = WeaponClass.Any,
+                AffectsWholeUnit = true,
+                Label = "+1 Hit",
+            },
+        ];
+
         // Both confer the DESTROYER CULT keyword. Cold Fervour's +2 Strength is keyword-driven, so it applies
         // to whichever models actually gain the keyword. Destroyer Ankh grants it to the bearer only (RAW);
         // Murdermind forces the whole attached unit to be DESTROYER CULT, so it is unit-wide.

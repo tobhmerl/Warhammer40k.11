@@ -412,6 +412,18 @@ public class DetachmentCatalogueTests
     }
 
     [Fact]
+    public void Mark_of_the_Nekrosor_applies_plus1_to_Hit_across_the_unit()
+    {
+        var enh = DetachmentCatalogue.FindById("cursed-legion")!.FindEnhancement("mark-of-the-nekrosor")!;
+        var mod = Assert.Single(enh.StatModifiers);
+        Assert.Equal(StatTarget.Skill, mod.Target);
+        Assert.Equal(1, mod.Delta);
+        Assert.Equal(WeaponClass.Any, mod.WeaponClass);
+        Assert.True(mod.AffectsWholeUnit);
+        Assert.Equal("+1 Hit", enh.EffectSummary);
+    }
+
+    [Fact]
     public void Empowered_Engines_adds_plus6_move_to_Titanic_units()
     {
         var buff = Assert.Single(DetachmentCatalogue.FindById("the-phaerons-armoury")!.StatBuffs);
