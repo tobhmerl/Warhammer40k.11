@@ -295,53 +295,6 @@ html[data-scroll="up"] .hud.sticky {
     box-shadow: var(--shadow-inset);
 }
 
-/* Sticky so the phase/turn you are reading against never scrolls away. */
-.ov-head {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.3rem 0.5rem;
-    padding: 0.5rem 0.65rem;
-    border-bottom: 1px solid var(--border-strong);
-    border-radius: var(--radius) var(--radius) 0 0;
-    background: var(--surface-2);
-}
-
-.ov-kicker {
-    color: var(--accent-strong);
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.ov-crumbs {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.3rem;
-    color: var(--text);
-    font-size: 0.82rem;
-}
-
-.ov-phase,
-.ov-turn {
-    font-weight: 700;
-}
-
-.ov-phase {
-    color: var(--accent-strong);
-}
-
-.ov-sep {
-    color: var(--text-faint);
-}
-
 /* A counted, labelled total — never a bare number. */
 .ov-total {
     flex: none;
@@ -2630,38 +2583,6 @@ html[data-scroll="up"] .hud.sticky {
 /* ---- Battle matrix -------------------------------------------------------------------------
    Units down the side, the rules relevant in this window across the top, X where one applies.
    Dense and high-contrast: a tactical panel to scan, not a spreadsheet to read. */
-
-/* Layout toggle sits at the far end of the sticky overview header. */
-.ov-modes {
-    display: inline-flex;
-    gap: 2px;
-    padding: 2px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-}
-
-.ov-mode {
-    padding: 0.2rem 0.5rem;
-    border: 0;
-    border-radius: calc(var(--radius-sm) - 3px);
-    background: transparent;
-    color: var(--text-dim);
-    font: inherit;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-}
-
-.ov-mode.on {
-    background: var(--accent-soft);
-    color: var(--accent-strong);
-}
-
-.ov-units {
-    color: var(--text-dim);
-}
 
 .mx-tools {
     display: flex;

@@ -337,32 +337,7 @@ else
 			var ovTotal = ovRules.Count + ov.Total;
 			var mx = _overviewMatrix ? BuildMatrix() : null;
 			var mxRows = mx is null ? [] : VisibleMatrixRows(mx);
-			var headTotal = mx?.ColumnCount ?? ovTotal;
 			<section class="overview" aria-label="Army overview">
-				<div class="ov-head">
-					<span class="ov-kicker">Now</span>
-					<span class="ov-crumbs">
-						<span class="ov-view">@(_overviewMatrix ? "Battle matrix" : "Army overview")</span>
-						<span class="ov-sep" aria-hidden="true">·</span>
-						<span class="ov-phase">@BattlePhases.Label(_phase)</span>
-						<span class="ov-sep" aria-hidden="true">·</span>
-						<span class="ov-turn">@(_turn == BattleTurn.Player ? "Your turn" : "Opponent's turn")</span>
-						@if (mx is not null)
-						{
-							<span class="ov-sep" aria-hidden="true">·</span>
-							<span class="ov-units">@mxRows.Count @(mxRows.Count == 1 ? "unit" : "units")</span>
-						}
-					</span>
-					<span class="ov-total">@headTotal @(headTotal == 1 ? "relevant rule" : "relevant rules")</span>
-					@* Card view keeps the readable long-form pills; matrix view is the fast scan. *@
-					<div class="ov-modes" role="group" aria-label="Overview layout">
-						<button type="button" class="ov-mode @(_overviewMatrix ? "on" : "")"
-								aria-pressed="@_overviewMatrix" @onclick="() => SetOverviewMatrix(true)" title="Matrix view">Matrix</button>
-						<button type="button" class="ov-mode @(!_overviewMatrix ? "on" : "")"
-								aria-pressed="@(!_overviewMatrix)" @onclick="() => SetOverviewMatrix(false)" title="Card view">Cards</button>
-					</div>
-				</div>
-
 				@if (_overviewMatrix && mx is not null)
 				{
 					@* Rows = units, columns = the rules relevant in this window, X = it applies. The unit
