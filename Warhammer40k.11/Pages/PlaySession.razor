@@ -146,11 +146,9 @@ else
 			@<span class="u-chips">
 				@{
 					var uDead = IsDead(u);
-					var uEffectAlways = u.CombinedAbilities.Where(IsEffectAlways).ToList();
-					var uKeyword = u.CombinedAbilities.Where(a => !HasEffectKeywords(a) && a.HasManualKeyword).ToList();
-					var uAlways = u.CombinedAbilities.Where(a => !HasEffectKeywords(a) && !a.HasManualKeyword && a.IsAlwaysAvailable).ToList();
-					var uCore = u.CoreAbilities;
-					var uHasAbilityLine = !uDead && (uKeyword.Count > 0 || uAlways.Count > 0 || uCore.Count > 0 || uEffectAlways.Count > 0);
+					var uKeyword = u.CombinedAbilities.Where(a => a.HasManualKeyword).ToList();
+					var uCore = PassiveCoreAbilities(u);
+					var uHasAbilityLine = !uDead && (uKeyword.Count > 0 || uCore.Count > 0);
 				}
 				@* Line 1 — Invulnerable, Feel No Pain, then Warlord (fixed slots; "-" placeholder when absent) *@
 				<span class="chip-line">
@@ -196,24 +194,6 @@ else
 								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
 								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
 								@a.ManualKeyword
-							</span>
-						}
-						@foreach (var a in uAlways)
-						{
-							<span class="chip ability @(a.IsEnhancement ? "enh" : "")" role="button" tabindex="0"
-								  title="@($"{a.Ability.Name} — tap to read its rules")"
-								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
-								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
-								@a.Ability.Name
-							</span>
-						}
-						@foreach (var a in uEffectAlways)
-						{
-							<span class="chip effect toggle @(IsEffectActive(u, a) ? "on" : "")" role="button" tabindex="0"
-								  title="@($"{a.Ability.Name} — tap; switch on to apply {EffectLabel(a)} to this unit's weapons")"
-								  @onclick="() => OpenAbilityCard(u, a)" @onclick:stopPropagation="true"
-								  @onkeydown="e => OnAbilityChipKey(e, u, a)" @onkeydown:stopPropagation="true">
-								@a.Ability.Name
 							</span>
 						}
 						@foreach (var a in uCore)
@@ -2416,16 +2396,26 @@ else
 	private static bool HasEffectKeywords(BattleAbility ability) => EffectKeywords(ability).Count > 0;
 
 	// One rule for the whole ability strip, regardless of origin (unit ability, detachment buff, enhancement,
-	// army rule): an item is "available now" — shown highlighted on Line 2 AND counted on the deck pill — when it
-	// is scheduled for the current phase + turn. Everything else is "always available" (Line 3, not highlighted).
+	// army rule): an item is "available now" — shown as a card in the Now section — when it is scheduled for the
+	// current phase + turn. An ability the player flagged with a keyword lives on the chip strip instead, and one
+	// whose effect is applied to the unit shows only as the weapon / stat change it produces.
 	private bool IsUsableNow(BattleAbility a) =>
-		!HasEffectKeywords(a) && !a.HasManualKeyword && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+		!HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
+		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
 	private bool IsEffectNow(BattleAbility a) =>
-		HasEffectKeywords(a) && BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+		HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
+		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
-	private bool IsEffectAlways(BattleAbility a) =>
-		HasEffectKeywords(a) && !BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
+	// The chip strip carries only permanent, state-like core abilities (Deep Strike, Lone Operative, Stealth …).
+	// Phase-bound core rules (Fights First) and event-bound ones (Deadly Demise) are not passive states, so they
+	// stay out of it — like every other ability they belong to the phase/turn cards below.
+	private static readonly string[] PhaseBoundCoreAbilities = ["Fights First", "Deadly Demise"];
+
+	private static List<BattleAbility> PassiveCoreAbilities(BattleUnit unit) =>
+		unit.CoreAbilities
+			.Where(a => !PhaseBoundCoreAbilities.Any(p => a.Ability.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+			.ToList();
 
 	// The number of a unit's "available now" items (the Line 2 set): conditional detachment buffs scheduled now,
 	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
@@ -2439,12 +2429,10 @@ else
 	private bool IsOncePerBattleUsedAbility(BattleUnit unit, BattleAbility ability) =>
 		IsOncePerBattleAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability));
 
-	// The unit's always-on written rules — the chip strip's second line (keyword, always-available and core
-	// abilities plus conditional effects that aren't scheduled now). Drives the deck pill's "always" segment.
-	private int AlwaysAbilityCount(BattleUnit unit) =>
-		unit.CombinedAbilities.Count(a => IsEffectAlways(a)
-			|| (!HasEffectKeywords(a) && (a.HasManualKeyword || a.IsAlwaysAvailable)))
-		+ unit.CoreAbilities.Count;
+	// The unit's passive, always-on markers — exactly what the chip strip's second line shows (keyword-flagged
+	// abilities plus passive core keywords). Drives the deck pill's "always" segment.
+	private static int AlwaysAbilityCount(BattleUnit unit) =>
+		unit.CombinedAbilities.Count(a => a.HasManualKeyword) + PassiveCoreAbilities(unit).Count;
 
 	private static string EffectLabel(BattleAbility ability) =>
 		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));
