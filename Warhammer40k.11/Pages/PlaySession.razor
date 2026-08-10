@@ -2407,15 +2407,9 @@ else
 		HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
 		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
-	// The chip strip carries only permanent, state-like core abilities (Deep Strike, Lone Operative, Stealth …).
-	// Phase-bound core rules (Fights First) and event-bound ones (Deadly Demise) are not passive states, so they
-	// stay out of it — like every other ability they belong to the phase/turn cards below.
-	private static readonly string[] PhaseBoundCoreAbilities = ["Fights First", "Deadly Demise"];
-
-	private static List<BattleAbility> PassiveCoreAbilities(BattleUnit unit) =>
-		unit.CoreAbilities
-			.Where(a => !PhaseBoundCoreAbilities.Any(p => a.Ability.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-			.ToList();
+	// The chip strip carries the unit's core abilities (Deep Strike, Fights First, Lone Operative, Stealth …):
+	// they are always-on datasheet keywords, so they read as passive state chips next to Inv / FNP / Warlord.
+	private static List<BattleAbility> PassiveCoreAbilities(BattleUnit unit) => [.. unit.CoreAbilities];
 
 	// The number of a unit's "available now" items (the Line 2 set): conditional detachment buffs scheduled now,
 	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
