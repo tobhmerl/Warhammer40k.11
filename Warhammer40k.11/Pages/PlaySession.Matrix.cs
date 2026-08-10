@@ -22,6 +22,7 @@ public partial class PlaySession
         ArmyRule,
         Stratagem,
         Ability,
+        Aura,
         Buff,
     }
 
@@ -92,6 +93,11 @@ public partial class PlaySession
         var abilities = BuildAbilityColumns(live);
         if (abilities.Count > 0)
             groups.Add(new MatrixGroup("Unit abilities", MatrixKind.Ability, abilities));
+
+        // Auras projected by one unit onto others: one column per aura, holding every unit it could cover.
+        var auras = BuildAuraColumns(live);
+        if (auras.Count > 0)
+            groups.Add(new MatrixGroup("Auras", MatrixKind.Aura, auras));
 
         var all = groups.SelectMany(g => g.Columns).ToList();
         var rows = live
@@ -182,6 +188,28 @@ public partial class PlaySession
             .ToList();
     }
 
+    // One column per aura in the army, listing every unit it could cover. The bearer's own unit is left out:
+    // it stands in its own bubble, so the effect is already applied to it and needs no confirmation.
+    private List<MatrixColumn> BuildAuraColumns(IReadOnlyList<BattleUnit> live)
+    {
+        var byKey = new Dictionary<string, (string Label, string Detail, Dictionary<string, object?> Applies)>(StringComparer.Ordinal);
+
+        foreach (var unit in live)
+            foreach (var offer in ForeignAuraOffersFor(unit))
+            {
+                var key = string.Join('|', "U", offer.Source.Id, offer.Ability.Ability.Name);
+                if (!byKey.TryGetValue(key, out var entry))
+                    byKey[key] = entry = (offer.Ability.Ability.Name, AuraSource(offer), new Dictionary<string, object?>(StringComparer.Ordinal));
+                entry.Applies[unit.Id] = offer;
+            }
+
+        return byKey
+            .Select(kv => new MatrixColumn(kv.Key, MatrixKind.Aura, kv.Value.Label, kv.Value.Detail, null, kv.Value.Applies))
+            .OrderByDescending(c => c.Count)
+            .ThenBy(c => c.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     // ---- View state ----------------------------------------------------------------------------
 
     // Attached Leaders as a compact one-line suffix built from the same short labels the unit pills
@@ -197,6 +225,7 @@ public partial class PlaySession
         MatrixKind.Reminder => "k-must",
         MatrixKind.ArmyRule => "k-rule",
         MatrixKind.Stratagem => "k-strat",
+        MatrixKind.Aura => "k-aura",
         _ => "k-ability",
     };
 
@@ -256,6 +285,9 @@ public partial class PlaySession
                 break;
             case BattleAbility ability:
                 OpenAbilityCard(unit, ability);
+                break;
+            case AuraOffer aura:
+                OpenAuraCard(unit, aura);
                 break;
             case ConditionalUnitBuff buff:
                 OpenBuffCard(unit, buff);

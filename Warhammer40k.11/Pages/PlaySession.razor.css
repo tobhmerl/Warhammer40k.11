@@ -256,6 +256,22 @@ html[data-scroll="up"] .hud.sticky {
     background: rgba(96, 165, 250, 0.07);
 }
 
+/* Auras come from ANOTHER unit standing nearby, so they carry their own violet accent — never confused
+   with the unit's own abilities (green) or stratagems (blue). Confirmed ones fill in. */
+.now-action.aura {
+    border-color: rgba(192, 132, 252, 0.6);
+    background: rgba(192, 132, 252, 0.08);
+}
+
+.now-action.aura .na-type {
+    color: #d8b4fe;
+}
+
+.now-action.aura.on {
+    border-color: rgba(192, 132, 252, 0.95);
+    background: rgba(192, 132, 252, 0.2);
+}
+
 .now-action strong,
 .now-action small {
     max-width: 100%;
@@ -2148,6 +2164,16 @@ html[data-scroll="up"] .hud.sticky {
     cursor: pointer;
 }
 
+/* The aura sheet's confirmation reads in the same violet as the card that opened it. */
+.ac-toggle.aura {
+    border-color: rgba(192, 132, 252, 0.6);
+    background: rgba(192, 132, 252, 0.1);
+}
+
+.ac-toggle.aura input {
+    accent-color: #c084fc;
+}
+
 .a-text {
     display: block;
     color: var(--text-dim);
@@ -2895,6 +2921,11 @@ html[data-scroll="up"] .hud.sticky {
 .mx-group.k-ability,
 .mx-head.k-ability {
     box-shadow: inset 0 -2px 0 rgba(126, 231, 255, 0.55);
+}
+
+.mx-group.k-aura,
+.mx-head.k-aura {
+    box-shadow: inset 0 -2px 0 rgba(192, 132, 252, 0.7);
 }
 
 /* Phones: the unit column stays tight and single-line, and rule columns hold their readable

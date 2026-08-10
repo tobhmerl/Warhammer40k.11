@@ -135,6 +135,7 @@ else
 		@{
 			var nowReminders = NowReminders;
 			var nowAbilities = NowAbilities;
+			var nowAuras = NowAuras;
 			var nowBuffs = NowBuffs;
 			var nowRules = UsableArmyRules;
 			var nowStrats = AffordableNowStratagems;
@@ -250,6 +251,15 @@ else
 							{
 								<small>@modelContext</small>
 							}
+						</button>
+					}
+					@foreach (var offer in nowAuras)
+					{
+						<button type="button" class="now-action aura @(IsAuraActive(offer.Unit, offer.Offer) ? "on" : "")"
+								@onclick="() => OpenAuraCard(offer.Unit, offer.Offer)">
+							<span class="na-type">Aura · @AuraLabel(offer.Offer)</span>
+							<strong>@offer.Offer.Ability.Ability.Name</strong>
+							<small>@AuraSource(offer.Offer)</small>
 						</button>
 					}
 					@foreach (var action in nowBuffs)
@@ -1020,6 +1030,18 @@ else
 		}
 	</Sheet>
 
+	<Sheet Open="_auraCard is not null" Eyebrow="Aura" Title="@_auraCard?.Ability.Ability.Name" OnCloseRequested="CloseAuraCard">
+		@if (_auraCard is { } aur && _auraCardUnit is { } auru)
+		{
+			<p class="a-src">@AuraSource(aur)</p>
+			<label class="ac-toggle aura">
+				<input type="checkbox" checked="@IsAuraActive(auru, aur)" @onchange="e => ToggleAura(auru, aur, (bool)e.Value!)" />
+				<span>@auru.Name is within the aura — apply @AuraLabel(aur) to its weapons</span>
+			</label>
+			<p class="a-text">@Clean(aur.Ability.Ability.Text)</p>
+		}
+	</Sheet>
+
 	<Sheet Open="_buffCard is not null" Eyebrow="Detachment" Title="@_buffCard?.Label" OnCloseRequested="CloseBuffCard">
 		@if (_buffCard is { } bc && _buffCardUnit is { } bcu)
 		{
@@ -1760,6 +1782,13 @@ else
 			? ConditionalBuffsFor(unit).Select(b => (unit, b)).ToList()
 			: [];
 
+	// Auras projected onto the focused unit by ANOTHER unit: the app can't see the board, so each one is
+	// offered here for the player to confirm. The unit's own aura needs no card — it is already applied.
+	private IReadOnlyList<(BattleUnit Unit, AuraOffer Offer)> NowAuras =>
+		NowUnit is { } unit && !IsDead(unit)
+			? ForeignAuraOffersFor(unit).Select(o => (unit, o)).ToList()
+			: [];
+
 	private IReadOnlyList<StratView> AffordableNowStratagems =>
 		UsableStratagems
 			.Where(s => CanAfford(s, StratContextUnit))
@@ -1771,7 +1800,7 @@ else
 		: $"Army overview · {BattlePhases.Label(_phase)}";
 
 	private int AvailableNowTotal =>
-		NowReminders.Count + NowAbilities.Count + NowBuffs.Count + UsableArmyRules.Count + AffordableNowStratagems.Count;
+		NowReminders.Count + NowAbilities.Count + NowAuras.Count + NowBuffs.Count + UsableArmyRules.Count + AffordableNowStratagems.Count;
 
 	private void FocusReminder(BattleUnit unit)
 	{
@@ -2404,7 +2433,7 @@ else
 		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
 	private bool IsEffectNow(BattleAbility a) =>
-		HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
+		HasEffectKeywords(a) && !a.HasManualKeyword && !IsAuraAbility(a) && a.AppliedSummary is null
 		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
 	// The chip strip carries the unit's core abilities (Deep Strike, Fights First, Lone Operative, Stealth …):
@@ -2451,7 +2480,7 @@ else
 	{
 		foreach (var a in unit.CombinedAbilities)
 		{
-			if (!IsEffectActive(unit, a))
+			if (IsAuraAbility(a) || !IsEffectActive(unit, a))
 				continue;
 			var text = a.Ability.Text ?? "";
 			var named = unit.Parts.SelectMany(p => p.Weapons)
@@ -2462,6 +2491,11 @@ else
 				foreach (var kw in EffectKeywords(a))
 					yield return kw;
 		}
+
+		// Auras reach every weapon of the unit they cover: the bearer's own automatically, another unit's
+		// once the player confirmed it is inside the bubble.
+		foreach (var kw in ActiveAuraKeywords(unit))
+			yield return kw;
 	}
 
 	// ---- Conditional detachment buffs (player-toggled) ----
