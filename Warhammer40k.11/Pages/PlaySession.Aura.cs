@@ -23,6 +23,12 @@ public partial class PlaySession
     }
 
     // Every aura in the army that could affect this unit, the unit's own first.
+    //
+    // The bearer's own aura is a permanent weapon/unit stat buff, so it is always present. An aura reaching
+    // this unit from ANOTHER unit is a decision the player has to make each phase (is it within 6"? is it a
+    // Destroyer Cult unit? is it attacking the closest eligible target?), so \u2014 exactly like every other
+    // ability that is not chipped as a keyword \u2014 it is only offered in the phase + turn windows ticked for
+    // that ability in setup, and applies nowhere else.
     private List<AuraOffer> AuraOffersFor(BattleUnit unit)
     {
         var offers = new List<AuraOffer>();
@@ -35,11 +41,18 @@ public partial class PlaySession
             {
                 if (AuraParser.Parse(ability.Ability) is not { } aura || !aura.AppliesTo(keywords))
                     continue;
-                offers.Add(new AuraOffer(source, ability, aura, ReferenceEquals(source, unit)));
+                var isSelf = ReferenceEquals(source, unit);
+                if (!isSelf && !IsScheduledNow(ability))
+                    continue;
+                offers.Add(new AuraOffer(source, ability, aura, isSelf));
             }
 
         return offers.OrderByDescending(o => o.IsSelf).ToList();
     }
+
+    // True when the player ticked this ability's window for the current phase + turn.
+    private bool IsScheduledNow(BattleAbility ability) =>
+        ability.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
     // The auras this unit is offered by OTHER units — the ones the player has to confirm.
     private List<AuraOffer> ForeignAuraOffersFor(BattleUnit unit) =>
