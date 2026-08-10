@@ -214,13 +214,6 @@ public partial class PlaySession
 
     // ---- View state ----------------------------------------------------------------------------
 
-    // Attached Leaders as a compact one-line suffix built from the same short labels the unit pills
-    // use ("+ Overlord", "+ Orikan + Crawlers"), so a matrix row never needs a second line.
-    private static string? MatrixUnitLeaders(BattleUnit unit) =>
-        unit.Parts.Count < 2
-            ? null
-            : "+ " + string.Join(" + ", unit.Parts.Skip(1).Select(p => ShortName(p.Datasheet.Name)));
-
     // The colour accent a group / column / cell carries, so a rule's type reads without a legend.
     private static string GroupClass(MatrixKind kind) => kind switch
     {

@@ -2685,15 +2685,17 @@ html[data-scroll="up"] .hud.sticky {
     border-bottom: 2px solid var(--border-strong);
 }
 
-/* The unit column sticks to the left; the two corner cells stick on both axes. Short pill-style
-   labels keep it narrow, leaving the width to the rule columns. */
+/* The unit column sticks to the left; the two corner cells stick on both axes. Its width is FIXED: just
+   enough for a unit's short name and its model count, so the rule columns get everything else — and the
+   table looks the same whether one rule or a dozen are relevant. */
 .mx-corner,
 .mx-unit {
     position: sticky;
     left: 0;
     z-index: 5;
-    width: min(30%, 13rem);
-    min-width: 8.5rem;
+    width: 9.5rem;
+    min-width: 9.5rem;
+    max-width: 9.5rem;
     background: var(--surface-2);
     border-right: 2px solid var(--border-strong);
     text-align: left;
@@ -2808,16 +2810,6 @@ html[data-scroll="up"] .hud.sticky {
     text-overflow: ellipsis;
     font-size: 0.8rem;
     font-weight: 700;
-}
-
-.mx-lead {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-faint);
-    font-size: 0.66rem;
-    font-weight: 500;
 }
 
 .mx-models {
@@ -2939,6 +2931,7 @@ html[data-scroll="up"] .hud.sticky {
     .mx-unit {
         width: 7.5rem;
         min-width: 7.5rem;
+        max-width: 7.5rem;
     }
 
     .mx-table {
@@ -2947,10 +2940,5 @@ html[data-scroll="up"] .hud.sticky {
 
     .mx-unit-name {
         font-size: 0.74rem;
-    }
-
-    /* The leader suffix drops out first; it is still in the row tooltip and on the unit card. */
-    .mx-lead {
-        display: none;
     }
 }
