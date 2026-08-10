@@ -241,6 +241,16 @@ else
 							<small>@reminder.Unit.Name</small>
 						</button>
 					}
+					@* Auras come first among the rule cards: they are resolved before a unit's own abilities. *@
+					@foreach (var offer in nowAuras)
+					{
+						<button type="button" class="now-action aura @(IsAuraActive(offer.Unit, offer.Offer) ? "on" : "")"
+								@onclick="() => OpenAuraCard(offer.Unit, offer.Offer)">
+							<span class="na-type">Aura · @AuraLabel(offer.Offer)</span>
+							<strong>@offer.Offer.Ability.Ability.Name</strong>
+							<small>@AuraSource(offer.Offer)</small>
+						</button>
+					}
 					@foreach (var action in nowAbilities)
 					{
 						var modelContext = AbilityModelContext(action.Unit, action.Ability);
@@ -251,15 +261,6 @@ else
 							{
 								<small>@modelContext</small>
 							}
-						</button>
-					}
-					@foreach (var offer in nowAuras)
-					{
-						<button type="button" class="now-action aura @(IsAuraActive(offer.Unit, offer.Offer) ? "on" : "")"
-								@onclick="() => OpenAuraCard(offer.Unit, offer.Offer)">
-							<span class="na-type">Aura · @AuraLabel(offer.Offer)</span>
-							<strong>@offer.Offer.Ability.Ability.Name</strong>
-							<small>@AuraSource(offer.Offer)</small>
 						</button>
 					}
 					@foreach (var action in nowBuffs)

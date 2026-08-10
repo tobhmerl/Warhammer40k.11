@@ -89,15 +89,17 @@ public partial class PlaySession
         if (stratagems.Count > 0)
             groups.Add(new MatrixGroup("Stratagems", MatrixKind.Stratagem, stratagems));
 
+        // Auras projected by one unit onto others: one column per aura, holding every unit it could cover.
+        // They sit right after the stratagems and ahead of the ordinary abilities — an aura is resolved before
+        // a unit's own rules and reaches much of the army, so it earns the more prominent spot.
+        var auras = BuildAuraColumns(live);
+        if (auras.Count > 0)
+            groups.Add(new MatrixGroup("Auras", MatrixKind.Aura, auras));
+
         // Unit abilities and detachment buffs, merged by name so a shared ability is one column.
         var abilities = BuildAbilityColumns(live);
         if (abilities.Count > 0)
             groups.Add(new MatrixGroup("Unit abilities", MatrixKind.Ability, abilities));
-
-        // Auras projected by one unit onto others: one column per aura, holding every unit it could cover.
-        var auras = BuildAuraColumns(live);
-        if (auras.Count > 0)
-            groups.Add(new MatrixGroup("Auras", MatrixKind.Aura, auras));
 
         var all = groups.SelectMany(g => g.Columns).ToList();
         var rows = live
