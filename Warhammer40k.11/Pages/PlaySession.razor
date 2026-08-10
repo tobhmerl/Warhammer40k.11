@@ -1018,6 +1018,14 @@ else
 					<span>Active now — apply @EffectLabel(ac) to this unit's weapons</span>
 				</label>
 			}
+			@if (IsDeploymentAbility(ac) && _abilityCardUnit is { } depu)
+			{
+				<label class="ac-toggle">
+					<input type="checkbox" checked="@IsOncePerBattleUsed(OncePerBattleAbilityKey(depu, ac))"
+						   @onchange="e => SetOncePerBattleUsed(OncePerBattleAbilityKey(depu, ac), (bool)e.Value!)" />
+					<span>Used — this unit is deployed, so hide @ac.Ability.Name for the rest of the battle</span>
+				</label>
+			}
 			@if (IsOncePerBattleAbility(ac) && _abilityCardUnit is { } opbu)
 			{
 				<label class="ac-toggle">
@@ -2438,7 +2446,20 @@ else
 
 	// The chip strip carries the unit's core abilities (Deep Strike, Fights First, Lone Operative, Stealth …):
 	// they are always-on datasheet keywords, so they read as passive state chips next to Inv / FNP / Warlord.
-	private static List<BattleAbility> PassiveCoreAbilities(BattleUnit unit) => [.. unit.CoreAbilities];
+	// The deployment ones drop out once the player ticks them off as used — they cannot come back this battle.
+	private List<BattleAbility> PassiveCoreAbilities(BattleUnit unit) =>
+		unit.CoreAbilities.Where(a => !IsDeploymentAbilityUsed(unit, a)).ToList();
+
+	// Deployment abilities are spent the moment the battle is set up (Scouts / Infiltrators) or the unit has
+	// arrived (Deep Strike). Once ticked they are obsolete, so they leave the card entirely rather than
+	// competing for attention with the rules that still matter.
+	private static readonly string[] DeploymentAbilityPrefixes = ["Deep Strike", "Scouts", "Infiltrators"];
+
+	private static bool IsDeploymentAbility(BattleAbility ability) =>
+		DeploymentAbilityPrefixes.Any(p => ability.Ability.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+	private bool IsDeploymentAbilityUsed(BattleUnit unit, BattleAbility ability) =>
+		IsDeploymentAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability));
 
 	// The number of a unit's "available now" items (the Line 2 set): conditional detachment buffs scheduled now,
 	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
@@ -2448,13 +2469,15 @@ else
 		+ unit.CombinedAbilities.Count(a => IsEffectNow(a) && !IsOncePerBattleUsedAbility(unit, a))
 		+ unit.CombinedAbilities.Count(a => IsUsableNow(a) && !IsOncePerBattleUsedAbility(unit, a));
 
-	// True when this ability is a once-per-battle item the player has already ticked "used" for this unit.
+	// True when this ability is a once-per-battle item the player has already ticked "used" for this unit, or a
+	// deployment ability (Deep Strike / Scouts / Infiltrators) that has been spent.
 	private bool IsOncePerBattleUsedAbility(BattleUnit unit, BattleAbility ability) =>
-		IsOncePerBattleAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability));
+		(IsOncePerBattleAbility(ability) && IsOncePerBattleUsed(OncePerBattleAbilityKey(unit, ability)))
+		|| IsDeploymentAbilityUsed(unit, ability);
 
 	// The unit's passive, always-on markers — exactly what the chip strip's second line shows (keyword-flagged
 	// abilities plus passive core keywords). Drives the deck pill's "always" segment.
-	private static int AlwaysAbilityCount(BattleUnit unit) =>
+	private int AlwaysAbilityCount(BattleUnit unit) =>
 		unit.CombinedAbilities.Count(a => a.HasManualKeyword) + PassiveCoreAbilities(unit).Count;
 
 	private static string EffectLabel(BattleAbility ability) =>
