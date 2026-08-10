@@ -42,6 +42,12 @@ public class PhaseClassifierTests
     [InlineData("Models in this unit have the Feel No Pain 5+ ability.", true)]
     // A conditional ability that confers a save → not an own rule (real ability, applied manually).
     [InlineData("While this model is leading a unit, models in that unit have a 4+ invulnerable save.", false)]
+    // An aura that confers a save is bounded by range, so it is never the bearer's own always-on save.
+    // (Nekrosor Ammentar's Nullstone Field Generator used to be swallowed here and vanished from setup.)
+    [InlineData("While a friendly Necrons unit is within 6\" of the bearer, models in that unit have the "
+              + "Feel No Pain 5+ ability against mortal wounds and Psychic Attacks.", false)]
+    // A save that only counts against a kind of attack is conditional too.
+    [InlineData("Models in this unit have the Feel No Pain 4+ ability against mortal wounds.", false)]
     public void IsOwnSaveRule_distinguishes_profile_saves_from_conferring_abilities(string text, bool expected) =>
         Assert.Equal(expected, PhaseClassifier.IsOwnSaveRule(new Ability { Name = "X", Text = text }));
 

@@ -95,6 +95,30 @@ public class BattleRosterTests
     }
 
     [Fact]
+    public void An_aura_that_confers_a_conditional_save_stays_a_listed_ability()
+    {
+        // Nekrosor Ammentar's "Nullstone Field Generator (Aura)" grants Feel No Pain 5+ only to units inside
+        // the bubble, and only against mortal wounds / Psychic Attacks. It used to be mistaken for the bearer's
+        // own always-on save: the ability then disappeared from setup and Play Mode, while the unit silently
+        // wore an unconditional FNP 5+ chip. It must stay a normal, schedulable ability and grant no chip.
+        var ammentar = Sheet("ammentar", "Nekrosor Ammentar", abilities:
+        [
+            new Ability
+            {
+                Name = "Nullstone Field Generator (Aura)",
+                Text = "While a friendly Necrons unit is within 6\" of the bearer, models in that unit have the "
+                     + "Feel No Pain 5+ ability against mortal wounds and Psychic Attacks.",
+            },
+        ]);
+        var roster = new Roster { Units = [Unit("u1", "ammentar")] };
+
+        var group = Assert.Single(BattleRoster.Build(roster, Catalogue(ammentar)).Units);
+
+        Assert.Contains(group.CombinedAbilities, a => a.Ability.Name == "Nullstone Field Generator (Aura)");
+        Assert.Empty(group.FeelNoPains);
+    }
+
+    [Fact]
     public void Joined_cryptothralls_give_the_cryptek_model_feel_no_pain()
     {
         // Bound Creation: "While this unit is in the same unit as a CRYPTEK model, that CRYPTEK model has the

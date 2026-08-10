@@ -85,16 +85,29 @@ public static class PhaseClassifier
     /// <summary>
     /// True when an ability is a model's / unit's <b>own</b> always-on save rule (e.g. "This model has a 4+
     /// invulnerable save" or "Models in this unit have a 5+ invulnerable save") rather than a conditional
-    /// ability that <i>confers</i> a save (e.g. a Leader's "While this model is leading a unit, …"). Own save
-    /// rules are surfaced as an always-on chip and are not schedulable; conferral abilities are listed in setup
-    /// and applied manually.
+    /// ability that <i>confers</i> a save (e.g. a Leader's "While this model is leading a unit, …", an Aura's
+    /// "While a friendly NECRONS unit is within 6\" of the bearer, …", or a save that only counts against
+    /// certain attacks). Own save rules are surfaced as an always-on chip and are not schedulable; conditional
+    /// abilities are real abilities: they are listed in setup, scheduled, and applied manually.
     /// </summary>
     public static bool IsOwnSaveRule(Ability ability)
     {
         if (InvulnerableSaveScoped(ability) is null && FeelNoPainScoped(ability) is null)
             return false;
-        return !(ability.Text ?? "").Contains("leading a unit", StringComparison.OrdinalIgnoreCase);
+        return !IsConditionalSave(ability.Text ?? string.Empty);
     }
+
+    // Anything that ties the save to a situation the app cannot see makes it conditional: leading a unit,
+    // standing inside an aura ("while a friendly … is within 6\" of…"), or a save that only works against a
+    // kind of attack ("against mortal wounds and Psychic Attacks"). Such a save must never be silently shown
+    // as the unit's always-on chip, and its ability must stay visible so the player can schedule and apply it.
+    private static readonly string[] SaveConditionMarkers =
+    [
+        "leading a unit", "while a friendly", " within ", " against ",
+    ];
+
+    private static bool IsConditionalSave(string text) =>
+        SaveConditionMarkers.Any(marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
 
     // A save reads as unit-wide when its text talks about "(models in) this/that unit"; otherwise it's a
     // single model's save (e.g. a Character's own "this model has a 4+ invulnerable save").
