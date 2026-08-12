@@ -27,6 +27,13 @@ public sealed class UserSettings
     /// </summary>
     public bool PlayCardSwipe { get; set; } = true;
 
+    /// <summary>
+    /// Play Mode rule cards (experimental). <c>false</c> (default) = each card shows the rule's name;
+    /// <c>true</c> = it shows a compact description of the rule's actual effect instead, for players who know
+    /// the names but want the effect at a glance. The full rules text stays one tap away either way.
+    /// </summary>
+    public bool PlayCompactRules { get; set; }
+
     /// <summary>A fresh settings object with built-in defaults.</summary>
     public static UserSettings Default => new();
 }

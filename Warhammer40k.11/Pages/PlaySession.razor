@@ -232,7 +232,7 @@ else
 			}
 			else
 			{
-				<div class="now-actions" style="@($"--now-columns: {Math.Min(AvailableNowTotal, 3)}")">
+				<div class="now-actions @(CompactRules ? "compact" : "")" style="@($"--now-columns: {Math.Min(AvailableNowTotal, 3)}")">
 					@foreach (var reminder in nowReminders)
 					{
 						<button type="button" class="now-action must" @onclick="() => FocusReminder(reminder.Unit)">
@@ -245,18 +245,19 @@ else
 					@foreach (var offer in nowAuras)
 					{
 						<button type="button" class="now-action aura @(IsAuraActive(offer.Unit, offer.Offer) ? "on" : "")"
+								title="@CardTooltip(offer.Offer.Ability.Ability.Name)"
 								@onclick="() => OpenAuraCard(offer.Unit, offer.Offer)">
 							<span class="na-type">Aura · @AuraLabel(offer.Offer)</span>
-							<strong>@offer.Offer.Ability.Ability.Name</strong>
+							<strong>@AuraTitle(offer.Offer)</strong>
 							<small>@AuraSource(offer.Offer)</small>
 						</button>
 					}
 					@foreach (var action in nowAbilities)
 					{
 						var modelContext = AbilityModelContext(action.Unit, action.Ability);
-						<button type="button" class="now-action ability" @onclick="() => OpenAbilityCard(action.Unit, action.Ability)">
+						<button type="button" class="now-action ability" title="@CardTooltip(action.Ability.Ability.Name)" @onclick="() => OpenAbilityCard(action.Unit, action.Ability)">
 							<span class="na-type">@(HasEffectKeywords(action.Ability) ? "Effect" : action.Ability.IsEnhancement ? "Enhancement" : "Ability")</span>
-							<strong>@action.Ability.Ability.Name</strong>
+							<strong>@AbilityTitle(action.Ability)</strong>
 							@if (modelContext is not null)
 							{
 								<small>@modelContext</small>
@@ -265,25 +266,25 @@ else
 					}
 					@foreach (var action in nowBuffs)
 					{
-						<button type="button" class="now-action ability" @onclick="() => OpenBuffCard(action.Unit, action.Buff)">
+						<button type="button" class="now-action ability" title="@CardTooltip(action.Buff.Label)" @onclick="() => OpenBuffCard(action.Unit, action.Buff)">
 							<span class="na-type">Detachment</span>
-							<strong>@action.Buff.Label</strong>
+							<strong>@BuffTitle(action.Buff)</strong>
 						</button>
 					}
 					@foreach (var rule in nowRules)
 					{
-						<button type="button" class="now-action rule" @onclick="() => OpenNowRule(rule)">
+						<button type="button" class="now-action rule" title="@CardTooltip(rule.Name)" @onclick="() => OpenNowRule(rule)">
 							<span class="na-type">Army rule</span>
-							<strong>@rule.Name</strong>
+							<strong>@ArmyRuleTitle(rule)</strong>
 						</button>
 					}
 					@foreach (var strat in nowStrats)
 					{
 						var cost = EffectiveCost(strat, StratContextUnit);
 						var modelContext = StratagemModelContext(strat);
-						<button type="button" class="now-action stratagem" @onclick="() => OpenNowStratagem(strat)">
+						<button type="button" class="now-action stratagem" title="@CardTooltip(strat.Name)" @onclick="() => OpenNowStratagem(strat)">
 							<span class="na-type">Stratagem · @cost CP</span>
-							<strong>@strat.Name</strong>
+							<strong>@StratagemTitle(strat)</strong>
 							@if (modelContext is not null)
 							{
 								<small>@modelContext</small>

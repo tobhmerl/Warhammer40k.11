@@ -27,6 +27,7 @@ public sealed class SettingsEntity : ITableEntity
     public string Theme { get; set; } = AppThemes.Default;
     public bool PlayHudSticky { get; set; }
     public bool PlayCardSwipe { get; set; }
+    public bool PlayCompactRules { get; set; }
 
     public UserSettings ToSettings() => new()
     {
@@ -34,6 +35,7 @@ public sealed class SettingsEntity : ITableEntity
         Theme = AppThemes.Normalize(Theme),
         PlayHudSticky = PlayHudSticky,
         PlayCardSwipe = PlayCardSwipe,
+        PlayCompactRules = PlayCompactRules,
     };
 
     public static SettingsEntity From(string userId, UserSettings settings) => new()
@@ -44,6 +46,7 @@ public sealed class SettingsEntity : ITableEntity
         Theme = AppThemes.Normalize(settings.Theme),
         PlayHudSticky = settings.PlayHudSticky,
         PlayCardSwipe = settings.PlayCardSwipe,
+        PlayCompactRules = settings.PlayCompactRules,
     };
 }
 
