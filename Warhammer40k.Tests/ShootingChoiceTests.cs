@@ -138,7 +138,7 @@ public class ShootingChoiceTests
         await host.InvokeAsync("ShowOverview");
         var html = await host.HtmlAsync();
         Assert.Contains("Shooting choice", html);
-        Assert.Contains("Choose shooting ability", html);
+        Assert.Contains("Technosorcerous Augmentations", html);
         Assert.DoesNotContain("Atomic Disintegrators", html);
     }
 

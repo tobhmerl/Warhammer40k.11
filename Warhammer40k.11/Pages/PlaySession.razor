@@ -253,7 +253,7 @@ else
 			}
 			else
 			{
-				<div class="now-actions @(CompactRules ? "compact" : "")" style="@($"--now-columns: {Math.Min(AvailableNowTotal, 3)}")">
+				<div class="now-actions" style="@($"--now-columns: {Math.Min(AvailableNowTotal, 3)}")">
 					@foreach (var reminder in nowReminders)
 					{
 						<button type="button" class="now-action must" @onclick="() => FocusReminder(reminder.Unit)">
@@ -279,6 +279,10 @@ else
 								title="@ShootingChoiceName(choiceUnit)" @onclick="() => OpenShootingCard(choiceUnit)">
 							<span class="na-type">Shooting · choose one</span>
 							<strong>@ShootingChoiceTitle(choiceUnit)</strong>
+							@if (SelectedChoice(choiceUnit) is { } selectedChoice)
+							{
+								<small>Selected: @selectedChoice</small>
+							}
 							@if (ShootingEnhancements(choiceUnit).Count > 0)
 							{
 								<small>@ShootingChoiceSources(choiceUnit)</small>

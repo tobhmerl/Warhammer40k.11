@@ -30,7 +30,7 @@ public partial class PlaySession
         _battle?.WeaponChoicesFor(unit).FirstOrDefault()?.Name ?? "Shooting ability";
 
     private string ShootingChoiceTitle(BattleUnit unit) =>
-        SelectedChoice(unit) ?? (CompactRules ? "Choose shooting ability" : ShootingChoiceName(unit));
+        ShootingChoiceName(unit);
 
     private static IReadOnlyList<Enhancement> ShootingEnhancements(BattleUnit unit) =>
         unit.Parts.Select(part => part.Enhancement).OfType<Enhancement>()

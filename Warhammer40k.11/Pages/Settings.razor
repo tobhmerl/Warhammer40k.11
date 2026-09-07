@@ -105,19 +105,7 @@
 					</span>
 				</span>
 			</button>
-			<button type="button" role="switch" aria-checked="@_settings.PlayCompactRules"
-					class="switch @(_settings.PlayCompactRules ? "on" : "")"
-					@onclick="() => _settings.PlayCompactRules = !_settings.PlayCompactRules">
-				<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
-				<span class="switch-text">
-					<span class="switch-name">Compact rules (test): @(_settings.PlayCompactRules ? "On — show the effect" : "Off — show the name")</span>
-					<span class="switch-desc">
-						@(_settings.PlayCompactRules
-							? "Rule cards read \"SH1: Destroyer Cult or closest target\" instead of the rule's name. Tap a card for the full text."
-							: "Rule cards show the rule's name, as printed on the datasheet.")
-					</span>
-				</span>
-			</button>
+			<p class="muted">Rule cards show their printed names. Tap a card for its full rules.</p>
 		</section>
 
 		<div class="save-row">

@@ -288,7 +288,6 @@ html[data-scroll="up"] .hud.sticky {
     background: rgba(192, 132, 252, 0.2);
 }
 
-.now-action strong,
 .now-action small {
     max-width: 100%;
     overflow: hidden;
@@ -297,18 +296,10 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 .now-action strong {
+    max-width: 100%;
     font-size: 0.78rem;
-}
-
-/* Compact rules mode: the title is a short effect rather than a name, so it may need a second line.
-   Same typography, still clipped so it can never overflow the card. */
-.now-actions.compact .now-action strong {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
     white-space: normal;
-    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .now-action small,

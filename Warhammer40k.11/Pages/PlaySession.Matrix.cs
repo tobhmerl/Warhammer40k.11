@@ -87,7 +87,7 @@ public partial class PlaySession
 
         var choices = live.Where(unit => ShootingOptionsFor(unit).Count > 0)
             .GroupBy(ShootingChoiceName)
-            .Select(group => new MatrixColumn("C|" + group.Key, MatrixKind.Choice, "Choose shooting ability",
+            .Select(group => new MatrixColumn("C|" + group.Key, MatrixKind.Choice, group.Key,
                 group.Key, null, group.ToDictionary(unit => unit.Id, unit => (object?)unit, StringComparer.Ordinal)))
             .ToList();
         if (choices.Count > 0)
