@@ -21,6 +21,14 @@
 		</div>
 	</div>
 }
+else if (_loadError is not null)
+{
+	<div class="play"><div class="card pad">
+		<p class="error" role="alert">@_loadError</p>
+		<button type="button" class="btn primary" @onclick="LoadAsync">Retry loading Play</button>
+		<a class="btn ghost" href="play">Back to armies</a>
+	</div></div>
+}
 else if (!_authenticated)
 {
 	<div class="play">
@@ -131,6 +139,17 @@ else
 				}
 			</nav>
 		</div>
+
+		@if (Readiness is { } setupCheck)
+		{
+			<button type="button" class="setup-status @(setupCheck.IsReady ? "checked" : "review")" @onclick="OpenReadiness">
+				@(setupCheck.IsReady ? "Play setup checked" : $"Review Play setup · {setupCheck.Issues.Count + setupCheck.ListValidation.Errors.Count()}")
+			</button>
+		}
+		else if (_readinessError is not null)
+		{
+			<button type="button" class="setup-status review" @onclick="OpenReadiness">Play setup not verified</button>
+		}
 
 		@{
 			var nowReminders = NowReminders;
@@ -930,6 +949,18 @@ else
 	}
 </Sheet>
 
+	<Sheet Open="_readinessOpen" Eyebrow="Selected-army setup" Title="Play readiness" OnCloseRequested="CloseReadiness">
+		@if (Readiness is { } check)
+		{
+			<PlayReadinessPanel Result="check" RosterId="@Id" UseFocusedCards="UseFocusedForReadiness" />
+		}
+		else if (_readinessError is not null)
+		{
+			<p class="error" role="alert">@_readinessError</p>
+			<button type="button" class="btn ghost" @onclick="RecheckReadiness">Retry check</button>
+		}
+	</Sheet>
+
 	<Sheet Open="_abilityCard is not null"
 		   Eyebrow="@(_abilityReference ? "Reference · not scheduled" : _abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : _abilityCard is { } e1 && BattleUnit.IsAbilityActiveInPhase(e1, _phase, _turn) ? "Usable now" : "Always available")"
 		   Title="@_abilityCard?.Ability.Name" OnCloseRequested="CloseAbilityCard">
@@ -1356,11 +1387,17 @@ else
 	{
 		_loading = true;
 		_notFound = false;
-
-		var user = await Api.GetCurrentUserAsync();
-		_authenticated = user.IsAuthenticated;
-		if (_authenticated)
+		_loadError = null;
+		_readinessFocus = null;
+		RecheckReadiness();
+		_restorePending = false;
+		_battleStateReady = false;
+		try
 		{
+			var user = await Api.GetCurrentUserAsync();
+			_authenticated = user.IsAuthenticated;
+			if (!_authenticated)
+				return;
 			await Settings.InitializeAsync();
 			_hudSticky = Settings.PlayHudSticky;
 			_cardSwipe = Settings.PlayCardSwipe;
@@ -1378,6 +1415,8 @@ else
 				// Scheduling lives in the user's cross-roster library now: merge it over anything the roster still
 				// carries (library wins) so timing is consistent everywhere, then build the battle from that.
 				var library = await Api.GetScheduleLibraryAsync();
+				if (roster.Units.Count > 0 && _catalogue.Datasheets.Count == 0)
+					throw new InvalidOperationException("Catalogue data is unavailable.");
 				roster.AbilitySchedules = library.EffectiveFor(roster);
 
 				_roster = roster;
@@ -1390,8 +1429,14 @@ else
 				_restorePending = true;
 			}
 		}
-
-		_loading = false;
+		catch (Exception)
+		{
+			_loadError = "Could not load the army, catalogue, or timing library. Play setup is not verified; retry before starting.";
+		}
+		finally
+		{
+			_loading = false;
+		}
 	}
 
 	private async Task RestoreBattleStateAsync()
@@ -2374,12 +2419,10 @@ else
 	// current phase + turn. An ability the player flagged with a keyword lives on the chip strip instead, and one
 	// whose effect is applied to the unit shows only as the weapon / stat change it produces.
 	private bool IsUsableNow(BattleAbility a) =>
-		!a.IsShootingChoice && !HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
-		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
+		!HasEffectKeywords(a) && BattleUnit.IsNowAction(a, _phase, _turn);
 
 	private bool IsEffectNow(BattleAbility a) =>
-		HasEffectKeywords(a) && !a.HasManualKeyword && !IsAuraAbility(a) && a.AppliedSummary is null
-		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
+		HasEffectKeywords(a) && BattleUnit.IsNowAction(a, _phase, _turn);
 
 	// The chip strip carries the unit's core abilities (Deep Strike, Fights First, Lone Operative, Stealth …):
 	// they are always-on datasheet keywords, so they read as passive state chips next to Inv / FNP / Warlord.
@@ -2464,36 +2507,7 @@ else
 	// gets a toggle; switching it on injects the buff's modifiers into that unit's weapon stats. The buff is
 	// only offered in the phases/turns the player scheduled for it in Setup (like army rules / stratagems).
 	private IEnumerable<ConditionalUnitBuff> ConditionalBuffsFor(BattleUnit unit)
-	{
-		if (_battle is null)
-			yield break;
-		foreach (var det in _battle.Detachments)
-			foreach (var rule in det.Rules)
-				foreach (var buff in rule.ConditionalBuffs)
-					if (UnitMatchesBuff(unit, buff)
-						&& _battle.Source.IsScheduledNow(AbilityScheduleKeys.ForDetachmentBuff(det.Id, buff.Label), _phase, _turn))
-						yield return buff;
-	}
-
-	private static bool UnitMatchesBuff(BattleUnit unit, ConditionalUnitBuff buff)
-	{
-		bool HasKeyword(string kw) => unit.Parts.Any(p => p.Datasheet.Keywords.Any(k => KeywordMatches(k, kw)));
-		if (buff.RequiredKeywords.Any(kw => !HasKeyword(kw)))
-			return false;
-		if (buff.ExcludedKeywords.Any(HasKeyword))
-			return false;
-		return true;
-	}
-
-	// A datasheet keyword matches a wanted keyword when it equals it, or when it's the qualified "Prefix: Value"
-	// form and the value matches — the seed stores the faction keyword as "Faction: Necrons", not "Necrons".
-	private static bool KeywordMatches(string datasheetKeyword, string wanted)
-	{
-		if (string.Equals(datasheetKeyword, wanted, StringComparison.OrdinalIgnoreCase))
-			return true;
-		var colon = datasheetKeyword.IndexOf(':');
-		return colon >= 0 && string.Equals(datasheetKeyword[(colon + 1)..].Trim(), wanted, StringComparison.OrdinalIgnoreCase);
-	}
+		=> _battle?.ConditionalBuffsFor(unit, _phase, _turn) ?? [];
 
 	private static string BuffKey(BattleUnit unit, ConditionalUnitBuff buff) => unit.Id + "|buff|" + buff.Label;
 

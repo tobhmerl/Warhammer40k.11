@@ -8,8 +8,10 @@
 @inject IApiClient Api
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject SettingsState Settings
 
 <PageTitle>TombWorld — @(_roster?.Name ?? "Roster")</PageTitle>
+<NavigationLock OnBeforeInternalNavigation="BeforePlayNavigation" />
 
 @if (_loading)
 {
@@ -18,6 +20,13 @@
 			<p class="status"><span class="pulse" aria-hidden="true"></span> Loading roster&hellip;</p>
 		</div>
 	</div>
+}
+else if (_loadError is not null)
+{
+	<div class="editor"><div class="card pad">
+		<p class="error" role="alert">@_loadError</p>
+		<button type="button" class="btn primary" @onclick="LoadAsync">Retry loading setup</button>
+	</div></div>
 }
 else if (!_authenticated)
 {
@@ -45,8 +54,8 @@ else
 		<header class="sticky">
 			<div class="title-row">
 				<input class="name-input" value="@_roster.Name" @oninput="OnNameInput" maxlength="80" aria-label="Roster name" />
-				<button class="btn small primary" type="button" disabled="@(_saving || !_dirty)" @onclick="SaveAsync">
-					@(_saving ? "Saving…" : _dirty ? "Save" : "Saved")
+				<button class="btn small primary" type="button" disabled="@(_saving || (!_dirty && !_libraryDirty))" @onclick="SaveAsync">
+					@(_saving ? "Saving…" : _dirty || _libraryDirty ? "Save" : "Saved")
 				</button>
 			</div>
 			<div class="stats-row">
@@ -59,7 +68,7 @@ else
 				<span class="enh">Enhancements @EnhancementCount/3</span>
 				<span class="points @(Over ? "over" : "")"><strong>@_validation.TotalPoints</strong> / @_roster.PointsLimit</span>
 				<span class="pill @(_validation.IsReady ? "ready" : "issues")">
-					@(_validation.IsReady ? "Ready" : $"{ErrorCount} {(ErrorCount == 1 ? "issue" : "issues")}")
+					@(_validation.IsReady ? "List legal" : $"{ErrorCount} {(ErrorCount == 1 ? "issue" : "issues")}")
 				</span>
 			</div>
 		</header>
@@ -102,6 +111,7 @@ else
 			<div class="editor-actions">
 				<button class="btn primary add-unit" type="button" @onclick="OpenPicker">+ Add unit</button>
 				<button class="btn ghost" type="button" @onclick="OpenTiming">Stratagems</button>
+				<button class="btn ghost" type="button" disabled="@(_saving || _checkingReadiness)" @onclick="CheckPlayAsync">Validate for play</button>
 				<button class="btn ghost" type="button" @onclick="ExportJsonAsync" title="Download the whole army as JSON — units, attached leaders, abilities, saves, enhancements and stratagems">Export JSON</button>
 			</div>
 
@@ -137,8 +147,34 @@ else
 		{
 			<p class="error">@_error</p>
 		}
+		@if (_configuring is null && !_timingOpen && !_readinessOpen)
+		{
+			@SaveFeedback()
+		}
 	</div>
 }
+
+<Sheet Open="_readinessOpen" Eyebrow="Before the game" Title="Play readiness" OnCloseRequested="CloseReadiness">
+	@SaveFeedback()
+	@if (_checkingReadiness)
+	{
+		<p class="status" role="status">Saving pending setup and checking Play coverage…</p>
+	}
+	else if (_readinessError is not null)
+	{
+		<p class="error" role="alert">@_readinessError</p>
+	}
+	else if (_readiness is { } check && !HasPendingSetup)
+	{
+		<PlayReadinessPanel Result="check" RosterId="@Id" />
+		<a class="btn primary" href="@($"play/{Id}")">@(check.IsReady ? "Start Play" : "Play with warnings")</a>
+	}
+	else if (!_checkingReadiness)
+	{
+		<p class="cfg-note">Save pending changes before starting Play. Run the check again after changes.</p>
+	}
+	<button class="btn ghost" type="button" disabled="@(_saving || _checkingReadiness)" @onclick="CheckPlayAsync">Run check again</button>
+</Sheet>
 
 <Sheet Open="_picking" Eyebrow="Add unit" Title="Add a unit" OnCloseRequested="ClosePicker">
 	<div class="picker">
@@ -176,6 +212,7 @@ else
 	@if (_configuring is { } u && SheetFor(u) is { } sheet)
 	{
 		<div class="config">
+			@SaveFeedback()
 			@if (sheet.PointsOptions.Count > 0)
 			{
 				<div class="cfg-block">
@@ -324,7 +361,7 @@ else
 						var key = ab.Key;
 						var textOpen = _openSchedText.Contains(ab.Name);
 						var hasText = !string.IsNullOrWhiteSpace(ab.Text);
-						<div class="sched" @key="key">
+						<div class="sched" id="@ScheduleAnchor(key)" @key="key">
 							<div class="sched-head">
 								@if (hasText)
 								{
@@ -382,6 +419,7 @@ else
 							{
 								@ScheduleGrid(key)
 							}
+							@ReferenceReview(key, ab.Name, ab.Text)
 						</div>
 					}
 				</div>
@@ -410,6 +448,7 @@ else
 	@if (_roster is not null)
 	{
 		<div class="config">
+			@SaveFeedback()
 			<p class="cfg-note">Tick the phase + turn each army rule, detachment rule and stratagem can be used in. Nothing appears in Play Mode until you tick it. Tap a name to read its rules.</p>
 
 			@{ var armyRules = ArmyRuleCatalogue.ForFaction(_roster.Faction); }
@@ -420,9 +459,17 @@ else
 					@foreach (var rule in armyRules)
 					{
 						var key = AbilityScheduleKeys.ForArmyRule(rule.Name);
-						<div class="sched" @key="key">
-							<div class="sched-head"><span class="sched-name">@rule.Name</span></div>
+						var textOpen = _openSchedText.Contains(key);
+						<div class="sched" id="@ScheduleAnchor(key)" @key="key">
+							<div class="sched-head">
+								<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen"><span class="sched-name">@rule.Name</span></button>
+							</div>
+							@if (textOpen)
+							{
+								<p class="sched-text">@rule.Text</p>
+							}
 							@ScheduleGrid(key)
+							@ReferenceReview(key, rule.Name, rule.Text)
 						</div>
 					}
 				</div>
@@ -439,7 +486,7 @@ else
 					{
 						var key = AbilityScheduleKeys.ForDetachmentBuff(det.Id, buff.Label);
 						var textOpen = _openSchedText.Contains(key);
-						<div class="sched" @key="key">
+						<div class="sched" id="@ScheduleAnchor(key)" @key="key">
 							<div class="sched-head">
 								<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this rule's effect">
 									<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
@@ -452,9 +499,35 @@ else
 								<p class="sched-text">@buff.Effect</p>
 							}
 							@ScheduleGrid(key)
+							@ReferenceReview(key, buff.Label, buff.Effect)
 						</div>
 					}
 				</div>
+			}
+
+			@foreach (var det in _detachments)
+			{
+				@foreach (var rule in det.Rules.Where(rule => rule.ConditionalBuffs.Count == 0 && !det.WeaponChoices.Any(choice => choice.Name == rule.Name)))
+				{
+					var key = AbilityScheduleKeys.ForDetachmentRule(det.Id, rule.Name);
+					var textOpen = _openSchedText.Contains(key);
+					<div class="sched" id="@ScheduleAnchor(key)" @key="key">
+						<div class="sched-head">
+							<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen"><span class="sched-name">@rule.Name</span></button>
+							<span class="sched-src">@det.Name · reference</span>
+						</div>
+						@if (textOpen)
+						{
+							<p class="sched-text">@CleanText(rule.Text)</p>
+						}
+						<p class="cfg-hint">This rule has no complete Now action. Existing passive effects remain on profiles; review the other conditions here.</p>
+						@ReferenceReview(key, rule.Name, rule.Text)
+					</div>
+				}
+				@if (det.Stratagems.Count == 0)
+				{
+					<p class="cfg-note">@det.Name: no stratagem content entered yet.</p>
+				}
 			}
 
 			<div class="cfg-block">
@@ -463,7 +536,7 @@ else
 				{
 					var key = AbilityScheduleKeys.ForCoreStratagem(s.Id);
 					var textOpen = _openSchedText.Contains(key);
-					<div class="sched" @key="key">
+					<div class="sched" id="@ScheduleAnchor(key)" @key="key">
 						<div class="sched-head">
 							<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this stratagem's rules text">
 								<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
@@ -476,6 +549,7 @@ else
 							@StratRef(s.Flavour, s.When, s.Target, s.Effect, s.Restrictions)
 						}
 						@ScheduleGrid(key)
+						@ReferenceReview(key, s.Name, PlayReadiness.StratagemText(s.Cost, s.When, s.Target, s.Effect, s.Restrictions))
 					</div>
 				}
 			</div>
@@ -490,7 +564,7 @@ else
 						{
 							var key = AbilityScheduleKeys.ForDetachmentStratagem(det.Id, s.Id);
 							var textOpen = _openSchedText.Contains(key);
-							<div class="sched" @key="key">
+							<div class="sched" id="@ScheduleAnchor(key)" @key="key">
 								<div class="sched-head">
 									<button type="button" class="sched-name-btn" @onclick="() => ToggleSchedText(key)" aria-expanded="@textOpen" title="Show this stratagem's rules text">
 										<span class="chev" aria-hidden="true">@(textOpen ? "▾" : "▸")</span>
@@ -503,6 +577,7 @@ else
 									@StratRef(null, s.When, s.Target, s.Effect, null)
 								}
 								@ScheduleGrid(key)
+								@ReferenceReview(key, s.Name, PlayReadiness.StratagemText(s.CpCost, s.When, s.Target, s.Effect))
 							</div>
 						}
 					</div>
@@ -637,14 +712,16 @@ else
 
 	protected override async Task OnParametersSetAsync()
 	{
-		if (_loadedId == Id)
-			return;
-		_loadedId = Id;
-		await LoadAsync();
+		if (_loadedId != Id)
+		{
+			_loadedId = Id;
+			await LoadAsync();
+		}
 
 		// Arriving from the New-Roster wizard (rosters/{id}?add=1) → open the unit picker straight away.
-		if (_roster is not null && WantsAddOnArrival())
+		if (_roster is not null && _loadError is null && WantsAddOnArrival())
 			OpenPicker();
+		ApplySetupQuery();
 	}
 
 	private bool WantsAddOnArrival()
@@ -666,6 +743,11 @@ else
 			}
 			catch (JSException) { }
 			catch (InvalidOperationException) { }
+		}
+		if (_pendingRuleAnchor is { } anchor)
+		{
+			_pendingRuleAnchor = null;
+			await JS.InvokeVoidAsync("tombworld.revealRule", anchor);
 		}
 	}
 
@@ -689,11 +771,15 @@ else
 		_loading = true;
 		_notFound = false;
 		_error = null;
-
-		var user = await Api.GetCurrentUserAsync();
-		_authenticated = user.IsAuthenticated;
-		if (_authenticated)
+		_loadError = null;
+		_saveError = null;
+		_readiness = null;
+		try
 		{
+			var user = await Api.GetCurrentUserAsync();
+			_authenticated = user.IsAuthenticated;
+			if (!_authenticated)
+				return;
 			if (_catalogue.Datasheets.Count == 0)
 				_catalogue = await Api.GetCatalogueAsync();
 
@@ -704,18 +790,24 @@ else
 			}
 			else
 			{
-				_roster = roster;
-
 				// Scheduling is now global: pull the user's library and migrate any schedules this roster still
 				// carries from before (so old definitions become defaults), then stop the roster keeping its own
 				// copy — every read/write below goes through the library.
 				_library = await Api.GetScheduleLibraryAsync();
+				if (roster.Units.Count > 0 && _catalogue.Datasheets.Count == 0)
+					throw new InvalidOperationException("Catalogue data is unavailable.");
+				_roster = roster;
+				_libraryDirty = false;
 				var migrated = _library.SeedMissingFrom(roster);
 				roster.AbilitySchedules = [];
 				if (migrated)
 				{
 					try { _library = await Api.SaveScheduleLibraryAsync(_library); }
-					catch (Exception) { _libraryDirty = true; }
+					catch (Exception)
+					{
+						_libraryDirty = true;
+						_saveError = "Could not save migrated timing. Retry saving before Play.";
+					}
 				}
 
 				ResolveDetachments();
@@ -724,8 +816,15 @@ else
 				_dirty = false;
 			}
 		}
-
-		_loading = false;
+		catch (Exception)
+		{
+			_loadError = "Could not load roster, catalogue, or timing data. Setup has not been verified; retry before editing.";
+		}
+		finally
+		{
+			_loading = false;
+			ApplySetupQuery();
+		}
 	}
 
 	private void Recompute()
@@ -740,6 +839,7 @@ else
 	private void MarkChanged()
 	{
 		Recompute();
+		_readiness = null;
 		_dirty = true;
 		ScheduleAutoSave();
 	}
@@ -768,6 +868,8 @@ else
 		if (token.IsCancellationRequested)
 			return;
 		await SaveAsync();
+		if ((_dirty || _libraryDirty) && _saveError is null)
+			ScheduleAutoSave();
 		StateHasChanged();
 	}
 
@@ -855,13 +957,20 @@ else
 		}
 	}
 
-	private async Task SaveAsync()
+	private Task SaveAsync() =>
+		_saveTask is { IsCompleted: false } ? _saveTask : _saveTask = SaveCoreAsync();
+
+	private async Task SaveCoreAsync()
 	{
-		if (_roster is null || _saving || (!_dirty && !_libraryDirty))
+		if (_roster is null || _loadError is not null || _saving || (!_dirty && !_libraryDirty))
 			return;
 
+		var roster = _roster;
+		var library = _library;
 		_saving = true;
 		_error = null;
+		_saveError = null;
+		_readiness = null;
 		// Clear the flags up front so edits made during the save mark things dirty again (and reschedule).
 		var savingRoster = _dirty;
 		var savingLibrary = _libraryDirty;
@@ -869,26 +978,35 @@ else
 		_libraryDirty = false;
 		try
 		{
+			await InvokeAsync(StateHasChanged);
 			if (savingRoster)
 			{
-				var saved = await Api.SaveRosterAsync(_roster);
+				var saved = await Api.SaveRosterAsync(roster);
 				// Keep our in-memory instance (open sheets reference its units); just sync server-assigned fields.
-				_roster.Id = saved.Id;
-				_roster.CreatedUtc = saved.CreatedUtc;
-				_roster.ModifiedUtc = saved.ModifiedUtc;
+				roster.Id = saved.Id;
+				roster.CreatedUtc = saved.CreatedUtc;
+				roster.ModifiedUtc = saved.ModifiedUtc;
 			}
 			if (savingLibrary)
-				_library = await Api.SaveScheduleLibraryAsync(_library);
+			{
+				var savedLibrary = await Api.SaveScheduleLibraryAsync(library);
+				if (!_libraryDirty && ReferenceEquals(_library, library))
+					_library = savedLibrary;
+			}
 		}
 		catch (Exception)
 		{
-			_error = "Could not save your changes. Auto-save will retry on the next change.";
-			_dirty = savingRoster || _dirty; // keep dirty so the next change (or manual Save) retries
-			_libraryDirty = savingLibrary || _libraryDirty;
+			_saveError = "Could not save your changes. Retry saving before Play.";
+			if (ReferenceEquals(_roster, roster))
+			{
+				_dirty = savingRoster || _dirty; // keep dirty so the next change (or manual Save) retries
+				_libraryDirty = savingLibrary || _libraryDirty;
+			}
 		}
 		finally
 		{
 			_saving = false;
+			await InvokeAsync(StateHasChanged);
 		}
 	}
 
@@ -1281,6 +1399,7 @@ else
 	private void ToggleWindow(string key, BattlePhase phase, BattleTurn turn, bool on)
 	{
 		_library.GetOrCreate(key).SetWindow(phase, turn, on);
+		_library.GetOrCreate(key).ReviewedReferenceHash = null;
 		MarkLibraryChanged();
 	}
 
@@ -1289,6 +1408,7 @@ else
 	private void SetApplied(string key, bool on)
 	{
 		_library.GetOrCreate(key).ApplyToUnit = on;
+		_library.GetOrCreate(key).ReviewedReferenceHash = null;
 		MarkLibraryChanged();
 	}
 
@@ -1317,6 +1437,7 @@ else
 	private void SetKeyword(string key, string? text)
 	{
 		_library.GetOrCreate(key).ManualKeyword = TrimToWords(text, 3);
+		_library.GetOrCreate(key).ReviewedReferenceHash = null;
 		MarkLibraryChanged();
 	}
 
@@ -1324,9 +1445,41 @@ else
 	// roster's debounce so a burst of ticks results in a single library save once you pause.
 	private void MarkLibraryChanged()
 	{
+		_readiness = null;
 		_libraryDirty = true;
 		ScheduleAutoSave();
 	}
+
+	private RenderFragment SaveFeedback() => __builder =>
+	{
+		@if (_saveError is not null)
+		{
+			<div class="error" role="alert">
+				<p>@_saveError</p>
+				<button type="button" class="btn ghost" disabled="@_saving" @onclick="SaveAsync">Retry saving</button>
+			</div>
+		}
+		else if (_saving)
+		{
+			<p class="cfg-hint" role="status">Saving setup…</p>
+		}
+		else if (_dirty || _libraryDirty)
+		{
+			<p class="cfg-hint" role="status">Unsaved setup changes</p>
+		}
+	};
+
+	private RenderFragment ReferenceReview(string key, string name, string text) => __builder =>
+	{
+		@if (!string.IsNullOrWhiteSpace(text) && !PlayReadiness.HasConfiguration(_library.Find(key)))
+		{
+			<label class="sched-apply">
+				<input type="checkbox" checked="@PlayReadiness.IsReviewedReference(_library.Find(key), name, text)"
+					   @onchange="e => SetReferenceReview(key, name, text, (bool)e.Value!)" />
+				Reviewed as reference only — no Now prompt
+			</label>
+		}
+	};
 
 	// Keeps a manual keyword short by taking only the first few words; returns null when empty.
 	private static string? TrimToWords(string? text, int maxWords)

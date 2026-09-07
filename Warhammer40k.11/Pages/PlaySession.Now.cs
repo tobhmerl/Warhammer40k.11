@@ -41,7 +41,9 @@ public partial class PlaySession
 
     private string ShootingChoiceSources(BattleUnit unit) =>
         string.Join(", ", ShootingEnhancements(unit).Select(enhancement =>
-            enhancement.Name + (ShootingEnhancementEnabled(enhancement) ? "" : " · needs setup")));
+            enhancement.Name + (ShootingEnhancementEnabled(enhancement) ? ""
+                : PlayReadiness.IsReviewedReference(_battle?.Source.FindSchedule(AbilityScheduleKeys.ForEnhancement(enhancement.Id)), enhancement.Name, enhancement.Text)
+                    ? " · reference only" : " · needs setup")));
 
     private IReadOnlyList<DetachmentRule> ShootingChoiceRules(BattleUnit unit)
     {

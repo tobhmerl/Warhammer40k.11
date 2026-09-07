@@ -221,6 +221,22 @@ html[data-scroll="up"] .hud.sticky {
     margin-top: 0.55rem;
 }
 
+.setup-status {
+    margin: 0 0 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.setup-status.review {
+    color: #fbbf24;
+}
+
 .now-action {
     min-width: 0;
     padding: 0.55rem 0.6rem;

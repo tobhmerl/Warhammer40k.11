@@ -1,0 +1,87 @@
+@using Warhammer40k.Core.Play
+
+@if (Result is { } result)
+{
+	<div class="readiness-panel">
+		<p class="readiness-summary @(result.IsReady ? "ready" : "review")" role="status">
+			<strong>@(result.IsReady ? "Play ready" : "Review play setup")</strong>
+			<span>@result.AccountedCount / @result.Entries.Count entered rule entries accounted for</span>
+		</p>
+		<p class="readiness-note">List legal: @(result.ListValidation.IsReady ? "yes" : "needs attention"). This checks the selected army's entered content, not rules that have not been uploaded.</p>
+		@if (result.ReferenceCount > 0)
+		{
+			<p class="readiness-note">@result.ReferenceCount explicitly reviewed as reference only. These do not produce Now prompts.</p>
+		}
+		@if (!result.ListValidation.IsReady || result.Issues.Count > 0)
+		{
+			<ul class="readiness-issues">
+				@foreach (var issue in result.ListValidation.Errors)
+				{
+					<li>
+						<strong>List legality</strong>
+						<p>@issue.Text</p>
+						<a href="@RosterLink">Review army</a>
+					</li>
+				}
+				@foreach (var issue in result.Issues)
+				{
+					<li @key="(issue.Key, issue.UnitId)">
+						<strong>@issue.Name</strong>
+						<small>@issue.Source</small>
+						<p>@issue.Message</p>
+						@if (issue.Key == "view|stacked" && UseFocusedCards.HasDelegate)
+						{
+							<button type="button" class="btn ghost" @onclick="UseFocusedCards">Use focused cards</button>
+						}
+						else
+						{
+							<a href="@SetupLink(issue)">@(issue.Key == "view|stacked" ? "Review Play layout" : "Review setup")</a>
+						}
+					</li>
+				}
+			</ul>
+		}
+		<details class="readiness-preview">
+			<summary>Five phases × both turns</summary>
+			<p class="readiness-note">Mapped / configured rule entries. Merged cards can have different counts.</p>
+			<table>
+				<thead><tr><th>Phase</th><th>You</th><th>Opponent</th></tr></thead>
+				<tbody>
+					@foreach (var phase in BattlePhases.Ordered)
+					{
+						var mine = result.Windows.Single(window => window.Phase == phase && window.Turn == BattleTurn.Player);
+						var theirs = result.Windows.Single(window => window.Phase == phase && window.Turn == BattleTurn.Opponent);
+						<tr>
+							<th>@BattlePhases.Label(phase)</th>
+							<td class="@(mine.Expected != mine.Projected ? "gap" : "")">@mine.Projected / @mine.Expected</td>
+							<td class="@(theirs.Expected != theirs.Projected ? "gap" : "")">@theirs.Projected / @theirs.Expected</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</details>
+		<p class="readiness-note">Preview assumes fresh unit state and sufficient CP. Board conditions and spent uses still need checking during play.</p>
+	</div>
+}
+
+@code {
+	[Parameter] public PlayReadinessResult? Result { get; set; }
+	[Parameter] public string RosterId { get; set; } = "";
+	[Parameter] public EventCallback UseFocusedCards { get; set; }
+
+	private string RosterLink => "rosters/" + Uri.EscapeDataString(RosterId);
+
+	private string SetupLink(PlayReadinessEntry issue)
+	{
+		if (issue.Key == "view|stacked")
+			return "settings";
+		var key = Uri.EscapeDataString(issue.Key);
+		if (issue.Key.StartsWith("strat|", StringComparison.Ordinal)
+			|| issue.Key.StartsWith("armyrule|", StringComparison.Ordinal)
+			|| issue.Key.StartsWith("detbuff|", StringComparison.Ordinal)
+			|| issue.Key.StartsWith("detrule|", StringComparison.Ordinal)
+			|| issue.Key.StartsWith("detachment|", StringComparison.Ordinal))
+			return RosterLink + "?timing=1&rule=" + key;
+		return issue.UnitId is { } unitId ? RosterLink + "?unit=" + Uri.EscapeDataString(unitId) + "&rule=" + key : RosterLink;
+	}
+}

@@ -134,6 +134,12 @@
 
 .open {
     display: flex;
+    width: 100%;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.15rem;

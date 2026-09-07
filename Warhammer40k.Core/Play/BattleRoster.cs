@@ -444,6 +444,19 @@ public sealed class BattleRoster
                 .ToList()
             : [];
 
+    /// <summary>Conditional detachment buffs available to this unit in the player's configured window.</summary>
+    public IEnumerable<ConditionalUnitBuff> ConditionalBuffsFor(BattleUnit unit, BattlePhase phase, BattleTurn turn) =>
+        Detachments.SelectMany(detachment => detachment.Rules.SelectMany(rule => rule.ConditionalBuffs)
+            .Where(buff => BuffAppliesTo(unit, buff)
+                && Source.IsScheduledNow(AbilityScheduleKeys.ForDetachmentBuff(detachment.Id, buff.Label), phase, turn)));
+
+    public static bool BuffAppliesTo(BattleUnit unit, ConditionalUnitBuff buff)
+    {
+        var keywords = unit.Parts.SelectMany(part => part.Datasheet.Keywords).ToList();
+        return buff.RequiredKeywords.All(keyword => StratagemTargeting.HasKeyword(keywords, keyword))
+            && !buff.ExcludedKeywords.Any(keyword => StratagemTargeting.HasKeyword(keywords, keyword));
+    }
+
     private static bool ModelHasKeyword(BattlePart part, string keyword) =>
         string.IsNullOrEmpty(keyword)
         || part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase);
@@ -828,6 +841,12 @@ public sealed class BattleUnit
             return false;
         return ability.Windows.Any(w => w.Phase == phase && w.Turn == turn);
     }
+
+    /// <summary>The ordinary Now-action predicate shared by the screen and pre-game coverage validation.</summary>
+    public static bool IsNowAction(BattleAbility ability, BattlePhase phase, BattleTurn turn) =>
+        !ability.IsShootingChoice && !ability.HasManualKeyword && ability.AppliedSummary is null
+        && ability.Windows.Any(window => window.Phase == phase && window.Turn == turn)
+        && AuraParser.Parse(ability.Ability) is null;
 
     /// <summary>How many of this group's text abilities are usable in <paramref name="phase"/> during
     /// <paramref name="turn"/> (drives the phase markers).</summary>

@@ -11,6 +11,10 @@ public static class StratagemTargeting
     private static readonly Regex KeywordRun = new(@"[A-Z][A-Z'\u2019-]+(?:[ /][A-Z][A-Z'\u2019-]+)*", RegexOptions.Compiled);
     private static readonly Regex ExcludeClause = new(@"\((?:excluding|excludes|except|but not)\s+([^)]*)\)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    /// <summary>Matches a single keyword, including qualified faction keywords.</summary>
+    public static bool HasKeyword(IEnumerable<string> keywords, string wanted) =>
+        keywords.Any(keyword => string.Equals(Normalize(keyword), Normalize(wanted), StringComparison.OrdinalIgnoreCase));
+
     /// <summary>
     /// Adjacent keywords are required together; slash-separated keywords are alternatives. The catalogue's
     /// vocabulary preserves multiword keywords such as NECRON WARRIORS and DESTROYER CULT as single terms.

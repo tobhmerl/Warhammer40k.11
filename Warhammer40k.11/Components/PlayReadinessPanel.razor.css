@@ -1,0 +1,86 @@
+.readiness-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.readiness-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+}
+
+.readiness-summary.ready strong {
+    color: var(--accent-strong);
+}
+
+.readiness-summary.review strong,
+.gap {
+    color: #fbbf24;
+}
+
+.readiness-note,
+.readiness-summary span {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.readiness-issues {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.readiness-issues li {
+    padding: 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+}
+
+.readiness-issues small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--text-faint);
+}
+
+.readiness-issues p {
+    margin: 0.45rem 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.readiness-issues a {
+    display: inline-block;
+    padding: 0.4rem 0;
+    color: var(--accent-strong);
+}
+
+.readiness-preview summary {
+    cursor: pointer;
+    padding: 0.4rem 0;
+}
+
+.readiness-preview table {
+    width: 100%;
+    margin-top: 0.6rem;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.readiness-preview th,
+.readiness-preview td {
+    padding: 0.45rem 0.25rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}

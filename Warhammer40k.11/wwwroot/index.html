@@ -99,6 +99,9 @@
             scrollBottom: function () {
                 window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
             },
+            revealRule: function (id) {
+                document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            },
             // Transient Play Mode state is local to this browser and roster. Storage failures (private mode,
             // quota, blocked storage) deliberately degrade to an in-memory-only session.
             battleState: {

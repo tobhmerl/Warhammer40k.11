@@ -50,7 +50,7 @@
 			{
 				var s = Summary(roster);
 				<li class="play-card" @key="roster.Id">
-					<a class="open" href="@($"play/{roster.Id}")">
+					<button type="button" class="open" @onclick="() => CheckPlayAsync(roster)" aria-label="@($"Check {roster.Name} for Play")">
 						<span class="play-glyph" aria-hidden="true">▶</span>
 						<span class="info">
 							<span class="name">@roster.Name</span>
@@ -59,10 +59,10 @@
 						<span class="numbers">
 							<span class="pts"><strong>@s.Total</strong> / @roster.PointsLimit</span>
 							<span class="pill @(s.Errors == 0 ? "ready" : "issues")">
-								@(s.Errors == 0 ? "Ready" : $"{s.Errors} {(s.Errors == 1 ? "issue" : "issues")}")
+								@(s.Errors == 0 ? "List legal" : $"{s.Errors} {(s.Errors == 1 ? "issue" : "issues")}")
 							</span>
 						</span>
-					</a>
+					</button>
 				</li>
 			}
 		</ul>
@@ -73,6 +73,24 @@
 		<p class="error">@_error</p>
 	}
 </div>
+
+<Sheet Open="_checkedRoster is not null" Eyebrow="Before the game" Title="Play readiness" OnCloseRequested="CloseReadiness">
+	@if (_checkingPlay)
+	{
+		<p class="status" role="status">Checking the selected army's entered rules and timing…</p>
+	}
+	else if (_readinessError is not null && _checkedRoster is { } retryRoster)
+	{
+		<p class="error" role="alert">@_readinessError</p>
+		<button type="button" class="btn primary" @onclick="() => CheckPlayAsync(retryRoster)">Retry check</button>
+	}
+	else if (_readiness is { } check && _checkedRoster is { } checkedRoster)
+	{
+		<PlayReadinessPanel Result="check" RosterId="@checkedRoster.Id" />
+		<p class="lede">Opening Play resumes any saved battle for this roster. Use the existing Reset command for a new match.</p>
+		<a class="btn primary" href="@($"play/{checkedRoster.Id}")">@(check.IsReady ? "Start Play" : "Play with warnings")</a>
+	}
+</Sheet>
 
 @code {
 	private readonly List<Roster> _rosters = new();
