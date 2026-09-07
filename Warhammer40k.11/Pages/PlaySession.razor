@@ -137,6 +137,8 @@ else
 			var nowAbilities = NowAbilities;
 			var nowAuras = NowAuras;
 			var nowBuffs = NowBuffs;
+			var nowChoices = NowShootingChoices;
+			var nowReferences = NowReferenceAbilities;
 			var nowRules = UsableArmyRules;
 			var nowStrats = AffordableNowStratagems;
 
@@ -147,7 +149,7 @@ else
 			@<span class="u-chips">
 				@{
 					var uDead = IsDead(u);
-					var uKeyword = u.CombinedAbilities.Where(a => a.HasManualKeyword).ToList();
+					var uKeyword = u.CombinedAbilities.Where(a => !a.IsShootingChoice && a.HasManualKeyword).ToList();
 					var uCore = PassiveCoreAbilities(u);
 					var uHasAbilityLine = !uDead && (uKeyword.Count > 0 || uCore.Count > 0);
 				}
@@ -252,6 +254,22 @@ else
 							<small>@AuraSource(offer.Offer)</small>
 						</button>
 					}
+					@foreach (var choiceUnit in nowChoices)
+					{
+						<button type="button" class="now-action ability choice @(SelectedChoice(choiceUnit) is not null ? "on" : "")"
+								title="@ShootingChoiceName(choiceUnit)" @onclick="() => OpenShootingCard(choiceUnit)">
+							<span class="na-type">Shooting · choose one</span>
+							<strong>@ShootingChoiceTitle(choiceUnit)</strong>
+							@if (ShootingEnhancements(choiceUnit).Count > 0)
+							{
+								<small>@ShootingChoiceSources(choiceUnit)</small>
+							}
+							@if (NowUnit is null)
+							{
+								<small>@choiceUnit.Name</small>
+							}
+						</button>
+					}
 					@foreach (var action in nowAbilities)
 					{
 						var modelContext = AbilityModelContext(action.Unit, action.Ability);
@@ -293,31 +311,24 @@ else
 					}
 				</div>
 			}
-		</section>
-		}
-
-		@{ var usableRules = UsableArmyRules; }
-		@if (!_overview && usableRules.Count > 0)
-		{
-			<section class="army-now" aria-label="Army rules usable now">
-				<span class="an-head">Army rules — usable now</span>
-				<ul class="an-list">
-					@foreach (var rule in usableRules)
+			@if (nowReferences.Count > 0)
+			{
+				<details class="now-reference">
+					<summary>Unscheduled rules · @nowReferences.Count</summary>
+					<p class="a-text">Reference only. Configure these rules in your roster to show them when usable.</p>
+					@foreach (var reference in nowReferences)
 					{
-						var ruleOpen = _openArmyRules.Contains(rule.Name);
-						<li class="an-item @(ruleOpen ? "open" : "")" @key="rule.Name">
-							<button type="button" class="an-toggle" @onclick="() => ToggleArmyRule(rule.Name)" aria-expanded="@ruleOpen">
-								<span class="chev" aria-hidden="true">@(ruleOpen ? "▾" : "▸")</span>
-								<span class="an-name">@rule.Name</span>
-							</button>
-							@if (ruleOpen)
+						<button type="button" class="reference-rule" @onclick="() => OpenReferenceAbility(reference.Unit, reference.Ability)">
+							<span>@reference.Ability.Ability.Name</span>
+							@if (NowUnit is null)
 							{
-								<p class="a-text">@rule.Text</p>
+								<small>@reference.Unit.Name</small>
 							}
-						</li>
+						</button>
 					}
-				</ul>
-			</section>
+				</details>
+			}
+		</section>
 		}
 
 		@if (_overview)
@@ -631,23 +642,6 @@ else
 								@{
 									var ranged = unit.Parts.SelectMany(p => p.RangedWeapons.Select(w => (Part: p, Weapon: w))).ToList();
 									var melee = unit.Parts.SelectMany(p => p.MeleeWeapons.Select(w => (Part: p, Weapon: w))).ToList();
-									var shootChoices = _battle.WeaponChoicesFor(unit);
-									var shootOptions = shootChoices.SelectMany(c => c.Options)
-										.Concat(_battle.ExtraShootingOptions(unit))
-										.Distinct(StringComparer.OrdinalIgnoreCase)
-										.ToList();
-								}
-								@if (MyShootingPhase && shootOptions.Count > 0)
-								{
-									<div class="shoot-choice">
-										<span class="sc-label">@(shootChoices.Count > 0 ? shootChoices[0].Name : "Shooting ability")</span>
-										<div class="sc-opts">
-											@foreach (var opt in shootOptions)
-											{
-												<button type="button" class="sc-opt @(IsChoiceSelected(unit, opt) ? "on" : "")" @onclick="() => ToggleChoice(unit, opt)">@opt</button>
-											}
-										</div>
-									</div>
 								}
 								@if (ranged.Count > 0)
 								{
@@ -758,71 +752,6 @@ else
 										</ul>
 									</div>
 								}
-
-								@{
-										// The card body lists only genuine reference abilities: unscheduled rules text (no phase window,
-										// not always-on, not a manual keyword) such as Resurrection orb. Abilities whose effect is
-										// already surfaced above — applied conferrals/enhancements (shown as inv/FNP chips or buffed
-										// stat cells) and phase-scheduled actions (shown in the Now ribbon) — are intentionally excluded.
-										var referenceAbilities = unit.CombinedAbilities
-											.Where(a => a.AppliedSummary is null
-												&& !a.IsAlwaysAvailable && !a.HasManualKeyword && a.Windows.Count == 0)
-											.ToList();
-									}
-								@if (referenceAbilities.Count > 0)
-								{
-									<ul class="abilities">
-										@foreach (var a in referenceAbilities)
-											{
-												var hasText = !string.IsNullOrWhiteSpace(a.Ability.Text);
-												var activeNow = BattleUnit.IsAbilityActiveInPhase(a, _phase, _turn);
-												var open = IsAbilityOpen(unit, a);
-												<li class="ability @(a.IsEnhancement ? "enh" : "") @(activeNow ? "now" : "") @(open ? "open" : "")" @key="a.Ability.Name">
-													@if (hasText)
-												{
-													<button type="button" class="a-toggle" @onclick="() => ToggleAbility(unit, a)" aria-expanded="@open">
-														<span class="chev" aria-hidden="true">@(open ? "▾" : "▸")</span>
-														<span class="a-name">
-															@a.Ability.Name
-															@if (a.IsEnhancement)
-															{
-																<span class="a-tag enh">Enhancement</span>
-															}
-															@if (activeNow)
-															{
-																<span class="a-tag now" title="@($"Usable in the {BattlePhases.Label(_phase)} phase")">Usable now</span>
-															}
-															@if (unit.Parts.Count > 1)
-															{
-																<span class="a-src">@a.Source</span>
-															}
-														</span>
-													</button>
-													@if (open)
-													{
-														<p class="a-text">@Clean(a.Ability.Text)</p>
-													}
-												}
-												else
-												{
-													<div class="a-row">
-														<span class="a-name">
-															@a.Ability.Name
-															@if (a.IsEnhancement)
-															{
-																<span class="a-tag enh">Enhancement</span>
-															}
-															@if (unit.Parts.Count > 1)
-															{
-																<span class="a-src">@a.Source</span>
-															}
-														</span>
-													</div>
-												}
-											</li>
-									}
-								</ul>
-							}
 
 								@if (!_cardSwipe)
 									{
@@ -1002,7 +931,7 @@ else
 </Sheet>
 
 	<Sheet Open="_abilityCard is not null"
-		   Eyebrow="@(_abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : _abilityCard is { } e1 && BattleUnit.IsAbilityActiveInPhase(e1, _phase, _turn) ? "Usable now" : "Always available")"
+		   Eyebrow="@(_abilityReference ? "Reference · not scheduled" : _abilityCard is { } e0 && HasEffectKeywords(e0) ? "Effect" : _abilityCard?.IsEnhancement == true ? "Enhancement" : _abilityCard?.HasManualKeyword == true ? "Keyword" : _abilityCard is { } e1 && BattleUnit.IsAbilityActiveInPhase(e1, _phase, _turn) ? "Usable now" : "Always available")"
 		   Title="@_abilityCard?.Ability.Name" OnCloseRequested="CloseAbilityCard">
 		@if (_abilityCard is { } ac)
 		{
@@ -1010,14 +939,14 @@ else
 			{
 				<p class="a-src">@ac.Source</p>
 			}
-			@if (HasEffectKeywords(ac) && _abilityCardUnit is { } acu)
+			@if (!_abilityReference && IsEffectNow(ac) && _abilityCardUnit is { } acu)
 			{
 				<label class="ac-toggle">
 					<input type="checkbox" checked="@IsEffectActive(acu, ac)" @onchange="e => ToggleEffect(acu, ac, (bool)e.Value!)" />
 					<span>Active now — apply @EffectLabel(ac) to this unit's weapons</span>
 				</label>
 			}
-			@if (IsDeploymentAbility(ac) && _abilityCardUnit is { } depu)
+			@if (!_abilityReference && IsDeploymentAbility(ac) && _abilityCardUnit is { } depu)
 			{
 				<label class="ac-toggle">
 					<input type="checkbox" checked="@IsOncePerBattleUsed(OncePerBattleAbilityKey(depu, ac))"
@@ -1025,7 +954,7 @@ else
 					<span>Used — this unit is deployed, so hide @ac.Ability.Name for the rest of the battle</span>
 				</label>
 			}
-			@if (IsOncePerBattleAbility(ac) && _abilityCardUnit is { } opbu)
+			@if (!_abilityReference && IsOncePerBattleAbility(ac) && _abilityCardUnit is { } opbu)
 			{
 				<label class="ac-toggle">
 					<input type="checkbox" checked="@IsOncePerBattleUsed(OncePerBattleAbilityKey(opbu, ac))"
@@ -1034,6 +963,47 @@ else
 				</label>
 			}
 			<p class="a-text">@Clean(ac.Ability.Text)</p>
+			@if (_abilityReference)
+			{
+				<p class="a-src">Not scheduled in setup. This is reference information, not an available action.</p>
+				<a class="btn ghost" href="@($"rosters/{Id}")">Configure in roster</a>
+			}
+		}
+	</Sheet>
+
+	<Sheet Open="_shootingCardUnit is not null" Eyebrow="Your Shooting phase · choose one"
+		   Title="@(_shootingCardUnit is { } scu ? ShootingChoiceName(scu) : "Shooting ability")" OnCloseRequested="CloseShootingCard">
+		@if (_shootingCardUnit is { } shootingUnit)
+		{
+			<p class="a-text">When this unit is selected to shoot, choose one ability for its ranged weapons until the end of the phase.</p>
+			<div class="shooting-picker">
+				<div class="sc-opts">
+					@foreach (var option in ShootingOptionsFor(shootingUnit))
+					{
+						<button type="button" class="sc-opt @(IsChoiceSelected(shootingUnit, option) ? "on" : "")"
+								aria-pressed="@IsChoiceSelected(shootingUnit, option)" @onclick="() => ChooseShootingOption(shootingUnit, option)">@option</button>
+					}
+				</div>
+			</div>
+			@foreach (var enhancement in ShootingEnhancements(shootingUnit))
+			{
+				<div class="choice-source">
+					<strong>@enhancement.Name</strong>
+					@if (!ShootingEnhancementEnabled(enhancement))
+					{
+						<p class="a-src">Enable this enhancement's extra shooting options in setup to include them here.</p>
+						<a class="btn ghost" href="@($"rosters/{Id}")">Configure in roster</a>
+					}
+					<p class="a-text">@Clean(enhancement.Text)</p>
+				</div>
+			}
+			<details class="now-reference">
+				<summary>Full detachment rules</summary>
+				@foreach (var rule in ShootingChoiceRules(shootingUnit))
+				{
+					<p class="a-text">@Clean(rule.Text)</p>
+				}
+			</details>
 		}
 	</Sheet>
 
@@ -1564,13 +1534,21 @@ else
 	{
 		// Detachment shooting picks last "until the end of the phase", so clear them when the phase changes.
 		if (phase != _phase)
+		{
 			_shootingChoice.Clear();
+			CloseShootingCard();
+		}
 		_phase = phase;
 		ScheduleBattleSave();
 	}
 
 	private void SetTurn(BattleTurn turn)
 	{
+		if (turn != _turn)
+		{
+			_shootingChoice.Clear();
+			CloseShootingCard();
+		}
 		_turn = turn;
 		ScheduleBattleSave();
 	}
@@ -1807,7 +1785,7 @@ else
 		: $"Army overview · {BattlePhases.Label(_phase)}";
 
 	private int AvailableNowTotal =>
-		NowReminders.Count + NowAbilities.Count + NowAuras.Count + NowBuffs.Count + UsableArmyRules.Count + AffordableNowStratagems.Count;
+		NowReminders.Count + NowAbilities.Count + NowAuras.Count + NowBuffs.Count + NowShootingChoices.Count + UsableArmyRules.Count + AffordableNowStratagems.Count;
 
 	private void FocusReminder(BattleUnit unit)
 	{
@@ -1883,15 +1861,6 @@ else
 		_nowStratagem = null;
 		_overviewStratUnit = null;
 		_stratNormalCost = false;
-	}
-
-	// Army rules whose text the user expanded (collapsed to the name by default), keyed by rule name.
-	private readonly HashSet<string> _openArmyRules = new(StringComparer.Ordinal);
-
-	private void ToggleArmyRule(string name)
-	{
-		if (!_openArmyRules.Remove(name))
-			_openArmyRules.Add(name);
 	}
 
 	private bool _rulesOpen;
@@ -2081,13 +2050,16 @@ else
 
 	// ---- Detachment shooting choice (e.g. Cryptek "Technosorcerous Augmentations") ----
 	private string? SelectedChoice(BattleUnit unit) =>
-		_shootingChoice.TryGetValue(unit.Id, out var s) ? s : null;
+		_shootingChoice.TryGetValue(unit.Id, out var s)
+		&& ShootingOptionsFor(unit).Contains(s, StringComparer.OrdinalIgnoreCase) ? s : null;
 
 	private bool IsChoiceSelected(BattleUnit unit, string option) =>
 		string.Equals(SelectedChoice(unit), option, StringComparison.Ordinal);
 
 	private void ToggleChoice(BattleUnit unit, string option)
 	{
+		if (!ShootingOptionsFor(unit).Contains(option, StringComparer.OrdinalIgnoreCase))
+			return;
 		if (IsChoiceSelected(unit, option))
 			_shootingChoice.Remove(unit.Id);
 		else
@@ -2108,6 +2080,7 @@ else
 		_collapsed.Clear();
 		_openAbilities.Clear();
 		_shootingChoice.Clear();
+		CloseShootingCard();
 		_activeEffects.Clear();
 		_selectedMember.Clear();
 		_selectedCell = null;
@@ -2321,12 +2294,14 @@ else
 
 	private void OpenAbilityCard(BattleUnit unit, BattleAbility ability)
 	{
+		_abilityReference = false;
 		_abilityCardUnit = unit;
 		_abilityCard = ability;
 	}
 
 	private void CloseAbilityCard()
 	{
+		_abilityReference = false;
 		_abilityCard = null;
 		_abilityCardUnit = null;
 	}
@@ -2392,14 +2367,14 @@ else
 		return list;
 	}
 
-	private static bool HasEffectKeywords(BattleAbility ability) => EffectKeywords(ability).Count > 0;
+	private static bool HasEffectKeywords(BattleAbility ability) => !ability.IsShootingChoice && EffectKeywords(ability).Count > 0;
 
 	// One rule for the whole ability strip, regardless of origin (unit ability, detachment buff, enhancement,
 	// army rule): an item is "available now" — shown as a card in the Now section — when it is scheduled for the
 	// current phase + turn. An ability the player flagged with a keyword lives on the chip strip instead, and one
 	// whose effect is applied to the unit shows only as the weapon / stat change it produces.
 	private bool IsUsableNow(BattleAbility a) =>
-		!HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
+		!a.IsShootingChoice && !HasEffectKeywords(a) && !a.HasManualKeyword && a.AppliedSummary is null
 		&& a.Windows.Any(w => w.Phase == _phase && w.Turn == _turn);
 
 	private bool IsEffectNow(BattleAbility a) =>
@@ -2427,7 +2402,7 @@ else
 	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
 	// equals the number of highlighted chips on the card, whatever the ability's origin.
 	private int AvailableNowCount(BattleUnit unit) =>
-		ConditionalBuffsFor(unit).Count()
+		(ShootingOptionsFor(unit).Count > 0 ? 1 : 0) + ConditionalBuffsFor(unit).Count()
 		+ unit.CombinedAbilities.Count(a => IsEffectNow(a) && !IsOncePerBattleUsedAbility(unit, a))
 		+ unit.CombinedAbilities.Count(a => IsUsableNow(a) && !IsOncePerBattleUsedAbility(unit, a));
 
@@ -2440,7 +2415,7 @@ else
 	// The unit's passive, always-on markers — exactly what the chip strip's second line shows (keyword-flagged
 	// abilities plus passive core keywords). Drives the deck pill's "always" segment.
 	private int AlwaysAbilityCount(BattleUnit unit) =>
-		unit.CombinedAbilities.Count(a => a.HasManualKeyword) + PassiveCoreAbilities(unit).Count;
+		unit.CombinedAbilities.Count(a => !a.IsShootingChoice && a.HasManualKeyword) + PassiveCoreAbilities(unit).Count;
 
 	private static string EffectLabel(BattleAbility ability) =>
 		string.Join(", ", EffectKeywords(ability).Select(k => $"[{k}]"));

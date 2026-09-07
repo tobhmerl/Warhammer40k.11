@@ -341,7 +341,14 @@ else
 								{
 									<span class="sched-member">@ab.Source</span>
 								}
-								@if (ab.Summary is { } sum)
+								@if (ab.IsShootingChoice)
+								{
+									<label class="sched-apply" title="Include this enhancement's alternatives in the choose-one shooting ability card">
+										<input type="checkbox" checked="@IsApplied(key)" @onchange="e => SetApplied(key, (bool)e.Value!)" />
+										Enable extra shooting options
+									</label>
+								}
+								else if (ab.Summary is { } sum)
 								{
 									<label class="sched-apply" title="Apply @sum to the unit instead of showing the rules text">
 										<input type="checkbox" checked="@IsApplied(key)" @onchange="e => SetApplied(key, (bool)e.Value!)" />
@@ -349,6 +356,8 @@ else
 									</label>
 								}
 							</div>
+							@if (!ab.IsShootingChoice)
+							{
 							<div class="sched-kw-row">
 								<label class="sched-kw" title="Show this ability as a short keyword chip in Play Mode (e.g. Stealth), like Inv/FNP">
 									<input type="checkbox" checked="@ShowKeyword(key)" @onchange="e => ToggleKeyword(key, (bool)e.Value!)" />
@@ -360,11 +369,19 @@ else
 										   value="@KeywordText(key)" @onchange="e => SetKeyword(key, e.Value?.ToString())" />
 								}
 							</div>
+							}
 							@if (textOpen && hasText)
 							{
 								<p class="sched-text">@CleanText(ab.Text)</p>
 							}
-							@ScheduleGrid(key)
+							@if (ab.IsShootingChoice)
+							{
+								<p class="cfg-hint">Once enabled, choose one option in Now during your Shooting phase. No separate timing or keyword chip is needed.</p>
+							}
+							else
+							{
+								@ScheduleGrid(key)
+							}
 						</div>
 					}
 				</div>
@@ -1149,7 +1166,7 @@ else
 	// ---- Ability / stratagem scheduling (manual phase + turn windows) ----
 
 	/// <summary>A datasheet ability (or assigned enhancement) that gets a schedule grid: its key, name, rules text, and conferred-effect summary.</summary>
-	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary, string Source);
+	private sealed record SchedAbility(string Key, string Name, string Text, string? Summary, string Source, bool IsShootingChoice = false);
 
 	// Ability names (and stratagem schedule keys) whose rules text the user expanded in the scheduler (collapsed by default).
 	private readonly HashSet<string> _openSchedText = new(StringComparer.Ordinal);
@@ -1216,7 +1233,7 @@ else
 			var summary = string.IsNullOrWhiteSpace(enh.EffectSummary) ? null : enh.EffectSummary;
 			result.Add(new SchedAbility(
 				AbilityScheduleKeys.ForEnhancement(enh.Id),
-				enh.Name, enh.Text ?? "", summary, sheet.Name));
+				enh.Name, enh.Text ?? "", summary, sheet.Name, enh.ShootingAbilityOptions.Count > 0));
 		}
 
 		return result;

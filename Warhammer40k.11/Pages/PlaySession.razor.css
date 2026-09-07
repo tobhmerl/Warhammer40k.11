@@ -309,6 +309,40 @@ html[data-scroll="up"] .hud.sticky {
     margin-bottom: 1rem;
 }
 
+.now-action.choice.on {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+}
+
+.now-reference {
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.now-reference summary {
+    cursor: pointer;
+}
+
+.reference-rule {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0.5rem 0;
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.choice-source {
+    margin-top: 1rem;
+}
+
 /* ---- Army overview ---- */
 /* Built for reading at arm's length mid-game: a sticky phase header, the stratagems several units share
    listed once, then one compact row per unit carrying only what is specific to it. Surfaces are opaque
@@ -1971,7 +2005,7 @@ html[data-scroll="up"] .hud.sticky {
 }
 
 /* ---- Detachment Shooting-phase ability selector ---- */
-.shoot-choice {
+.shooting-picker {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -2018,6 +2052,10 @@ html[data-scroll="up"] .hud.sticky {
     background: linear-gradient(180deg, var(--accent-strong), var(--accent-deep));
     color: #04130d;
     box-shadow: var(--glow-sm);
+}
+
+.shooting-picker .sc-opt {
+    min-height: 44px;
 }
 
 

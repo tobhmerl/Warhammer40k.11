@@ -24,6 +24,7 @@ public partial class PlaySession
         Ability,
         Aura,
         Buff,
+        Choice,
     }
 
     // One column: a single rule, listed once no matter how many units it covers.
@@ -83,6 +84,14 @@ public partial class PlaySession
             .ToList();
         if (armyRules.Count > 0)
             groups.Add(new MatrixGroup("Army rules", MatrixKind.ArmyRule, armyRules));
+
+        var choices = live.Where(unit => ShootingOptionsFor(unit).Count > 0)
+            .GroupBy(ShootingChoiceName)
+            .Select(group => new MatrixColumn("C|" + group.Key, MatrixKind.Choice, "Choose shooting ability",
+                group.Key, null, group.ToDictionary(unit => unit.Id, unit => (object?)unit, StringComparer.Ordinal)))
+            .ToList();
+        if (choices.Count > 0)
+            groups.Add(new MatrixGroup("Shooting choice", MatrixKind.Choice, choices));
 
         // Stratagems: one column each, holding every unit that can legally use it and can pay for it.
         var stratagems = BuildStratagemColumns(live);
@@ -257,7 +266,7 @@ public partial class PlaySession
             case MatrixKind.Stratagem when column.Applies.Values.FirstOrDefault() is StratView strat:
                 OpenGeneralStratagem(strat);
                 break;
-            case MatrixKind.Ability or MatrixKind.Buff:
+            case MatrixKind.Ability or MatrixKind.Buff or MatrixKind.Choice:
                 // Abilities and buffs only ever read in the context of a bearer, so the sheet opens for
                 // the first unit that has it; the cells open it for the unit you actually tapped.
                 OpenMatrixCellFor(column, column.Applies.Keys.First());
@@ -286,6 +295,9 @@ public partial class PlaySession
                 break;
             case ConditionalUnitBuff buff:
                 OpenBuffCard(unit, buff);
+                break;
+            case BattleUnit choiceUnit:
+                OpenShootingCard(choiceUnit);
                 break;
             default:
                 // A reminder has no sheet of its own — jump to the unit's card to resolve it there.

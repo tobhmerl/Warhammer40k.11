@@ -435,6 +435,15 @@ public sealed class BattleRoster
         return result;
     }
 
+    /// <summary>The unit's choose-one shooting options, including manually enabled enhancements, in their authored window.</summary>
+    public IReadOnlyList<string> ShootingOptionsFor(BattleUnit unit, BattlePhase phase, BattleTurn turn) =>
+        phase == BattlePhase.Shooting && turn == BattleTurn.Player
+            ? WeaponChoicesFor(unit).SelectMany(choice => choice.Options)
+                .Concat(ExtraShootingOptions(unit))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+            : [];
+
     private static bool ModelHasKeyword(BattlePart part, string keyword) =>
         string.IsNullOrEmpty(keyword)
         || part.Datasheet.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase);
@@ -722,6 +731,7 @@ public sealed class BattleUnit
                     result.Add(new BattleAbility(new Ability { Name = enh.Name, Text = enh.Text }, part.Datasheet.Name)
                     {
                         IsEnhancement = true,
+                        IsShootingChoice = enh.ShootingAbilityOptions.Count > 0,
                         Key = key,
                         ConferredSummary = string.IsNullOrWhiteSpace(summary) ? null : summary,
                         Windows = schedule?.Windows ?? [],
@@ -852,6 +862,9 @@ public sealed record BattleAbility(Ability Ability, string Source)
 {
     /// <summary>True when this entry is a setup-assigned Enhancement rather than a printed datasheet ability.</summary>
     public bool IsEnhancement { get; init; }
+
+    /// <summary>Extends a choose-one shooting interaction; its bracketed options must not become a generic effect toggle.</summary>
+    public bool IsShootingChoice { get; init; }
 
     /// <summary>The manual-schedule key (<see cref="AbilityScheduleKeys"/>) used to configure this in setup.</summary>
     public string Key { get; init; } = string.Empty;
