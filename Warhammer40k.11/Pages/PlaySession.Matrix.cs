@@ -39,6 +39,7 @@ public partial class PlaySession
         IReadOnlyDictionary<string, object?> Applies)
     {
         public int Count => Applies.Count;
+        public string? CostLabel { get; init; }
 
         public bool AppliesTo(BattleUnit unit) => Applies.ContainsKey(unit.Id);
     }
@@ -67,8 +68,10 @@ public partial class PlaySession
 
         // Must-resolve reminders — only ever in your Command phase, so the group vanishes elsewhere.
         var reminders = new List<MatrixColumn>();
-        AddReminderColumn(reminders, "Battle-shock", "Take a Battle-shock test for this unit.", live, NeedsBattleShock);
-        AddReminderColumn(reminders, "Reanimation", "Resolve Reanimation Protocols for this unit.", live, NeedsReanimation);
+        AddReminderColumn(reminders, "Battle-shock", "Take a Battle-shock test for this unit.", live,
+            unit => UnitNowReminders(unit).Any(reminder => reminder.Label == "Take Battle-shock test"));
+        AddReminderColumn(reminders, "Reanimation", "Resolve Reanimation Protocols for this unit.", live,
+            unit => UnitNowReminders(unit).Any(reminder => reminder.Label == "Resolve Reanimation Protocols"));
         if (reminders.Count > 0)
             groups.Add(new MatrixGroup("Must resolve", MatrixKind.Reminder, reminders));
 
@@ -94,7 +97,7 @@ public partial class PlaySession
             groups.Add(new MatrixGroup("Shooting choice", MatrixKind.Choice, choices));
 
         // Stratagems: one column each, holding every unit that can legally use it and can pay for it.
-        var stratagems = BuildStratagemColumns(live);
+        var stratagems = BuildStratagemColumns(OrderedUnits);
         if (stratagems.Count > 0)
             groups.Add(new MatrixGroup("Stratagems", MatrixKind.Stratagem, stratagems));
 
@@ -111,7 +114,7 @@ public partial class PlaySession
             groups.Add(new MatrixGroup("Unit abilities", MatrixKind.Ability, abilities));
 
         var all = groups.SelectMany(g => g.Columns).ToList();
-        var rows = live
+        var rows = OrderedUnits.Where(unit => !IsDead(unit) || stratagems.Any(column => column.AppliesTo(unit)))
             .Select(u => new MatrixRow(u, all.Count(c => c.AppliesTo(u))))
             .ToList();
 
@@ -146,7 +149,7 @@ public partial class PlaySession
         {
             var applies = new Dictionary<string, object?>(StringComparer.Ordinal);
             foreach (var unit in live)
-                if (StratagemAppliesTo(unit, strat.Target) && CanAfford(strat, unit))
+                if (CanUseStratagem(unit, strat))
                     applies[unit.Id] = strat;
             if (applies.Count == 0)
                 continue;
@@ -156,7 +159,7 @@ public partial class PlaySession
                 strat.Name,
                 strat.Source,
                 strat.Cost,
-                applies));
+                applies) { CostLabel = StratagemCostLabel(strat, live.Where(unit => CanTargetStratagem(unit, strat))) });
         }
 
         return columns
@@ -167,8 +170,7 @@ public partial class PlaySession
 
     private List<MatrixColumn> BuildAbilityColumns(IReadOnlyList<BattleUnit> live)
     {
-        // Keyed by name so an ability several units share becomes one column, while the payload map
-        // still holds each unit's own BattleAbility for the focused detail sheet.
+        // Merge the same source rule across units, without collapsing different rules that share a name.
         var byKey = new Dictionary<string, (MatrixKind Kind, string Label, string Detail, Dictionary<string, object?> Applies)>(StringComparer.Ordinal);
 
         void Add(string key, MatrixKind kind, string label, string detail, BattleUnit unit, object payload)
@@ -180,16 +182,14 @@ public partial class PlaySession
 
         foreach (var unit in live)
         {
-            foreach (var ability in unit.CombinedAbilities)
+            foreach (var ability in UnitNowAbilities(unit))
             {
-                if (!(IsEffectNow(ability) || IsUsableNow(ability)) || IsOncePerBattleUsedAbility(unit, ability))
-                    continue;
                 var kind = HasEffectKeywords(ability) ? "Effect" : ability.IsEnhancement ? "Enhancement" : "Ability";
-                Add("A|" + ability.Ability.Name, MatrixKind.Ability, ability.Ability.Name, kind, unit, ability);
+                Add("A|" + ability.Key, MatrixKind.Ability, ability.Ability.Name, kind, unit, ability);
             }
 
-            foreach (var buff in ConditionalBuffsFor(unit))
-                Add("B|" + buff.Label, MatrixKind.Buff, buff.Label, "Detachment", unit, buff);
+            foreach (var buff in UnitNowBuffs(unit))
+                Add("B|" + BuffIdentity(buff), MatrixKind.Buff, buff.Label, "Detachment", unit, buff);
         }
 
         return byKey
@@ -206,7 +206,7 @@ public partial class PlaySession
         var byKey = new Dictionary<string, (string Label, string Detail, Dictionary<string, object?> Applies)>(StringComparer.Ordinal);
 
         foreach (var unit in live)
-            foreach (var offer in ForeignAuraOffersFor(unit))
+            foreach (var offer in UnitNowAuras(unit))
             {
                 var key = string.Join('|', "U", offer.Source.Id, offer.Ability.Ability.Name);
                 if (!byKey.TryGetValue(key, out var entry))
@@ -266,9 +266,8 @@ public partial class PlaySession
             case MatrixKind.Stratagem when column.Applies.Values.FirstOrDefault() is StratView strat:
                 OpenGeneralStratagem(strat);
                 break;
-            case MatrixKind.Ability or MatrixKind.Buff or MatrixKind.Choice:
-                // Abilities and buffs only ever read in the context of a bearer, so the sheet opens for
-                // the first unit that has it; the cells open it for the unit you actually tapped.
+            case MatrixKind.Ability or MatrixKind.Buff or MatrixKind.Choice or MatrixKind.Aura or MatrixKind.Reminder:
+                // Unit-scoped headers open for the first applicable unit; cells retain their own row's context.
                 OpenMatrixCellFor(column, column.Applies.Keys.First());
                 break;
         }

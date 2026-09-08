@@ -312,8 +312,21 @@ html[data-scroll="up"] .hud.sticky {
     font-size: 0.62rem;
 }
 
+.now-action .usage-hint {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
 .now-detail {
     margin-bottom: 1rem;
+}
+
+.strat-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
 }
 
 .now-action.choice.on {
