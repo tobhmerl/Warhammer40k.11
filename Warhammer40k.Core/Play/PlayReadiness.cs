@@ -63,6 +63,7 @@ public static class PlayReadiness
         schedule is not null && !HasConfiguration(schedule)
         && string.Equals(schedule.ReviewedReferenceHash, ReviewHash(name, text), StringComparison.Ordinal);
 
+    // The layout argument is retained for existing callers; rule coverage is now independent of presentation.
     public static PlayReadinessResult Check(Roster roster, CatalogueData catalogue, ScheduleLibrary library, bool focusMode = true)
     {
         ArgumentNullException.ThrowIfNull(roster);
@@ -178,7 +179,7 @@ public static class PlayReadiness
                     return;
                 }
                 Scheduled(key, name, text, part.Datasheet.Name, part.Unit.Id,
-                    (phase, turn) => focusMode && projected.Windows.Any(window => window.Phase == phase && window.Turn == turn));
+                    (phase, turn) => projected.Windows.Any(window => window.Phase == phase && window.Turn == turn));
                 return;
             }
             if (projected.HasManualKeyword || projected.AppliedSummary is not null)
@@ -193,7 +194,7 @@ public static class PlayReadiness
                 return;
             }
             Scheduled(key, name, text, part.Datasheet.Name, part.Unit.Id,
-                (phase, turn) => focusMode && BattleUnit.IsNowAction(projected, phase, turn));
+                (phase, turn) => BattleUnit.IsNowAction(projected, phase, turn));
         }
 
         foreach (var rosterUnit in roster.Units)
@@ -294,13 +295,10 @@ public static class PlayReadiness
             var recipients = battle.Units.Where(unit => StratagemTargeting.AppliesTo(target,
                 unit.Parts.SelectMany(part => part.Datasheet.Keywords), vocabulary)).ToList();
             Scheduled(key, name, StratagemText(cost, when, target, effect, restrictions), source, null,
-                (phase, turn) => usable(phase, turn) && (!focusMode || recipients.Count > 0));
+                (phase, turn) => usable(phase, turn) && recipients.Count > 0);
             if (recipients.Count == 0)
                 Add(key + "|target", name + " targets", source, null, PlayReadinessState.NotProjected,
                     "Army-level eligibility passes, but the target filter finds no compatible unit. Review target keywords and exclusions.");
-            if (HasConfiguration(effective.FindSchedule(key)) && (when + target + effect + restrictions).Contains("once per battle round", StringComparison.OrdinalIgnoreCase))
-                Add(key + "|usage", name + " usage limit", source, null, PlayReadinessState.NotProjected,
-                    "The current spent tracker treats this per-round wording as once-per-battle. Review this limitation before play.");
         }
 
         foreach (var stratagem in CoreStratagemCatalogue.All)
@@ -355,7 +353,7 @@ public static class PlayReadiness
                         Add(buffKey, buff.Label, detachment.Name, null, PlayReadinessState.NotApplicable, "No unit matches this buff's required/excluded keywords.");
                     else
                         Scheduled(buffKey, buff.Label, buff.Effect, detachment.Name, recipients[0].Id,
-                            (phase, turn) => focusMode && recipients.All(unit => battle.ConditionalBuffsFor(unit, phase, turn).Contains(buff)));
+                            (phase, turn) => recipients.All(unit => battle.ConditionalBuffsFor(unit, phase, turn).Contains(buff)));
                 }
             }
         }
@@ -370,10 +368,6 @@ public static class PlayReadiness
             if (inScope && !knownKeys.Contains(schedule.Key))
                 Add(schedule.Key, "Unmatched setup entry", "Scheduling library", null, PlayReadinessState.NotEntered, "This selected army's schedule key no longer matches entered rule content. Review the old entry.");
         }
-        if (!focusMode)
-            Add("view|stacked", "Stacked-list coverage", "Play layout", null, PlayReadinessState.NotProjected,
-                "This layout currently omits some unit actions and command reminders. Use focused cards for complete configured unit coverage.");
-
         return new(validation, entries);
     }
 }

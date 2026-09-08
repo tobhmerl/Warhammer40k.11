@@ -9,7 +9,36 @@ public partial class PlaySession
     private bool _abilityReference;
 
     private IReadOnlyList<BattleUnit> NowContextUnits =>
-        NowUnit is { } unit ? [unit] : !_cardSwipe ? OrderedUnits : [];
+        NowUnit is { } unit ? [unit] : !_overview ? OrderedUnits : [];
+
+    private IReadOnlyList<NowReminder> UnitNowReminders(BattleUnit unit)
+    {
+        if (!MyCommandPhase || IsDead(unit))
+            return [];
+        var reminders = new List<NowReminder>();
+        if (NeedsBattleShock(unit))
+            reminders.Add(new(unit, "Take Battle-shock test"));
+        if (NeedsReanimation(unit))
+            reminders.Add(new(unit, "Resolve Reanimation Protocols"));
+        return reminders;
+    }
+
+    private IReadOnlyList<BattleAbility> UnitNowAbilities(BattleUnit unit) => IsDead(unit) ? []
+        : unit.CombinedAbilities.Where(ability => (IsEffectNow(ability) || IsUsableNow(ability))
+            && !IsOncePerBattleUsedAbility(unit, ability)).ToList();
+
+    private IReadOnlyList<ConditionalUnitBuff> UnitNowBuffs(BattleUnit unit) =>
+        IsDead(unit) ? [] : ConditionalBuffsFor(unit).ToList();
+
+    private IReadOnlyList<AuraOffer> UnitNowAuras(BattleUnit unit) =>
+        IsDead(unit) ? [] : ForeignAuraOffersFor(unit);
+
+    private string BuffIdentity(ConditionalUnitBuff buff)
+    {
+        var detachment = _battle?.Detachments.FirstOrDefault(detachment =>
+            detachment.Rules.Any(rule => rule.ConditionalBuffs.Contains(buff)));
+        return detachment is null ? buff.Label : AbilityScheduleKeys.ForDetachmentBuff(detachment.Id, buff.Label);
+    }
 
     private IReadOnlyList<string> ShootingOptionsFor(BattleUnit unit) =>
         _battle?.ShootingOptionsFor(unit, _phase, _turn) ?? [];

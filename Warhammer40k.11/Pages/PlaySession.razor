@@ -73,7 +73,7 @@ else
 						var u = ordered[index];
 						var dUsable = IsDead(u) ? 0 : AvailableNowCount(u);
 						var dAlways = IsDead(u) ? 0 : AlwaysAbilityCount(u);
-						var dStrat = IsDead(u) ? 0 : StratagemsNowCount(u);
+						var dStrat = StratagemsNowCount(u);
 						var dShock = MyCommandPhase && NeedsBattleShock(u);
 						var dReanim = MyCommandPhase && !dShock && NeedsReanimation(u);
 						var dState = dShock ? " · battle-shock" : dReanim ? " · can reanimate" : "";
@@ -271,6 +271,10 @@ else
 							<span class="na-type">Aura · @AuraLabel(offer.Offer)</span>
 							<strong>@AuraTitle(offer.Offer)</strong>
 							<small>@AuraSource(offer.Offer)</small>
+							@if (NowUnit is null)
+							{
+								<small>For @offer.Unit.Name</small>
+							}
 						</button>
 					}
 					@foreach (var choiceUnit in nowChoices)
@@ -299,6 +303,14 @@ else
 						<button type="button" class="now-action ability" title="@CardTooltip(action.Ability.Ability.Name)" @onclick="() => OpenAbilityCard(action.Unit, action.Ability)">
 							<span class="na-type">@(HasEffectKeywords(action.Ability) ? "Effect" : action.Ability.IsEnhancement ? "Enhancement" : "Ability")</span>
 							<strong>@AbilityTitle(action.Ability)</strong>
+							@if (RuleUsage.ManualLimitHint(action.Ability.Ability.Text) is { } limit)
+							{
+								<small class="usage-hint">@limit</small>
+							}
+							@if (NowUnit is null)
+							{
+								<small>@action.Unit.Name</small>
+							}
 							@if (modelContext is not null)
 							{
 								<small>@modelContext</small>
@@ -310,6 +322,10 @@ else
 						<button type="button" class="now-action ability" title="@CardTooltip(action.Buff.Label)" @onclick="() => OpenBuffCard(action.Unit, action.Buff)">
 							<span class="na-type">Detachment</span>
 							<strong>@BuffTitle(action.Buff)</strong>
+							@if (NowUnit is null)
+							{
+								<small>@action.Unit.Name</small>
+							}
 						</button>
 					}
 					@foreach (var rule in nowRules)
@@ -321,11 +337,14 @@ else
 					}
 					@foreach (var strat in nowStrats)
 					{
-						var cost = EffectiveCost(strat, StratContextUnit);
 						var modelContext = StratagemModelContext(strat);
 						<button type="button" class="now-action stratagem" title="@CardTooltip(strat.Name)" @onclick="() => OpenNowStratagem(strat)">
-							<span class="na-type">Stratagem · @cost CP</span>
+							<span class="na-type">Stratagem · @StratagemCostLabel(strat)</span>
 							<strong>@StratagemTitle(strat)</strong>
+							@if (StratagemUsageHint(strat) is { } limit)
+							{
+								<small class="usage-hint">@limit</small>
+							}
 							@if (modelContext is not null)
 							{
 								<small>@modelContext</small>
@@ -407,7 +426,7 @@ else
 														<span class="mx-head-meta">
 															@if (column.Cp is { } cp)
 															{
-																<span class="mx-cp">@cp CP</span>
+														<span class="mx-cp">@(column.CostLabel ?? $"{cp} CP")</span>
 															}
 															<span class="mx-head-units">@column.Count @(column.Count == 1 ? "unit" : "units")</span>
 														</span>
@@ -428,7 +447,7 @@ else
 													<button type="button" class="mx-unit-btn" title="@($"{row.Unit.Name} — {row.Unit.ModelCount} {(row.Unit.ModelCount == 1 ? "model" : "models")} · open this unit's card")"
 															@onclick="() => OpenMatrixUnit(row.Unit)">
 														<span class="mx-unit-name">@DeckLabel(row.Unit)</span>
-														<span class="mx-models" title="Models in this unit">@row.Unit.ModelCount</span>
+														<span class="mx-models" title="Models remaining in this unit">@GroupModels(row.Unit)</span>
 													</button>
 												</th>
 												@foreach (var column in mx.Columns)
@@ -998,6 +1017,10 @@ else
 				</label>
 			}
 			<p class="a-text">@Clean(ac.Ability.Text)</p>
+			@if (RuleUsage.ManualLimitHint(ac.Ability.Text) is { } abilityLimit)
+			{
+				<p class="a-src usage-hint">@abilityLimit. This period is not tracked automatically.</p>
+			}
 			@if (_abilityReference)
 			{
 				<p class="a-src">Not scheduled in setup. This is reference information, not an available action.</p>
@@ -1101,6 +1124,20 @@ else
 					<dd>@nowStratagem.Restrictions</dd>
 				}
 			</dl>
+			@if (NowUnit is null)
+			{
+				<p class="a-src">Select the target unit. Cost includes that unit's applicable discount.</p>
+				<div class="strat-targets" role="group" aria-label="Stratagem target">
+					@foreach (var target in StratagemTargetCandidates(nowStratagem))
+					{
+						<button type="button" class="btn small @(StratContextUnit?.Id == target.Id ? "primary" : "ghost")"
+								aria-pressed="@(StratContextUnit?.Id == target.Id)" disabled="@(!CanUseStratagem(target, nowStratagem))"
+								@onclick="() => SelectStratagemTarget(target)">
+							@target.Name · @EffectiveCost(nowStratagem, target) CP
+						</button>
+					}
+				</div>
+			}
 			@if (IsOncePerBattleStrat(nowStratagem))
 			{
 				<label class="ac-toggle">
@@ -1109,8 +1146,16 @@ else
 					<span>Used this battle — hide from currently-usable actions (once per battle)</span>
 				</label>
 			}
-			<button class="btn primary" type="button" @onclick="UseNowStratagem">
-				Use · @OpenStratagemCost(nowStratagem) CP
+			@if (StratagemUsageHint(nowStratagem) is { } stratagemLimit)
+			{
+				<p class="a-src usage-hint">@stratagemLimit. This period is not tracked automatically.</p>
+			}
+			@if (StratContextUnit is { } discountUnit && UnitHasCpDiscount(discountUnit) && DiscountUsageHint(discountUnit) is { } discountLimit)
+			{
+				<p class="a-src usage-hint">Discount: @discountLimit.</p>
+			}
+			<button class="btn primary" type="button" disabled="@(!CanUseOpenStratagem(nowStratagem))" @onclick="UseNowStratagem">
+				@(StratContextUnit is null ? "Choose a target to use" : $"Use · {OpenStratagemCost(nowStratagem)} CP")
 			</button>
 		}
 	</Sheet>
@@ -1608,7 +1653,8 @@ else
 
 	// Army rules the player scheduled for the current phase + turn (surfaced as a "usable now" band).
 	private IReadOnlyList<ArmyRule> UsableArmyRules =>
-		_roster is null
+		_roster is null || _battle is null || !_battle.Units.Any(unit => !IsDead(unit))
+		|| (NowUnit is { } focused && IsDead(focused))
 			? []
 			: ArmyRules
 				.Where(r => _roster.IsScheduledNow(AbilityScheduleKeys.ForArmyRule(r.Name), _phase, _turn))
@@ -1665,12 +1711,12 @@ else
 		// Pass 1: per-unit eligibility, plus the cost each eligible unit actually pays.
 		var eligible = new Dictionary<string, List<(BattleUnit Unit, int Cost)>>(StringComparer.Ordinal);
 		var stratById = new Dictionary<string, StratView>(StringComparer.Ordinal);
-		var live = OrderedUnits.Where(u => !IsDead(u)).ToList();
+		var live = OrderedUnits.Where(unit => !IsDead(unit) || phaseStrats.Any(stratagem => CanUseStratagem(unit, stratagem))).ToList();
 		foreach (var unit in live)
 		{
 			foreach (var s in phaseStrats)
 			{
-				if (!StratagemAppliesTo(unit, s.Target) || !CanAfford(s, unit))
+				if (!CanUseStratagem(unit, s))
 					continue;
 				var key = StratKey(s);
 				stratById[key] = s;
@@ -1703,23 +1749,15 @@ else
 		var others = new List<BattleUnit>();
 		foreach (var unit in live)
 		{
-			var reminders = new List<string>();
-			if (MyCommandPhase && NeedsBattleShock(unit))
-				reminders.Add("Take Battle-shock test");
-			if (MyCommandPhase && NeedsReanimation(unit))
-				reminders.Add("Resolve Reanimation Protocols");
-
-			var abilities = unit.CombinedAbilities
-				.Where(a => IsEffectNow(a) || IsUsableNow(a))
-				.Where(a => !IsOncePerBattleUsedAbility(unit, a))
-				.ToList();
-			var buffs = ConditionalBuffsFor(unit).ToList();
+			var reminders = UnitNowReminders(unit).Select(reminder => reminder.Label).ToList();
+			var abilities = UnitNowAbilities(unit);
+			var buffs = UnitNowBuffs(unit);
 
 			var strats = new List<StratView>();
 			var coveredByGeneral = false;
 			foreach (var s in phaseStrats)
 			{
-				if (!StratagemAppliesTo(unit, s.Target) || !CanAfford(s, unit))
+				if (!CanUseStratagem(unit, s))
 					continue;
 				// Priced differently for this unit (a CP discount) → an exception worth showing on the row.
 				if (EffectiveCost(s, unit) != s.Cost || !generalKeys.Contains(StratKey(s)))
@@ -1742,34 +1780,22 @@ else
 	{
 		_overview = true;
 		_overviewStratUnit = null;
-		_stratNormalCost = false;
 	}
 
-	// The unit an overview stratagem was opened for — so spending CP applies that unit's discount, exactly as
-	// tapping the same stratagem on the unit's own card would.
+	// Explicit target selected in a whole-army sheet, shared by list and matrix views.
 	private BattleUnit? _overviewStratUnit;
 
 	private void OpenOverviewStratagem(BattleUnit unit, StratView stratagem)
 	{
 		_overviewStratUnit = unit;
-		_stratNormalCost = false;
 		_nowStratagem = stratagem;
 	}
 
-	// A General entry targets no particular unit, so the CP discount — which only applies when a Stratagem is
-	// used to target the bearer's own unit — does not come into play: it is always the printed cost.
-	private bool _stratNormalCost;
-
-	private void OpenGeneralStratagem(StratView stratagem)
-	{
-		_overviewStratUnit = null;
-		_stratNormalCost = true;
-		_nowStratagem = stratagem;
-	}
+	private void OpenGeneralStratagem(StratView stratagem) => OpenArmyStratagem(stratagem);
 
 	// The cost the open Stratagem sheet shows and spends.
 	private int OpenStratagemCost(StratView stratagem) =>
-		_stratNormalCost ? stratagem.Cost : EffectiveCost(stratagem, StratContextUnit);
+		StratContextUnit is { } target ? EffectiveCost(stratagem, target) : stratagem.Cost;
 
 	// General entries whose eligible-unit list the player expanded, keyed by StratKey.
 	private readonly HashSet<string> _openGeneral = new(StringComparer.Ordinal);
@@ -1787,46 +1813,23 @@ else
 
 	private BattleUnit? NowUnit => !_overview && _cardSwipe ? ActiveUnit : null;
 
-	private IReadOnlyList<NowReminder> NowReminders
-	{
-		get
-		{
-			if (!MyCommandPhase || _battle is null || NowUnit is not { } unit || IsDead(unit))
-				return [];
-			var reminders = new List<NowReminder>();
-			if (NeedsBattleShock(unit))
-				reminders.Add(new NowReminder(unit, "Take Battle-shock test"));
-			if (NeedsReanimation(unit))
-				reminders.Add(new NowReminder(unit, "Resolve Reanimation Protocols"));
-			return reminders;
-		}
-	}
+	private IReadOnlyList<NowReminder> NowReminders =>
+		NowContextUnits.SelectMany(UnitNowReminders).ToList();
 
 	private IReadOnlyList<(BattleUnit Unit, BattleAbility Ability)> NowAbilities =>
-		NowUnit is { } unit && !IsDead(unit)
-			? unit.CombinedAbilities
-				.Where(a => IsEffectNow(a) || IsUsableNow(a))
-				.Where(a => !IsOncePerBattleUsedAbility(unit, a))
-				.Select(a => (unit, a))
-				.ToList()
-			: [];
+		NowContextUnits.SelectMany(unit => UnitNowAbilities(unit).Select(ability => (unit, ability))).ToList();
 
 	private IReadOnlyList<(BattleUnit Unit, ConditionalUnitBuff Buff)> NowBuffs =>
-		NowUnit is { } unit && !IsDead(unit)
-			? ConditionalBuffsFor(unit).Select(b => (unit, b)).ToList()
-			: [];
+		NowContextUnits.SelectMany(unit => UnitNowBuffs(unit).Select(buff => (unit, buff))).ToList();
 
 	// Auras projected onto the focused unit by ANOTHER unit: the app can't see the board, so each one is
 	// offered here for the player to confirm. The unit's own aura needs no card — it is already applied.
 	private IReadOnlyList<(BattleUnit Unit, AuraOffer Offer)> NowAuras =>
-		NowUnit is { } unit && !IsDead(unit)
-			? ForeignAuraOffersFor(unit).Select(o => (unit, o)).ToList()
-			: [];
+		NowContextUnits.SelectMany(unit => UnitNowAuras(unit).Select(offer => (unit, offer))).ToList();
 
 	private IReadOnlyList<StratView> AffordableNowStratagems =>
 		UsableStratagems
-			.Where(s => CanAfford(s, StratContextUnit))
-			.Where(s => !(IsOncePerBattleStrat(s) && IsOncePerBattleUsed(OncePerBattleStratKey(s))))
+			.Where(stratagem => NowContextUnits.Any(unit => CanUseStratagem(unit, stratagem)))
 			.ToList();
 
 	private string NowContextLabel => NowUnit is { } unit
@@ -1855,16 +1858,16 @@ else
 
 	private void OpenNowStratagem(StratView stratagem)
 	{
-		_overviewStratUnit = null;
-		_stratNormalCost = false;
-		_nowStratagem = stratagem;
+		if (NowUnit is { } unit)
+			OpenOverviewStratagem(unit, stratagem);
+		else
+			OpenArmyStratagem(stratagem);
 	}
 
 	private void CloseNowStratagem()
 	{
 		_nowStratagem = null;
 		_overviewStratUnit = null;
-		_stratNormalCost = false;
 	}
 
 	private static string? AbilityModelContext(BattleUnit unit, BattleAbility ability)
@@ -1901,7 +1904,7 @@ else
 
 	private void UseNowStratagem()
 	{
-		if (_nowStratagem is not { } stratagem)
+		if (_nowStratagem is not { } stratagem || !CanUseOpenStratagem(stratagem))
 			return;
 		StepCp(-OpenStratagemCost(stratagem));
 		// A once-per-battle stratagem is consumed when used, so mark it used automatically.
@@ -1909,7 +1912,6 @@ else
 			SetOncePerBattleUsed(OncePerBattleStratKey(stratagem), true);
 		_nowStratagem = null;
 		_overviewStratUnit = null;
-		_stratNormalCost = false;
 	}
 
 	private bool _rulesOpen;
@@ -1985,18 +1987,8 @@ else
 	private sealed record StratView(string Id, string Name, string Source, string Type, int Cost,
 		string Flavour, string When, string Target, string Effect, string? Restrictions);
 
-	private IReadOnlyList<StratView> UsableStratagems
-	{
-		get
-		{
-			var list = PhaseTurnStratagems();
-			// In swipe mode, narrow the list to stratagems the unit you're viewing can actually use, by matching
-			// its keywords against the Target's required/excluded keywords. (List mode shows them all.)
-			if (_cardSwipe && ActiveUnit is { } unit)
-				list = list.Where(s => StratagemAppliesTo(unit, s.Target)).ToList();
-			return list;
-		}
-	}
+	private IReadOnlyList<StratView> UsableStratagems =>
+		PhaseTurnStratagems().Where(stratagem => NowContextUnits.Any(unit => CanTargetStratagem(unit, stratagem))).ToList();
 
 	// All stratagems usable in the current phase + turn (Core plus every selected detachment), before any
 	// per-unit keyword narrowing or CP-affordability filtering. Shared by the panel and the per-pill counter.
@@ -2020,7 +2012,7 @@ else
 	// discount), and applicable to the unit by keyword. Drives the deck-pill stratagem badge so you can spot a
 	// unit a stratagem applies to without flipping through every card.
 	private int StratagemsNowCount(BattleUnit unit) =>
-		PhaseTurnStratagems().Count(s => CanAfford(s, unit) && StratagemAppliesTo(unit, s.Target));
+		PhaseTurnStratagems().Count(stratagem => CanUseStratagem(unit, stratagem));
 
 	private BattleUnit? ActiveUnit =>
 		_ordered.Count > 0 ? _ordered[Math.Clamp(_activeCard, 0, _ordered.Count - 1)] : null;
@@ -2038,9 +2030,8 @@ else
 		unit.Parts.Any(p => !PartDown(p) && p.ReducesStratagemCpCost
 			&& unit.IsAbilityAppliedToUnit(p, BattlePart.MyWillBeDoneAbility));
 
-	// The unit the Stratagem panel is currently scoped to: in swipe mode the active card (the target), otherwise
-	// none — list mode isn't unit-targeted, so a row is discounted only when some eligible bearer unit exists.
-	private BattleUnit? StratContextUnit => _overview ? _overviewStratUnit : _cardSwipe ? ActiveUnit : null;
+	// Whole-army views retain the selected target; focus mode can use its active unit directly.
+	private BattleUnit? StratContextUnit => _overviewStratUnit ?? (!_overview && _cardSwipe ? ActiveUnit : null);
 
 	private int EffectiveCost(StratView stratagem, BattleUnit? forUnit)
 	{
@@ -2378,7 +2369,7 @@ else
 	// An item is "once per battle" when its rules text says so — abilities/enhancements by their text, a
 	// stratagem across any of its clauses. Such items can be ticked "used" and then drop out of the Now ribbon.
 	private static bool IsOncePerBattleText(string? text) =>
-		!string.IsNullOrEmpty(text) && text.Contains("once per battle", StringComparison.OrdinalIgnoreCase);
+		RuleUsage.IsOncePerBattle(text);
 
 	private static bool IsOncePerBattleAbility(BattleAbility ability) =>
 		IsOncePerBattleText(ability.Ability.Text);
@@ -2449,9 +2440,8 @@ else
 	// phase-scheduled effects, and phase-scheduled abilities. Drives the deck-pill badge so the count always
 	// equals the number of highlighted chips on the card, whatever the ability's origin.
 	private int AvailableNowCount(BattleUnit unit) =>
-		(ShootingOptionsFor(unit).Count > 0 ? 1 : 0) + ConditionalBuffsFor(unit).Count()
-		+ unit.CombinedAbilities.Count(a => IsEffectNow(a) && !IsOncePerBattleUsedAbility(unit, a))
-		+ unit.CombinedAbilities.Count(a => IsUsableNow(a) && !IsOncePerBattleUsedAbility(unit, a));
+		IsDead(unit) ? 0 : (ShootingOptionsFor(unit).Count > 0 ? 1 : 0)
+		+ UnitNowAbilities(unit).Count + UnitNowBuffs(unit).Count + UnitNowAuras(unit).Count;
 
 	// True when this ability is a once-per-battle item the player has already ticked "used" for this unit, or a
 	// deployment ability (Deep Strike / Scouts / Infiltrators) that has been spent.

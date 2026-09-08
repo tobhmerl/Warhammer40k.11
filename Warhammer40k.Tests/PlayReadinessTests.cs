@@ -113,13 +113,30 @@ public class PlayReadinessTests
     }
 
     [Fact]
-    public void Stacked_layout_limitations_are_reported_not_silently_fixed()
+    public void Readiness_coverage_is_identical_for_focus_and_stacked_layouts()
     {
         var api = ConfiguredFixture();
+        var focused = PlayReadiness.Check(api.Roster, api.Catalogue, api.Library, focusMode: true);
         var result = PlayReadiness.Check(api.Roster, api.Catalogue, api.Library, focusMode: false);
-        Assert.Contains(result.Issues, entry => entry.Key == "view|stacked");
-        Assert.Contains(result.Entries, entry => entry.Name == "Implacable Eradication" && entry.State == PlayReadinessState.NotProjected);
-        Assert.Contains(result.Windows, window => window.Expected > window.Projected);
+        Assert.True(result.IsReady);
+        Assert.DoesNotContain(result.Issues, entry => entry.Key == "view|stacked");
+        Assert.Equal(focused.Windows, result.Windows);
+        Assert.All(result.Windows, window => Assert.Equal(window.Expected, window.Projected));
+    }
+
+    [Fact]
+    public void Per_round_stratagems_are_not_reported_as_broken_battle_consumables()
+    {
+        var api = ShootingChoiceTests.Fixture(enableAtomic: false);
+        api.Roster.DetachmentIds = ["pantheon-of-woe"];
+        api.Roster.Units.Single(unit => unit.DatasheetId == "plasmancer").AssignedEnhancementId = null;
+        var monster = api.Catalogue.Datasheets.First(sheet => sheet.Keywords.Contains("Monster"));
+        api.Roster.Units.Add(RosterUnit.FromDatasheet(monster));
+        var key = AbilityScheduleKeys.ForDetachmentStratagem("pantheon-of-woe", "molecular-erosion");
+        api.Library.GetOrCreate(key).SetWindow(BattlePhase.Command, BattleTurn.Player, true);
+        var result = Check(api);
+        Assert.Equal(PlayReadinessState.Mapped, result.Entries.Single(entry => entry.Key == key).State);
+        Assert.DoesNotContain(result.Issues, entry => entry.Key == key + "|usage");
     }
 
     [Fact]
