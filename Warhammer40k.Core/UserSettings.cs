@@ -28,9 +28,8 @@ public sealed class UserSettings
     public bool PlayCardSwipe { get; set; } = true;
 
     /// <summary>
-    /// Play Mode rule cards (experimental). <c>false</c> (default) = each card shows the rule's name;
-    /// <c>true</c> = it shows a compact description of the rule's actual effect instead, for players who know
-    /// the names but want the effect at a glance. The full rules text stays one tap away either way.
+    /// Legacy compact-title preference, retained for settings and backup compatibility.
+    /// Play Mode now always displays printed rule names regardless of this value.
     /// </summary>
     public bool PlayCompactRules { get; set; }
 

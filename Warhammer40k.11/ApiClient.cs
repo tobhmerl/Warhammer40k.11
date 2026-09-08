@@ -249,23 +249,11 @@ internal sealed class ApiClient(HttpClient http) : IApiClient
 
     public async Task<Warhammer40k.Core.Play.ScheduleLibrary> GetScheduleLibraryAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var library = await http.GetFromJsonAsync<Warhammer40k.Core.Play.ScheduleLibrary>("api/schedule-library", cancellationToken);
-            return library ?? Warhammer40k.Core.Play.ScheduleLibrary.Empty;
-        }
-        catch (HttpRequestException)
-        {
-            return Warhammer40k.Core.Play.ScheduleLibrary.Empty;
-        }
-        catch (NotSupportedException)
-        {
-            return Warhammer40k.Core.Play.ScheduleLibrary.Empty;
-        }
-        catch (JsonException)
-        {
-            return Warhammer40k.Core.Play.ScheduleLibrary.Empty;
-        }
+        var library = await http.GetFromJsonAsync<Warhammer40k.Core.Play.ScheduleLibrary>("api/schedule-library", cancellationToken);
+        if (library?.Schedules is null || library.Schedules.Any(schedule => schedule is null
+            || string.IsNullOrWhiteSpace(schedule.Key) || schedule.Windows is null || schedule.Windows.Any(window => window is null)))
+            throw new JsonException("The scheduling library response is missing or invalid.");
+        return library;
     }
 
     public async Task<Warhammer40k.Core.Play.ScheduleLibrary> SaveScheduleLibraryAsync(Warhammer40k.Core.Play.ScheduleLibrary library, CancellationToken cancellationToken = default)

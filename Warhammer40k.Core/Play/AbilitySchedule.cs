@@ -54,6 +54,12 @@ public sealed class AbilitySchedule
     /// </summary>
     public string? ManualKeyword { get; set; }
 
+    /// <summary>
+    /// The rule-content fingerprint explicitly reviewed as reference-only, without a Now prompt. It does not
+    /// change timing or effects, and only counts while no windows, applied effect, or manual keyword are set.
+    /// </summary>
+    public string? ReviewedReferenceHash { get; set; }
+
     /// <summary>True when a window for the given phase + turn is ticked.</summary>
     public bool Covers(BattlePhase phase, BattleTurn turn) =>
         Windows.Any(w => w.Phase == phase && w.Turn == turn);
@@ -97,6 +103,10 @@ public static class AbilityScheduleKeys
     /// <summary>A detachment conditional buff (e.g. Relentless Onslaught), keyed by detachment id + buff label.</summary>
     public static string ForDetachmentBuff(string detachmentId, string buffLabel) =>
         $"detbuff|{Norm(detachmentId)}|{Norm(buffLabel)}";
+
+    /// <summary>A detachment's reference rule, used to acknowledge content that has no schedulable action.</summary>
+    public static string ForDetachmentRule(string detachmentId, string ruleName) =>
+        $"detrule|{Norm(detachmentId)}|{Norm(ruleName)}";
 
     private static string Norm(string value) => (value ?? string.Empty).Trim().ToLowerInvariant();
 }

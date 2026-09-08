@@ -77,8 +77,8 @@ public interface IApiClient
     Task<UserSettings> SaveSettingsAsync(UserSettings settings, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns the signed-in user's cross-roster scheduling library, or an empty
-    /// <see cref="Play.ScheduleLibrary"/> when unsaved/unreachable.
+    /// Returns the signed-in user's cross-roster scheduling library (empty when no schedules are saved).
+    /// Throws on transport or invalid-response failures so an unavailable library cannot look unconfigured.
     /// </summary>
     Task<Play.ScheduleLibrary> GetScheduleLibraryAsync(CancellationToken cancellationToken = default);
 
