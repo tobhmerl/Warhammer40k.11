@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\docs\points\necrons-munitorum-points-2026-09-02.md" LogicalName="NecronPoints20260902.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Warhammer40k.Core\Warhammer40k.Core.csproj" />
     <ProjectReference Include="..\Warhammer40k.Api\Warhammer40k.Api.csproj" />
     <!-- CombatSimulator feature (removable): lets the engine/dice/importer be unit-tested. Remove with the feature. -->

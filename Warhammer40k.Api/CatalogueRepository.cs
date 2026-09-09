@@ -59,9 +59,14 @@ public sealed class TableCatalogueRepository : ICatalogueRepository
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly TableServiceClient _service;
+    private readonly CatalogueProvider _defaults;
     private TableClient? _table;
 
-    public TableCatalogueRepository(TableServiceClient service) => _service = service;
+    public TableCatalogueRepository(TableServiceClient service, CatalogueProvider defaults)
+    {
+        _service = service;
+        _defaults = defaults;
+    }
 
     private async Task<TableClient> GetTableAsync(CancellationToken ct)
     {
@@ -83,7 +88,7 @@ public sealed class TableCatalogueRepository : ICatalogueRepository
                 .ConfigureAwait(false);
 
             var json = ExtractJson(response.Value);
-            return string.IsNullOrWhiteSpace(json) ? null : CatalogueSeedLoader.Load(json);
+            return string.IsNullOrWhiteSpace(json) ? null : LoadCurrentCatalogue(json, _defaults.Catalogue);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
@@ -97,11 +102,20 @@ public sealed class TableCatalogueRepository : ICatalogueRepository
 
         // Re-derive ids/flags before storing so saved data is internally consistent (Enrich is id-preserving).
         CatalogueSeedLoader.Enrich(catalogue);
+        UnitPointsUpdate.Apply(catalogue, _defaults.Catalogue);
         var json = JsonSerializer.Serialize(catalogue, JsonOptions);
 
         var entity = BuildEntity(userId, json);
         await table.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken).ConfigureAwait(false);
 
+        return catalogue;
+    }
+
+    /// <summary>Loads saved content with the current price revision; this does not write or reset the stored catalogue.</summary>
+    public static CatalogueData LoadCurrentCatalogue(string json, CatalogueData defaults)
+    {
+        var catalogue = CatalogueSeedLoader.Load(json);
+        UnitPointsUpdate.Apply(catalogue, defaults);
         return catalogue;
     }
 
