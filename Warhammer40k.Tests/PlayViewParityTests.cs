@@ -37,6 +37,7 @@ public class PlayViewParityTests
         var html = await host.HtmlAsync();
         Assert.Equal(host.Read<int>("AvailableNowTotal"), Regex.Matches(html, "<button[^>]*class=\"now-action(?: [^\"]*)?\"").Count);
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         Assert.Equal(focused.Order(), MatrixTokens(host).Order());
     }
 
@@ -51,6 +52,7 @@ public class PlayViewParityTests
         Schedule(api, AbilityScheduleKeys.ForUnitAbility(warriors.Id, ability.Name));
         await using var host = await Session(api);
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         var columns = Items(Value(Call(host.Component, "BuildMatrix")!, "Columns"));
         Assert.Equal(2, columns.Count(column => (string)Value(column, "Label")! == ability.Name));
     }
@@ -96,6 +98,7 @@ public class PlayViewParityTests
         await host.InvokeAsync("UseNowStratagem");
         Assert.Equal(0, host.Read<int>("_cp"));
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         Assert.Contains("S|Core|15.02|" + discounted.Id, MatrixTokens(host));
         await host.InvokeAsync("OpenGeneralStratagem", stratagem);
         Assert.Equal(discounted.Id, host.Read<BattleUnit>("StratContextUnit").Id);
@@ -138,6 +141,7 @@ public class PlayViewParityTests
         await host.SetAsync("_cardSwipe", false);
         Assert.DoesNotContain(NowTokens(host), token => token.StartsWith("S|Core|15.04|", StringComparison.Ordinal));
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         Assert.DoesNotContain(MatrixTokens(host), token => token.StartsWith("S|Core|15.04|", StringComparison.Ordinal));
     }
 
@@ -162,6 +166,7 @@ public class PlayViewParityTests
         await host.SetAsync("_cardSwipe", false);
         Assert.Contains(reaction, NowTokens(host));
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         Assert.Contains(reaction, MatrixTokens(host));
     }
 
@@ -197,6 +202,7 @@ public class PlayViewParityTests
         await host.InvokeAsync("StepPart", primary, 1 - primary.TrackMax);
         await host.InvokeAsync("SelectPhase", kind == "Reminder" ? BattlePhase.Command : BattlePhase.Shooting);
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         var column = Items(Value(Call(host.Component, "BuildMatrix")!, "Columns"))
             .First(column => Value(column, "Kind")!.ToString() == kind);
         await host.InvokeAsync("OpenMatrixColumn", column);

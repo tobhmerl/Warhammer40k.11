@@ -122,6 +122,10 @@ public class RuleCardNameTests
         html = await host.HtmlAsync();
         Assert.Contains("Technosorcerous Augmentations", html);
         Assert.DoesNotContain("Choose shooting ability", html);
+        await host.InvokeAsync("SetOverviewMatrix", true);
+        html = await host.HtmlAsync();
+        Assert.Contains("Technosorcerous Augmentations", html);
+        Assert.DoesNotContain("Choose shooting ability", html);
     }
 
     [Theory]

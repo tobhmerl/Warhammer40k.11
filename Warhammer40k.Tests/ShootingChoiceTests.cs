@@ -136,6 +136,7 @@ public class ShootingChoiceTests
         await using var host = await PlayHost(api);
         await host.InvokeAsync("SelectPhase", BattlePhase.Shooting);
         await host.InvokeAsync("ShowOverview");
+        await host.InvokeAsync("SetOverviewMatrix", true);
         var html = await host.HtmlAsync();
         Assert.Contains("Shooting choice", html);
         Assert.Contains("Technosorcerous Augmentations", html);

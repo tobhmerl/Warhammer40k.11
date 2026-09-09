@@ -31,11 +31,14 @@
     position: sticky;
     top: 0;
     z-index: 1;
+    flex-shrink: 0;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
     padding: calc(1.1rem + env(safe-area-inset-top)) 1.25rem 0.85rem;
+    padding-left: calc(1.25rem + env(safe-area-inset-left));
+    padding-right: calc(1.25rem + env(safe-area-inset-right));
     border-bottom: 1px solid var(--border);
     background: linear-gradient(180deg, var(--surface-2), rgba(14, 23, 20, 0.92));
     border-radius: 0;
@@ -64,8 +67,8 @@
 
 .sheet-close {
     flex: none;
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 44px;
+    height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -75,6 +78,7 @@
     color: var(--text-dim);
     font-size: 1rem;
     cursor: pointer;
+    touch-action: manipulation;
     transition: color 0.15s var(--ease), background 0.15s var(--ease), border-color 0.15s var(--ease);
 }
 
@@ -85,8 +89,11 @@
 }
 
 .sheet-body {
-    padding: 1.1rem 1.25rem 1.6rem;
+    min-height: 0;
+    padding: 1.1rem calc(1.25rem + env(safe-area-inset-right)) calc(1.6rem + env(safe-area-inset-bottom)) calc(1.25rem + env(safe-area-inset-left));
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 @keyframes sheet-fade {

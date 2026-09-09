@@ -233,9 +233,8 @@ public partial class PlaySession
         _ => "k-ability",
     };
 
-    // The overview always renders as the matrix — it is the faster surface to scan, and the layout toggle
-    // was dropped to keep the page uncluttered. The card layout stays behind this flag for reference.
-    private readonly bool _overviewMatrix = true;
+    // Wrapped Now cards are the default; the wide matrix is an explicit display choice.
+    private bool _overviewMatrix;
 
     // Quick filter: hide units that have nothing at all in this battle window.
     private bool _matrixOnlyActive;
@@ -243,6 +242,8 @@ public partial class PlaySession
     // Row / column focus, so a tapped unit or rule stays highlighted while reading across the grid.
     private string? _matrixRowUnitId;
     private string? _matrixColumnKey;
+
+    private void SetOverviewMatrix(bool matrix) => _overviewMatrix = matrix;
 
     private void ToggleMatrixOnlyActive() => _matrixOnlyActive = !_matrixOnlyActive;
 

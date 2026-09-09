@@ -49,7 +49,7 @@ else if (_notFound || _roster is null || _battle is null)
 }
 else
 {
-	<div class="play @(_overview ? "wide" : null)">
+	<div class="play @(_overview && _overviewMatrix ? "wide" : null)">
 		@if (_cardSwipe && OrderedUnits.Count > 0)
 		{
 			var ordered = OrderedUnits;
@@ -133,7 +133,8 @@ else
 			<nav class="phases" aria-label="Battle phases">
 				@foreach (var phase in BattlePhases.Ordered)
 				{
-					<button type="button" class="phase @(phase == _phase ? "on" : "")" @onclick="() => SelectPhase(phase)" title="@BattlePhases.Label(phase)">
+					<button type="button" class="phase @(phase == _phase ? "on" : "")" aria-pressed="@(phase == _phase ? "true" : "false")"
+							aria-label="@BattlePhases.Label(phase)" @onclick="() => SelectPhase(phase)" title="@BattlePhases.Label(phase)">
 						<span class="ph-name">@BattlePhases.ShortLabel(phase)</span>
 					</button>
 				}
@@ -235,7 +236,17 @@ else
 				</span>
 			</span>;
 		}
-		@if (!_overview)
+		@if (_overview)
+		{
+			<div class="overview-views" role="group" aria-label="Army overview layout">
+				<button type="button" class="btn small @(!_overviewMatrix ? "primary" : "ghost")"
+						aria-pressed="@(_overviewMatrix ? "false" : "true")" @onclick="() => SetOverviewMatrix(false)">Now cards</button>
+				<button type="button" class="btn small @(_overviewMatrix ? "primary" : "ghost")"
+						aria-pressed="@(_overviewMatrix ? "true" : "false")" @onclick="() => SetOverviewMatrix(true)"
+						title="Optional wide table; Now cards wrap to fit the phone">Matrix (wide)</button>
+			</div>
+		}
+		@if (!_overview || !_overviewMatrix)
 		{
 		<section class="now-ribbon" aria-label="Available now">
 			<div class="now-head">
@@ -373,7 +384,7 @@ else
 		</section>
 		}
 
-		@if (_overview)
+		@if (_overview && _overviewMatrix)
 		{
 			@* Army overview — a sticky phase header, the stratagems several units share (listed once), then
 			   one compact row per unit carrying only what is specific or exceptional to it. *@
@@ -605,13 +616,13 @@ else
 				}
 			</section>
 		}
-		else if (_battle.Units.Count == 0)
+		else if (!_overview && _battle.Units.Count == 0)
 		{
 			<div class="card empty">
 				<p>This roster has no units yet.</p>
 			</div>
 		}
-		else
+		else if (!_overview)
 		{
 			<div class="@(_cardSwipe ? "deck" : null)" @ref="_deckRef" @onkeydown="OnDeckKeyDown" tabindex="@(_cardSwipe ? 0 : -1)">
 			<ul class="unit-list">
@@ -843,7 +854,7 @@ else
 				}
 				@if (ArmyRules.Count > 0 || _battle.Detachments.Count > 0)
 				{
-					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army &amp; detachment rules">
+					<button class="btn small ghost" type="button" @onclick="OpenRules" title="Army & detachment rules">
 						<svg class="btn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 							<path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z" />
 							<path d="M9.2 12.2l1.9 1.9 3.7-3.9" />
@@ -1663,8 +1674,8 @@ else
 	private sealed record NowReminder(BattleUnit Unit, string Label);
 
 	// ---- Army overview: one glance at everything the whole army can do in the current phase + turn ----
-	// Reached from the first pill of the unit selector; it replaces the card/list body (and the Now ribbon,
-	// which it supersedes) while it is open, so there is exactly one "what can I do now" surface on screen.
+	// Reached from the first unit-selector pill: wrapped Now cards by default, with an optional wide matrix.
+	// Either view replaces the unit-card body, so there is exactly one current-action surface on screen.
 	private bool _overview;
 
 	private sealed record OverviewRow(
@@ -1779,6 +1790,7 @@ else
 	private void ShowOverview()
 	{
 		_overview = true;
+		_overviewMatrix = false;
 		_overviewStratUnit = null;
 	}
 

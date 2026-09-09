@@ -9,7 +9,7 @@ public partial class PlaySession
     private bool _abilityReference;
 
     private IReadOnlyList<BattleUnit> NowContextUnits =>
-        NowUnit is { } unit ? [unit] : !_overview ? OrderedUnits : [];
+        NowUnit is { } unit ? [unit] : (!_overview || !_overviewMatrix) ? OrderedUnits : [];
 
     private IReadOnlyList<NowReminder> UnitNowReminders(BattleUnit unit)
     {
