@@ -1,9 +1,10 @@
 {
   "faction": "Necrons",
+  "unitPointsVersion": "2026-09-02",
   "datasheets": [
     {
       "name": "C'tan Shard of the Deceiver",
-      "points": 330,
+      "points": 310,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -87,14 +88,14 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 330
+          "points": 310
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "C'tan Shard of the Nightbringer",
-      "points": 360,
+      "points": 340,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -183,14 +184,14 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 360
+          "points": 340
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "C'tan Shard of the Void Dragon",
-      "points": 345,
+      "points": 330,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -312,14 +313,14 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 345
+          "points": 330
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Illuminor Szeras",
-      "points": 175,
+      "points": 165,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -407,7 +408,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 175
+          "points": 165
         }
       ],
       "wargearGroups": []
@@ -621,7 +622,7 @@
     },
     {
       "name": "Orikan the Diviner",
-      "points": 90,
+      "points": 80,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -688,14 +689,14 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 90
+          "points": 80
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "The Silent King",
-      "points": 420,
+      "points": 400,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -834,14 +835,14 @@
       "pointsOptions": [
         {
           "models": 3,
-          "points": 420
+          "points": 400
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Trazyn the Infinite",
-      "points": 65,
+      "points": 75,
       "primaryRole": "Epic Hero",
       "isEpicHero": true,
       "isBattleline": false,
@@ -907,7 +908,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 65
+          "points": 75
         }
       ],
       "wargearGroups": []
@@ -1069,7 +1070,7 @@
     },
     {
       "name": "Chronomancer",
-      "points": 70,
+      "points": 65,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -1142,12 +1143,10 @@
           ]
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 70,
-          "escalatedPoints": 80
+          "points": 65
         }
       ],
       "wargearGroups": []
@@ -1331,7 +1330,7 @@
     },
     {
       "name": "Lokhust Lord",
-      "points": 70,
+      "points": 80,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -1427,7 +1426,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 70
+          "points": 80
         }
       ],
       "wargearGroups": [
@@ -1467,7 +1466,7 @@
     },
     {
       "name": "Overlord",
-      "points": 90,
+      "points": 85,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -1585,7 +1584,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 90
+          "points": 85
         }
       ],
       "wargearGroups": [
@@ -1613,7 +1612,7 @@
     },
     {
       "name": "Overlord with Translocation Shroud",
-      "points": 90,
+      "points": 85,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -1683,7 +1682,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 90
+          "points": 85
         }
       ],
       "wargearGroups": []
@@ -2006,12 +2005,10 @@
           "keywords": []
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 90,
-          "escalatedPoints": 100
+          "points": 90
         }
       ],
       "wargearGroups": []
@@ -2085,19 +2082,17 @@
           "keywords": []
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 80,
-          "escalatedPoints": 90
+          "points": 80
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Transcendent C'tan",
-      "points": 340,
+      "points": 325,
       "primaryRole": "Character",
       "isEpicHero": false,
       "isBattleline": false,
@@ -2180,12 +2175,10 @@
           ]
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 340,
-          "escalatedPoints": 360
+          "points": 325
         }
       ],
       "wargearGroups": []
@@ -2274,7 +2267,7 @@
         },
         {
           "models": 10,
-          "points": 140
+          "points": 150
         }
       ],
       "wargearGroups": [
@@ -2298,7 +2291,7 @@
     },
     {
       "name": "Necron Warriors",
-      "points": 80,
+      "points": 90,
       "primaryRole": "Battleline",
       "isEpicHero": false,
       "isBattleline": true,
@@ -2375,11 +2368,11 @@
       "pointsOptions": [
         {
           "models": 10,
-          "points": 80
+          "points": 90
         },
         {
           "models": 20,
-          "points": 190
+          "points": 200
         }
       ],
       "wargearGroups": [
@@ -2537,24 +2530,21 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 5,
-          "points": 60,
-          "escalatedPoints": 70
+          "points": 60
         },
         {
           "models": 10,
-          "points": 120,
-          "escalatedPoints": 130
+          "points": 120
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Flayed Ones",
-      "points": 55,
+      "points": 60,
       "primaryRole": "Infantry",
       "isEpicHero": false,
       "isBattleline": false,
@@ -2608,18 +2598,18 @@
       "pointsOptions": [
         {
           "models": 5,
-          "points": 55
+          "points": 60
         },
         {
           "models": 10,
-          "points": 100
+          "points": 120
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Lychguard",
-      "points": 80,
+      "points": 85,
       "primaryRole": "Infantry",
       "isEpicHero": false,
       "isBattleline": false,
@@ -2684,11 +2674,11 @@
       "pointsOptions": [
         {
           "models": 5,
-          "points": 80
+          "points": 85
         },
         {
           "models": 10,
-          "points": 160
+          "points": 170
         }
       ],
       "wargearGroups": [
@@ -2762,24 +2752,21 @@
           "keywords": []
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 3,
-          "points": 80,
-          "escalatedPoints": 90
+          "points": 80
         },
         {
           "models": 6,
-          "points": 145,
-          "escalatedPoints": 155
+          "points": 160
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Skorpekh Destroyers",
-      "points": 85,
+      "points": 90,
       "primaryRole": "Infantry",
       "isEpicHero": false,
       "isBattleline": false,
@@ -2828,24 +2815,21 @@
           "keywords": []
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 3,
-          "points": 85,
-          "escalatedPoints": 95
+          "points": 90
         },
         {
           "models": 6,
-          "points": 170,
-          "escalatedPoints": 180
+          "points": 180
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Triarch Praetorians",
-      "points": 80,
+      "points": 90,
       "primaryRole": "Infantry",
       "isEpicHero": false,
       "isBattleline": false,
@@ -2932,11 +2916,11 @@
       "pointsOptions": [
         {
           "models": 5,
-          "points": 80
+          "points": 90
         },
         {
           "models": 10,
-          "points": 160
+          "points": 180
         }
       ],
       "wargearGroups": [
@@ -3087,34 +3071,29 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 40,
-          "escalatedPoints": 50
+          "points": 40
         },
         {
           "models": 2,
-          "points": 55,
-          "escalatedPoints": 65
+          "points": 60
         },
         {
           "models": 3,
-          "points": 80,
-          "escalatedPoints": 90
+          "points": 90
         },
         {
           "models": 6,
-          "points": 170,
-          "escalatedPoints": 180
+          "points": 180
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Lokhust Heavy Destroyers",
-      "points": 50,
+      "points": 55,
       "primaryRole": "Mounted",
       "isEpicHero": false,
       "isBattleline": false,
@@ -3193,22 +3172,18 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 50,
-          "escalatedPoints": 60
+          "points": 55
         },
         {
           "models": 2,
-          "points": 100,
-          "escalatedPoints": 110
+          "points": 110
         },
         {
           "models": 3,
-          "points": 160,
-          "escalatedPoints": 170
+          "points": 165
         }
       ],
       "wargearGroups": [
@@ -3233,7 +3208,7 @@
     },
     {
       "name": "Tomb Blades",
-      "points": 70,
+      "points": 75,
       "primaryRole": "Mounted",
       "isEpicHero": false,
       "isBattleline": false,
@@ -3340,17 +3315,14 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 3,
-          "points": 70,
-          "escalatedPoints": 80
+          "points": 75
         },
         {
           "models": 6,
-          "points": 140,
-          "escalatedPoints": 150
+          "points": 150
         }
       ],
       "wargearGroups": [
@@ -3394,7 +3366,7 @@
     },
     {
       "name": "Canoptek Macrocytes",
-      "points": 70,
+      "points": 85,
       "primaryRole": "Beast",
       "isEpicHero": false,
       "isBattleline": false,
@@ -3477,7 +3449,7 @@
       "pointsOptions": [
         {
           "models": 5,
-          "points": 70
+          "points": 85
         }
       ],
       "wargearGroups": [
@@ -3610,7 +3582,7 @@
     },
     {
       "name": "Canoptek Wraiths",
-      "points": 95,
+      "points": 110,
       "primaryRole": "Beast",
       "isEpicHero": false,
       "isBattleline": false,
@@ -3698,17 +3670,14 @@
           "keywords": []
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 3,
-          "points": 95,
-          "escalatedPoints": 115
+          "points": 110
         },
         {
           "models": 6,
-          "points": 220,
-          "escalatedPoints": 240
+          "points": 220
         }
       ],
       "wargearGroups": [
@@ -3748,7 +3717,7 @@
     },
     {
       "name": "Annihilation Barge",
-      "points": 95,
+      "points": 105,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -3844,7 +3813,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 95
+          "points": 105
         }
       ],
       "wargearGroups": [
@@ -4035,7 +4004,7 @@
     },
     {
       "name": "Canoptek Spyders",
-      "points": 65,
+      "points": 75,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4109,11 +4078,11 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 65
+          "points": 75
         },
         {
           "models": 2,
-          "points": 110
+          "points": 150
         }
       ],
       "wargearGroups": [
@@ -4145,7 +4114,7 @@
     },
     {
       "name": "Doom Scythe",
-      "points": 200,
+      "points": 230,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4228,7 +4197,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 200
+          "points": 230
         }
       ],
       "wargearGroups": [
@@ -4252,7 +4221,7 @@
     },
     {
       "name": "Doomsday Ark",
-      "points": 210,
+      "points": 200,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4338,19 +4307,17 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 210,
-          "escalatedPoints": 230
+          "points": 200
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Monolith",
-      "points": 420,
+      "points": 400,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4451,12 +4418,10 @@
           ]
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 420,
-          "escalatedPoints": 440
+          "points": 400
         }
       ],
       "wargearGroups": [
@@ -4480,7 +4445,7 @@
     },
     {
       "name": "Night Scythe",
-      "points": 125,
+      "points": 145,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4556,14 +4521,14 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 125
+          "points": 145
         }
       ],
       "wargearGroups": []
     },
     {
       "name": "Obelisk",
-      "points": 280,
+      "points": 300,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4632,12 +4597,10 @@
           ]
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 280,
-          "escalatedPoints": 310
+          "points": 300
         }
       ],
       "wargearGroups": []
@@ -4753,12 +4716,10 @@
           "keywords": []
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 540,
-          "escalatedPoints": 570
+          "points": 540
         }
       ],
       "wargearGroups": [
@@ -4782,7 +4743,7 @@
     },
     {
       "name": "Tesseract Vault",
-      "points": 465,
+      "points": 425,
       "primaryRole": "Vehicle",
       "isEpicHero": false,
       "isBattleline": false,
@@ -4904,12 +4865,10 @@
           ]
         }
       ],
-      "escalationRank": 2,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 465,
-          "escalatedPoints": 485
+          "points": 425
         }
       ],
       "wargearGroups": []
@@ -5027,12 +4986,10 @@
           ]
         }
       ],
-      "escalationRank": 3,
       "pointsOptions": [
         {
           "models": 1,
-          "points": 110,
-          "escalatedPoints": 120
+          "points": 110
         }
       ],
       "wargearGroups": [
@@ -5060,7 +5017,7 @@
     },
     {
       "name": "Ghost Ark",
-      "points": 100,
+      "points": 115,
       "primaryRole": "Dedicated Transport",
       "isEpicHero": false,
       "isBattleline": false,
@@ -5131,7 +5088,7 @@
       "pointsOptions": [
         {
           "models": 1,
-          "points": 100
+          "points": 115
         }
       ],
       "wargearGroups": []

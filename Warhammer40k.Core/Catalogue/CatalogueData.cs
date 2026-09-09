@@ -13,6 +13,9 @@ public sealed class CatalogueData
     /// <summary>Optional version/stamp the seed may carry; rosters record the catalogue version they were built against.</summary>
     [JsonPropertyName("version")] public string? Version { get; set; }
 
+    /// <summary>The dated unit-price table last applied; prevents overwriting later manual price edits on every load.</summary>
+    [JsonPropertyName("unitPointsVersion")] public string? UnitPointsVersion { get; set; }
+
     [JsonPropertyName("datasheets")] public List<Datasheet> Datasheets { get; set; } = [];
 
     [JsonPropertyName("pantheonBindings")] public List<PantheonBinding> PantheonBindings { get; set; } = [];

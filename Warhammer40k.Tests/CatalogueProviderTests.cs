@@ -41,11 +41,11 @@ public class CatalogueProviderTests
         Assert.Equal(expected, Get(id).MaxCopies);
 
     [Theory]
-    [InlineData("overlord", 1, 90)]            // flat single model
-    [InlineData("necron-warriors", 10, 80)]    // flat, 10-model size
-    [InlineData("necron-warriors", 20, 190)]   // flat, 20-model size
-    [InlineData("lokhust-destroyers", 1, 40)]  // tiered base price
-    [InlineData("monolith", 1, 420)]           // tiered base price
+    [InlineData("overlord", 1, 85)]
+    [InlineData("necron-warriors", 10, 90)]
+    [InlineData("necron-warriors", 20, 200)]
+    [InlineData("lokhust-destroyers", 1, 40)]
+    [InlineData("monolith", 1, 400)]
     public void Real_seed_carries_11th_edition_base_points(string id, int models, int points)
     {
         var option = Get(id).PointsOptions.Single(o => o.Models == models);
@@ -53,15 +53,16 @@ public class CatalogueProviderTests
     }
 
     [Theory]
-    [InlineData("lokhust-destroyers", 3, 1, 50)]   // your 3rd+ unit: 40 -> 50
-    [InlineData("monolith", 2, 1, 440)]            // your 2nd+ unit: 420 -> 440
-    [InlineData("canoptek-wraiths", 2, 3, 115)]    // your 2nd+ unit: 95 -> 115
-    [InlineData("doomsday-ark", 3, 1, 230)]        // your 3rd+ unit: 210 -> 230
-    public void Real_seed_carries_per_copy_escalation(string id, int rank, int models, int escalated)
+    [InlineData("lokhust-destroyers", 1, 40)]
+    [InlineData("monolith", 1, 400)]
+    [InlineData("canoptek-wraiths", 3, 110)]
+    [InlineData("doomsday-ark", 1, 200)]
+    public void Real_seed_uses_the_supplied_flat_price_table(string id, int models, int points)
     {
         var sheet = Get(id);
-        Assert.Equal(rank, sheet.EscalationRank);
-        Assert.Equal(escalated, sheet.PointsOptions.Single(o => o.Models == models).EscalatedPoints);
+        Assert.Equal(0, sheet.EscalationRank);
+        Assert.Null(sheet.PointsOptions.Single(o => o.Models == models).EscalatedPoints);
+        Assert.Equal(points, sheet.PointsOptions.Single(o => o.Models == models).Points);
     }
 
     [Fact]
